@@ -20,11 +20,24 @@ describe('resolveClips', () => {
   });
 
   it('falls back to looser patterns for other naming schemes', () => {
-    const out = resolveClips(['Armature|idle', 'Armature|walking', 'Armature|running', 'Armature|jump'].map(clip), HERO_MODELS.hatch.clips);
+    const out = resolveClips(['Armature|idle', 'Armature|walking', 'Armature|running', 'Armature|jump'].map(clip), HERO_MODELS.ual.clips);
     expect(out.idle?.name).toBe('Armature|idle');
     expect(out.walk?.name).toBe('Armature|walking');
     expect(out.run?.name).toBe('Armature|running');
     expect(out.airborne?.name).toBe('Armature|jump');
+  });
+});
+
+describe('Hatch Superman clip mapping', () => {
+  it('maps the real Mixamo clip names in the downloaded model', () => {
+    const names = ['mixamo.com', 'Falling Idle', 'Flying', 'Male Dynamic Pose', 'Running', 'Walk Strafe Left', 'Walk Strafe Right', 'Walking'];
+    const out = resolveClips(names.map(clip), HERO_MODELS.hatch.clips);
+    expect(out.idle?.name).toBe('mixamo.com');
+    expect(out.walk?.name).toBe('Walking');
+    expect(out.run?.name).toBe('Running');
+    expect(out.sprint?.name).toBe('Running');
+    expect(out.airborne?.name).toBe('Falling Idle');
+    expect(out.hardLand?.name).toBe('Male Dynamic Pose');
   });
 });
 

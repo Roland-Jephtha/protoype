@@ -12,23 +12,22 @@ source URL, download date, license, attribution, modifications, path, use.
 Verified: loads in three.js (smoke test check "rigged hero model loaded"), 1 skin / 53 joints, scaled to 1.9 m, faces +Z, animations play (idle, walk, jog, sprint, jump start/loop/land, crouch).
 Regenerate: `node scripts/prepare-hero.mjs "<unzipped>/Godot/AnimationLibrary_Godot_Standard.glb"`.
 
-## Optional: "Hatch Superman" (user-downloaded)
+## "Hatch Superman" — active hero (user-downloaded)
 
 | Field | Value |
 |---|---|
-| Asset | "Hatch Superman" (rigged, 8 animations, ~3k vertices) |
-| Creator | nitwit.friends (HatchXR) |
+| Asset | "Hatch Superman" — textured, Mixamo-rigged (66 joints), 8 clips: `mixamo.com` (idle), Walking, Running, Falling Idle, Flying, Male Dynamic Pose, Walk Strafe Left/Right |
+| Creator | nitwit.friends (HatchXR) — https://sketchfab.com/nitwit.friends |
 | URL | https://sketchfab.com/3d-models/hatch-superman-e023b533044a4c37a8f899c9517c9804 |
-| Licence | CC BY 4.0 — "Author must be credited. Commercial use is allowed." (checked via Sketchfab API 2026-10-23) |
-| Attribution | Shown on the in-game Credits screen (from `src/config/assets.ts`) |
-| Status | **Not downloaded** — Sketchfab requires a logged-in account, so it can't be fetched by script |
+| Downloaded | 2026-10-23 by the product owner (Sketchfab glTF export; file dates 2022-12-26) |
+| Licence | CC BY 4.0 — "Author must be credited. Commercial use is allowed." (confirmed in the bundled `license.txt`) |
+| Attribution | In-game Credits screen (from `src/config/assets.ts`) + `public/models/hatch-superman/license.txt` |
+| Modifications | `scripts/prepare-hatch.mjs`: texture 2048² PNG → 1024² WebP, meshopt compression (4.1 MB → 372 KB); procedural cape attached to `Spine2`; no geometry edits |
+| Path | `public/models/hatch-superman/hatch-superman.glb` (raw download kept locally in `/hatch_superman/`, gitignored) |
+| Use | Main hero (first in `HERO_MODEL_PRIORITY`); Quaternius hero is the fallback |
+| Notes | Animations are Mixamo-sourced, embedded by the model author. The "S" shield is DC's trademark — acceptable for this non-commercial fan prototype, must be replaced for any original/commercial version. The `Flying` clip is reserved for Phase 3. Locomotion clips verified in-place (no root motion). |
 
-To install: log in to Sketchfab → open the URL → Download 3D Model → **glTF** → unzip so
-that `public/models/hatch-superman/scene.gltf` exists (with its `scene.bin` and
-`textures/`). The game picks it up automatically (it's first in `HERO_MODEL_PRIORITY`)
-and falls back to the Quaternius hero if it's missing or fails. Note: it has no cape,
-so the procedural cape is attached; animation clip names are matched by pattern and
-may need tuning in `src/config/assets.ts` once the file is inspected.
+Regenerate: `node scripts/prepare-hatch.mjs hatch_superman` (add `--inspect` to list clips).
 
 Other Sketchfab "Superman" uploads were reviewed and **rejected** because they appear
 to be re-uploaded game rips under licences the uploader can't grant: "Superman |

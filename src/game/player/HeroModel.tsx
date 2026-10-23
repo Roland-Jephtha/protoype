@@ -85,13 +85,13 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
 
     const chest = findChestBone(model);
     let capePivot: Object3D | null = null;
-    const capeGeometry = def.addCape ? createCapeGeometry(0.62 * m.height, 0.19 * m.height, 0.38 * m.height) : null;
+    const capeGeometry = def.addCape ? createCapeGeometry(0.62 * m.height, 0.25 * m.height, 0.42 * m.height) : null;
     if (capeGeometry) ownedGeometries.push(capeGeometry);
     if (chest && capeGeometry) {
       const capeMat = new MeshStandardMaterial({ color: 0xb01826, roughness: 0.75, side: DoubleSide });
       ownedMaterials.push(capeMat);
       const anchor = new Object3D();
-      attachAtBindPose(model, chest, anchor, new Vector3(0, m.minY + 0.81 * m.height, m.backZ - 0.01 * m.height));
+      attachAtBindPose(model, chest, anchor, new Vector3(m.centerX, m.minY + 0.81 * m.height, m.backZ - 0.01 * m.height));
       capePivot = new Object3D();
       const capeMesh = new Mesh(capeGeometry, capeMat);
       capeMesh.castShadow = true;
@@ -104,7 +104,7 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       const red = new MeshStandardMaterial({ color: 0xc0182a, roughness: 0.5 });
       ownedMaterials.push(gold, red);
       const emblem = new Object3D();
-      attachAtBindPose(model, chest, emblem, new Vector3(0, m.minY + 0.745 * m.height, m.chestFrontZ));
+      attachAtBindPose(model, chest, emblem, new Vector3(m.centerX, m.minY + 0.745 * m.height, m.chestFrontZ));
       const s = m.height / 1.9;
       const outer = new Mesh(diamondGeometry(0.075 * s), gold);
       const inner = new Mesh(diamondGeometry(0.045 * s), red);
@@ -113,7 +113,7 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       emblem.add(outer, inner);
     }
 
-    return { model, scale, minY: m.minY, capePivot, ownedMaterials, ownedGeometries };
+    return { model, scale, minY: m.minY, centerX: m.centerX, capePivot, ownedMaterials, ownedGeometries };
   }, [gltf, def]);
 
   useEffect(
@@ -194,7 +194,11 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
 
   return (
     <group ref={facing}>
-      <group rotation-y={def.yawOffset} scale={built.scale} position-y={-built.minY * built.scale}>
+      <group
+        rotation-y={def.yawOffset}
+        scale={built.scale}
+        position={[-built.centerX * built.scale, -built.minY * built.scale, 0]}
+      >
         <primitive object={built.model} />
       </group>
     </group>

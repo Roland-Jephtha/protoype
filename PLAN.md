@@ -5,7 +5,7 @@ _Last updated: 2026-10-23_
 ## Update 2026-10-23 (post Phase 1)
 
 - Rigged, animated hero: Quaternius CC0 mannequin styled as a super-suit + cape (replaces primitive placeholder, which remains the fallback).
-- Optional Hatch Superman (CC BY) slot: auto-used when downloaded to `public/models/hatch-superman/`.
+- Hatch Superman (CC BY 4.0, nitwit.friends) integrated as the main hero: textured, Mixamo walk/run/fall clips, cape attached; 372 KB after processing. Quaternius mannequin is the fallback.
 - Phones always landscape: fullscreen + orientation lock, CSS rotation fallback, touch remapped.
 - Credits screen (CC BY attribution).
 - Ripped game models found in the project folder were excluded from git (see ASSET_MANIFEST.md).

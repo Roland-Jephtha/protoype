@@ -28,3 +28,6 @@ smoke-output
 # Copyrighted by their publishers; must never be committed or deployed.
 /Mobile - Injustice_ Gods Among Us - Heroes - Superman (Man Of Steel)/
 /Xbox - Superman Returns - Playable Characters - Superman/
+
+# Raw Sketchfab download (processed copy lives in public/models/hatch-superman/).
+/hatch_superman/

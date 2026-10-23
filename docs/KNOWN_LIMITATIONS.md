@@ -12,7 +12,7 @@
 
 ## Current shortcomings
 
-- **Hero**: CC0 Quaternius mannequin recoloured into a super-suit in code (vertex colours, so seams are soft; no face detail). The Hatch Superman model is supported but must be downloaded manually (Sketchfab login). The primitive placeholder shows briefly while the model loads and if it fails.
+- **Hero**: Hatch Superman has only walk/run/fall/idle clips — no jump-start or landing animation, so jumps use `Falling Idle`. Sprint reuses `Running` sped up (up to 2.4×). The primitive placeholder shows briefly while the model loads and if it fails.
 - No flight animation yet; the library's swim loops are kept as a stand-in for Phase 3.
 - City art is still a procedural greybox (box buildings, shader windows).
 - **Lighting**: areas in building shadow are quite dark; no environment map/reflections; one directional light with a ±45 m shadow area around the player.

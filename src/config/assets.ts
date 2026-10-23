@@ -58,20 +58,30 @@ export const HERO_MODELS = {
     credit: 'Universal Animation Library by Quaternius — CC0',
   },
   /**
-   * "Hatch Superman" by nitwit.friends (Sketchfab, CC BY 4.0). Optional: used
-   * automatically if the user has downloaded it to public/models/hatch-superman/.
-   * Sketchfab requires a login to download, so it can't be fetched by scripts.
+   * "Hatch Superman" by nitwit.friends (Sketchfab, CC BY 4.0), processed by
+   * scripts/prepare-hatch.mjs. Mixamo-rigged; clips: mixamo.com (idle),
+   * Walking, Running, Falling Idle, Flying, Male Dynamic Pose, strafes.
+   * No jump/land clips, so airborne uses Falling Idle.
    */
   hatch: {
     id: 'hatch',
     label: 'Hatch Superman by nitwit.friends (CC BY 4.0)',
-    url: `${base}models/hatch-superman/scene.gltf`,
+    url: `${base}models/hatch-superman/hatch-superman.glb`,
     heightMeters: 1.9,
     yawOffset: 0,
     styling: 'textured',
     addCape: true,
-    clips: COMMON_CLIPS,
-    clipSpeeds: { walk: 1.6, run: 4.2, sprint: 7.5 },
+    clips: {
+      idle: [/^mixamo\.com$/i, /idle/i, /dynamic pose/i],
+      walk: [/^walking$/i, /walk/i],
+      run: [/^running$/i, /run/i],
+      sprint: [/^running$/i, /run/i],
+      jumpStart: [/falling/i],
+      airborne: [/falling/i],
+      land: [/^mixamo\.com$/i],
+      hardLand: [/dynamic pose/i, /^mixamo\.com$/i],
+    },
+    clipSpeeds: { walk: 1.5, run: 3.8, sprint: 6.5 },
     credit: '"Hatch Superman" by nitwit.friends — https://sketchfab.com/3d-models/hatch-superman-e023b533044a4c37a8f899c9517c9804 — CC BY 4.0',
   },
 } satisfies Record<string, HeroModelDef>;

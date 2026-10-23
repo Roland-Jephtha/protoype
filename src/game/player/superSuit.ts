@@ -1,4 +1,4 @@
-import { BufferAttribute, Color, MeshStandardMaterial, Vector3, type Object3D, type SkinnedMesh } from 'three';
+import { BufferAttribute, Color, MeshStandardMaterial, Vector3, type Bone, type Object3D, type SkinnedMesh } from 'three';
 
 /**
  * Restyles an untextured humanoid mannequin into an original "super suit" by
@@ -20,6 +20,8 @@ export interface ModelMeasurements {
   /** Bind-pose height in the model's own units. */
   height: number;
   minY: number;
+  /** Body centreline (hips bone) in root space; models aren't always centred on x = 0. */
+  centerX: number;
   /** Front (max z) / back (min z) of the upper torso near the centreline. */
   chestFrontZ: number;
   backZ: number;
@@ -47,6 +49,14 @@ function skinnedMeshes(root: Object3D) {
   return out;
 }
 
+function findBone(root: Object3D, re: RegExp): Object3D | null {
+  let hit: Object3D | null = null;
+  root.traverse((o) => {
+    if (!hit && (o as Bone).isBone && re.test(o.name)) hit = o;
+  });
+  return hit;
+}
+
 /** Measures the bind pose (skinned positions at rest) in `root` space. Call with root at identity. */
 export function measureModel(root: Object3D): ModelMeasurements {
   root.updateMatrixWorld(true);
@@ -65,11 +75,14 @@ export function measureModel(root: Object3D): ModelMeasurements {
     maxY = Math.max(maxY, p.y);
   });
   const height = Math.max(maxY - minY, 1e-3);
+  let centerX = 0;
+  const hips = findBone(root, /hips|pelvis/i);
+  if (hips) centerX = hips.getWorldPosition(new Vector3()).x;
   let chestFrontZ = -Infinity;
   let backZ = Infinity;
   visit((p) => {
     const ny = (p.y - minY) / height;
-    if (Math.abs(p.x) < 0.08 * height && ny > 0.7 && ny < 0.8) {
+    if (Math.abs(p.x - centerX) < 0.08 * height && ny > 0.7 && ny < 0.8) {
       chestFrontZ = Math.max(chestFrontZ, p.z);
       backZ = Math.min(backZ, p.z);
     }
@@ -77,6 +90,7 @@ export function measureModel(root: Object3D): ModelMeasurements {
   return {
     height,
     minY,
+    centerX,
     chestFrontZ: Number.isFinite(chestFrontZ) ? chestFrontZ : 0.08 * height,
     backZ: Number.isFinite(backZ) ? backZ : -0.08 * height,
   };
