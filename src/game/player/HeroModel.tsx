@@ -1,10 +1,9 @@
 import { useGLTF } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import {
   AnimationMixer,
   BufferGeometry,
-  DoubleSide,
   Float32BufferAttribute,
   LoopOnce,
   LoopRepeat,
@@ -22,10 +21,40 @@ import {
 } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { HeroAnim, HeroModelDef } from '../../config/assets';
-import { createCapeGeometry, updateCape, type CapeState } from './cape';
+import { useApp } from '../../state/appStore';
+import { canonicalBoneName, MIXAMO_FROM_UAL } from './boneNames';
+import { ClothCape, type CapsuleCollider } from './clothCape';
 import type { GroundMotor } from './groundMovement';
 import { LOCOMOTION, LOOPING, resolveClips, roleForState } from './heroAnimation';
 import { applySuperSuit, measureModel } from './superSuit';
+
+/** Finds a bone by canonical name across rigs (Mixamo or Quaternius naming). */
+function boneByCanon(root: Object3D, names: string[]): Object3D | undefined {
+  let hit: Object3D | undefined;
+  root.traverse((o) => {
+    if (!hit && (o as Bone).isBone && names.includes(canonicalBoneName(o.name))) hit = o;
+  });
+  return hit;
+}
+
+/** Capsules approximating the back, head and legs, sized from the character height. */
+function bodyColliders(root: Object3D, H: number): CapsuleCollider[] {
+  const b = (mixamo: string) => boneByCanon(root, [mixamo, MIXAMO_FROM_UAL[mixamo]]);
+  const out: CapsuleCollider[] = [];
+  const cap = (a: string, z: string | null, radius: number) => {
+    const A = b(a);
+    const B = z ? b(z) : undefined;
+    if (A && (B || !z)) out.push({ a: A, b: B, radius: radius * H });
+  };
+  cap('Hips', 'Spine2', 0.075);
+  cap('Spine2', 'Neck', 0.08);
+  cap('Head', null, 0.065);
+  for (const s of ['Left', 'Right']) {
+    cap(`${s}UpLeg`, `${s}Leg`, 0.05);
+    cap(`${s}Leg`, `${s}Foot`, 0.04);
+  }
+  return out;
+}
 
 /** Finds the upper-spine/chest bone used to anchor the cape and emblem. */
 function findChestBone(root: Object3D): Bone | null {
@@ -84,19 +113,15 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     });
 
     const chest = findChestBone(model);
-    let capePivot: Object3D | null = null;
-    const capeGeometry = def.addCape ? createCapeGeometry(0.62 * m.height, 0.25 * m.height, 0.42 * m.height) : null;
-    if (capeGeometry) ownedGeometries.push(capeGeometry);
-    if (chest && capeGeometry) {
-      const capeMat = new MeshStandardMaterial({ color: 0xb01826, roughness: 0.75, side: DoubleSide });
-      ownedMaterials.push(capeMat);
-      const anchor = new Object3D();
-      attachAtBindPose(model, chest, anchor, new Vector3(m.centerX, m.minY + 0.81 * m.height, m.backZ - 0.01 * m.height));
-      capePivot = new Object3D();
-      const capeMesh = new Mesh(capeGeometry, capeMat);
-      capeMesh.castShadow = true;
-      capePivot.add(capeMesh);
-      anchor.add(capePivot);
+    let cape: ClothCape | null = null;
+    let capeAnchor: Object3D | null = null;
+    if (chest && def.addCape) {
+      // Cloth cape pinned across the shoulders, colliding with torso/head/legs.
+      capeAnchor = new Object3D();
+      attachAtBindPose(model, chest, capeAnchor, new Vector3(m.centerX, m.minY + 0.81 * m.height, m.backZ - 0.01 * m.height));
+      const H = def.heightMeters;
+      cape = new ClothCape({ length: 0.6 * H, topWidth: 0.22 * H, hemWidth: 0.4 * H, localPerMeter: 1 / scale });
+      cape.setColliders(bodyColliders(model, H));
     }
     if (chest && def.styling === 'superSuit') {
       // Generic diamond chest emblem (original shape, not a licensed logo).
@@ -113,16 +138,29 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       emblem.add(outer, inner);
     }
 
-    return { model, scale, minY: m.minY, centerX: m.centerX, capePivot, ownedMaterials, ownedGeometries };
+    return { model, scale, minY: m.minY, centerX: m.centerX, cape, capeAnchor, ownedMaterials, ownedGeometries };
   }, [gltf, def]);
 
   useEffect(
     () => () => {
       built.ownedMaterials.forEach((mat) => mat.dispose());
       built.ownedGeometries.forEach((g) => g.dispose());
+      built.cape?.dispose();
     },
     [built],
   );
+
+  // The cloth lives in world space, so its mesh is a direct child of the scene.
+  const scene = useThree((s) => s.scene);
+  useEffect(() => {
+    const mesh = built.cape?.mesh;
+    if (!mesh) return;
+    scene.add(mesh);
+    return () => {
+      scene.remove(mesh);
+    };
+  }, [scene, built]);
+  const stillAir = useMemo(() => new Vector3(), []);
 
   const anim = useMemo(() => {
     const mixer = new AnimationMixer(built.model);
@@ -146,7 +184,6 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     [anim, built],
   );
 
-  const cape = useRef<CapeState>({ lift: 0.1, phase: 0 });
   const currentRole = useRef<HeroAnim | null>(null);
   // Three.js objects are mutated per frame by design; keep them behind a ref.
   const animRef = useRef(anim);
@@ -189,7 +226,11 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     else next?.setEffectiveTimeScale(1);
 
     anim.mixer.update(dt);
-    if (built.capePivot) updateCape(built.capePivot, motor, cape.current, dt);
+    if (built.cape && built.capeAnchor && facing.current && !useApp.getState().paused) {
+      // Bones were just posed by the mixer; refresh world matrices before sampling them.
+      facing.current.updateWorldMatrix(true, true);
+      built.cape.update(built.capeAnchor, dt, stillAir, 2 + hSpeed * 1.4);
+    }
   });
 
   return (

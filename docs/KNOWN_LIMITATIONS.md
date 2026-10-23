@@ -13,6 +13,7 @@
 ## Current shortcomings
 
 - **Hero**: Hatch Superman has only walk/run/fall/idle clips — no jump-start or landing animation, so jumps use `Falling Idle`. Sprint reuses `Running` sped up (up to 2.4×). The primitive placeholder shows briefly while the model loads and if it fails.
+- **Cape**: Verlet cloth (8×12 particles) pinned to the chest bone, with capsule colliders for back, head and legs. Arms aren't colliders, so a hand can pass through the cape edge; very fast turns can briefly clip it. No wind yet (still air + speed flutter).
 - No flight animation yet; the library's swim loops are kept as a stand-in for Phase 3.
 - City art is still a procedural greybox (box buildings, shader windows).
 - **Lighting**: areas in building shadow are quite dark; no environment map/reflections; one directional light with a ±45 m shadow area around the player.
