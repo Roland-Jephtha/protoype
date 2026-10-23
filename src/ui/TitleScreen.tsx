@@ -1,0 +1,54 @@
+import { useState } from 'react';
+import { useApp } from '../state/appStore';
+import { ControlsReference } from './ControlsReference';
+import { SettingsPanel } from './SettingsPanel';
+
+type View = 'main' | 'settings' | 'controls';
+
+/**
+ * Phase 1 title screen. Only lists options that work today; Continue / Load /
+ * New Game / Cinematics / Credits arrive with saves (Phase 7) and the story
+ * slice (Phase 8).
+ */
+export function TitleScreen() {
+  const [view, setView] = useState<View>('main');
+  const startGame = useApp((s) => s.startGame);
+
+  return (
+    <div className="title-screen">
+      <div className="title-skyline" aria-hidden="true" />
+      <div className="title-vignette" aria-hidden="true" />
+      {view === 'main' && (
+        <div className="title-content">
+          <p className="title-kicker">Project Krypton</p>
+          <h1 className="title-logo">
+            Shadow over <span>Metropolis</span>
+          </h1>
+          <p className="title-build">Prototype · Phase 1 — playable foundation</p>
+          <nav className="menu-list title-menu">
+            <button type="button" className="menu-btn primary" onClick={startGame} autoFocus>
+              Free roam
+            </button>
+            <button type="button" className="menu-btn" onClick={() => setView('settings')}>
+              Settings
+            </button>
+            <button type="button" className="menu-btn" onClick={() => setView('controls')}>
+              Controls
+            </button>
+          </nav>
+          <p className="title-legal">Non-commercial fan prototype. Not affiliated with or endorsed by DC or Warner Bros.</p>
+        </div>
+      )}
+      {view === 'settings' && (
+        <div className="title-panel-wrap">
+          <SettingsPanel onBack={() => setView('main')} />
+        </div>
+      )}
+      {view === 'controls' && (
+        <div className="title-panel-wrap">
+          <ControlsReference onBack={() => setView('main')} />
+        </div>
+      )}
+    </div>
+  );
+}
