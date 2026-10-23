@@ -54,6 +54,31 @@ button {
   outline-offset: 3px;
 }
 
+/* --------------------------------------------------------------- app frame */
+
+.app-frame {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/*
+ * Phone held upright: rotate the whole frame 90° clockwise so the game is
+ * always landscape. The frame is sized to the swapped viewport; fixed-position
+ * children are contained by the transformed frame.
+ */
+.app-frame.rotated {
+  inset: auto;
+  top: 0;
+  left: 0;
+  width: 100vh;
+  height: 100vw;
+  width: 100dvh;
+  height: 100dvw;
+  transform-origin: top left;
+  transform: rotate(90deg) translateY(-100%);
+}
+
 /* ---------------------------------------------------------------- game root */
 
 .game-root {
@@ -364,6 +389,15 @@ input[type='range']::-moz-range-thumb {
   font-size: 12px;
   color: var(--c-text-dim);
   line-height: 1.5;
+}
+
+.credits-list {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  color: var(--c-text-dim);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 /* ---------------------------------------------------------------- controls */

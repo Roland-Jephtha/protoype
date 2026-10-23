@@ -73,6 +73,7 @@ export function SettingsPanel({ onBack }: { onBack: () => void }) {
         <Slider k="stickDeadZone" label="Stick dead zone" min={0} max={0.5} step={0.01} format={pct} />
         <Slider k="touchControlOpacity" label="Control opacity" min={0.2} max={1} step={0.05} format={pct} />
         <Slider k="touchControlScale" label="Control size" min={0.75} max={1.4} step={0.05} format={pct} />
+        <Toggle k="forceLandscape" label="Always landscape on phones" />
 
         <h3 className="settings-group">Graphics & accessibility</h3>
         <Choice

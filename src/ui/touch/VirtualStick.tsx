@@ -3,6 +3,7 @@ import { TOUCH } from '../../config/controls';
 import { input } from '../../input/InputManager';
 import { stickDebug } from '../../input/stickDebug';
 import { applyRadialDeadZone, pointerOffsetToStick } from '../../input/stickMath';
+import { screenDeltaToGame } from '../orientation';
 import { useSettings } from '../../state/settings';
 
 
@@ -26,7 +27,9 @@ export function VirtualStick({ scale }: { scale: number }) {
     const rect = base.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-    const s = pointerOffsetToStick(clientX - cx, clientY - cy, radius);
+    // Offsets are measured in screen space; map into the (possibly rotated) game frame.
+    const d = screenDeltaToGame(clientX - cx, clientY - cy);
+    const s = pointerOffsetToStick(d.x, d.y, radius);
     const { stickDeadZone } = useSettings.getState();
     const out = applyRadialDeadZone(s.rawX, s.rawY, stickDeadZone, TOUCH.defaultResponseExponent);
     input.setMove('touch', out.x, out.y);

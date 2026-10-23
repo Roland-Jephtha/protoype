@@ -14,6 +14,8 @@ export interface Settings {
   touchControls: 'auto' | 'on' | 'off';
   touchControlOpacity: number;
   touchControlScale: number;
+  /** Phones: always present the game horizontally (rotate if held upright). */
+  forceLandscape: boolean;
   graphicsQuality: GraphicsQuality;
   reducedMotion: boolean;
   showDebug: boolean;
@@ -38,6 +40,7 @@ export function defaultSettings(): Settings {
     touchControls: 'auto',
     touchControlOpacity: 0.75,
     touchControlScale: 1,
+    forceLandscape: true,
     graphicsQuality: 'medium',
     reducedMotion: typeof window !== 'undefined' && prefersReducedMotion(),
     showDebug: false,
@@ -69,6 +72,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     touchControls: oneOf('touchControls', ['auto', 'on', 'off'] as const),
     touchControlOpacity: num('touchControlOpacity', 0.2, 1),
     touchControlScale: num('touchControlScale', 0.75, 1.4),
+    forceLandscape: bool('forceLandscape'),
     graphicsQuality: oneOf('graphicsQuality', ['low', 'medium', 'high'] as const),
     reducedMotion: bool('reducedMotion'),
     showDebug: bool('showDebug'),

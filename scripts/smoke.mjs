@@ -80,6 +80,7 @@ const state = (page) =>
       draws: r.drawCalls,
       move: k.input.getMove(),
       held: k.input.debugSnapshot().held,
+      hero: r.heroModel,
     };
   });
 
@@ -109,6 +110,13 @@ async function desktopRun(browser) {
   await page.getByRole('button', { name: 'Free roam' }).click();
   const s0 = await waitForReady(page);
   check('world loads and player is grounded', !!s0?.ready && !!s0?.grounded, s0 ? `pos y=${s0.pos.y.toFixed(2)}` : 'no state');
+  // The rigged GLB hero streams in after the world; give it a moment.
+  let hero = s0?.hero;
+  for (let i = 0; i < 40 && hero !== 'ual' && hero !== 'hatch'; i++) {
+    await sleep(250);
+    hero = (await state(page)).hero;
+  }
+  check('rigged hero model loaded (not the placeholder)', hero === 'ual' || hero === 'hatch', `hero=${hero}`);
   await sleep(800);
   await page.screenshot({ path: path.join(OUT, '02-game.png') });
 
@@ -292,6 +300,39 @@ async function touchRun(browser) {
   await context.close();
 }
 
+async function portraitRun(browser) {
+  // Phone held upright: the app must present the game in landscape.
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  const cdp = await context.newCDPSession(page);
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Free roam' }).tap();
+  const s0 = await waitForReady(page);
+  check('portrait: world loads', !!s0?.ready);
+  await sleep(1500);
+  const frame = await page.evaluate(() => {
+    const f = document.querySelector('.app-frame');
+    const c = document.querySelector('canvas');
+    return { rotated: f?.classList.contains('rotated'), w: c?.clientWidth, h: c?.clientHeight };
+  });
+  check('portrait: frame rotated to landscape', !!frame.rotated && frame.w > frame.h, `canvas ${frame.w}x${frame.h}`);
+  await page.screenshot({ path: path.join(OUT, '07-portrait-rotated.png') });
+
+  // In the rotated frame "forward" on the stick is toward the screen's right edge.
+  const stick = await page.locator('.touch-stick').boundingBox();
+  const c = { x: stick.x + stick.width / 2, y: stick.y + stick.height / 2 };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y, id: 1 }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: c.x + 80, y: c.y, id: 1 }] });
+  await sleep(150);
+  const fwd = await state(page);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  check('portrait: stick maps to game-forward in rotated frame', fwd.move.y > 0.8 && Math.abs(fwd.move.x) < 0.2, `move ${fwd.move.x.toFixed(2)},${fwd.move.y.toFixed(2)}`);
+  check('no page errors (portrait)', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await context.close();
+}
+
 const server = process.env.SMOKE_URL ? null : await startServer();
 const browser = await chromium.launch({
   executablePath,
@@ -305,6 +346,7 @@ const browser = await chromium.launch({
 try {
   await desktopRun(browser);
   await touchRun(browser);
+  await portraitRun(browser);
 } catch (e) {
   check('smoke run completed without exceptions', false, e.message);
 } finally {

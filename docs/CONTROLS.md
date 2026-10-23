@@ -20,7 +20,13 @@ Only controls that work today are listed as active. Bindings live in
 
 Losing focus, hiding the tab, or losing pointer lock pauses the game and releases all keys.
 
-## Touch (landscape-first)
+## Touch (landscape only)
+
+The game is always horizontal on phones. On Play it requests fullscreen + a
+landscape lock (works on Android Chrome). Where that isn't possible (iOS Safari)
+and the phone is held upright, the whole game is rotated 90° in CSS — just turn
+the phone sideways. Toggle: Settings → *Always landscape on phones*.
+
 
 | Control | Action | Status |
 |---|---|---|

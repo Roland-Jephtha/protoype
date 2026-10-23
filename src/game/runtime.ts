@@ -15,6 +15,8 @@ export const runtime = {
   playerPosition: new Vector3(),
   playerVelocity: new Vector3(),
   playerState: 'idle' as PlayerMoveState,
+  /** Which hero visual is active: a HERO_MODELS id or 'placeholder'. */
+  heroModel: 'placeholder' as string,
   grounded: true,
   /** Camera yaw (rad). Movement input is interpreted relative to this. */
   cameraYaw: 0,

@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, type RefObject } from 'react';
-import { DoubleSide, MeshStandardMaterial, PlaneGeometry, type Group } from 'three';
+import { DoubleSide, MeshStandardMaterial, type Group } from 'three';
+import { createCapeGeometry } from './cape';
 import type { GroundMotor } from './groundMovement';
 
 /**
@@ -34,22 +35,7 @@ export function PlaceholderHero({ motor }: { motor: GroundMotor }) {
   );
   useEffect(() => () => Object.values(mats).forEach((m) => m.dispose()), [mats]);
 
-  // Cape: narrow at the shoulders, flared and gently curved at the hem.
-  const capeGeometry = useMemo(() => {
-    const g = new PlaneGeometry(1, 1.2, 6, 8);
-    const pos = g.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const y = pos.getY(i); // +0.6 (top) .. -0.6 (hem)
-      const t = (0.6 - y) / 1.2; // 0 at shoulders, 1 at hem
-      const width = 0.36 + 0.34 * t;
-      pos.setX(i, x * width);
-      // Wrap around the back; deeper folds toward the hem.
-      pos.setZ(i, -Math.pow(Math.abs(x) * 2, 2) * (0.05 + 0.08 * t) + Math.sin(x * 18) * 0.012 * t);
-    }
-    g.computeVertexNormals();
-    return g;
-  }, []);
+  const capeGeometry = useMemo(() => createCapeGeometry(), []);
   useEffect(() => () => capeGeometry.dispose(), [capeGeometry]);
 
   useFrame((_, rawDt) => {
@@ -179,7 +165,7 @@ export function PlaceholderHero({ motor }: { motor: GroundMotor }) {
 
         {/* Cape (pivot across the shoulders, hangs behind) */}
         <group ref={cape} position={[0, 1.5, -0.17]}>
-          <mesh position={[0, -0.6, 0]} geometry={capeGeometry} material={mats.cape} castShadow />
+          <mesh geometry={capeGeometry} material={mats.cape} castShadow />
         </group>
       </group>
     </group>

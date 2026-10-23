@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { CAMERA } from '../../config/gameConfig';
 import { input } from '../../input/InputManager';
 import { useSettings } from '../../state/settings';
+import { screenDeltaToGame } from '../orientation';
 
 /**
  * Right-side camera drag area. Sits *under* the action buttons, so a touch
@@ -35,8 +36,7 @@ export function LookPad() {
       }}
       onPointerMove={(e) => {
         if (e.pointerId !== activeId.current) return;
-        const dx = e.clientX - last.current.x;
-        const dy = e.clientY - last.current.y;
+        const { x: dx, y: dy } = screenDeltaToGame(e.clientX - last.current.x, e.clientY - last.current.y);
         last.current = { x: e.clientX, y: e.clientY };
         const k = CAMERA.touchSensitivity * useSettings.getState().touchLookSensitivity;
         input.addLook(dx * k, -dy * k);

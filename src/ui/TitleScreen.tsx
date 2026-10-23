@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useApp } from '../state/appStore';
+import { tryLockLandscape } from './orientation';
 import { ControlsReference } from './ControlsReference';
+import { CreditsPanel } from './CreditsPanel';
 import { SettingsPanel } from './SettingsPanel';
 
-type View = 'main' | 'settings' | 'controls';
+type View = 'main' | 'settings' | 'controls' | 'credits';
 
 /**
  * Phase 1 title screen. Only lists options that work today; Continue / Load /
@@ -13,6 +15,13 @@ type View = 'main' | 'settings' | 'controls';
 export function TitleScreen() {
   const [view, setView] = useState<View>('main');
   const startGame = useApp((s) => s.startGame);
+  const touchDetected = useApp((s) => s.touchDetected);
+
+  const play = () => {
+    // Phones: fullscreen + landscape lock where supported (must run in the tap gesture).
+    if (touchDetected || window.matchMedia('(pointer: coarse)').matches) void tryLockLandscape();
+    startGame();
+  };
 
   return (
     <div className="title-screen">
@@ -26,7 +35,7 @@ export function TitleScreen() {
           </h1>
           <p className="title-build">Prototype · Phase 1 — playable foundation</p>
           <nav className="menu-list title-menu">
-            <button type="button" className="menu-btn primary" onClick={startGame} autoFocus>
+            <button type="button" className="menu-btn primary" onClick={play} autoFocus>
               Free roam
             </button>
             <button type="button" className="menu-btn" onClick={() => setView('settings')}>
@@ -35,6 +44,9 @@ export function TitleScreen() {
             <button type="button" className="menu-btn" onClick={() => setView('controls')}>
               Controls
             </button>
+            <button type="button" className="menu-btn" onClick={() => setView('credits')}>
+              Credits
+            </button>
           </nav>
           <p className="title-legal">Non-commercial fan prototype. Not affiliated with or endorsed by DC or Warner Bros.</p>
         </div>
@@ -42,6 +54,11 @@ export function TitleScreen() {
       {view === 'settings' && (
         <div className="title-panel-wrap">
           <SettingsPanel onBack={() => setView('main')} />
+        </div>
+      )}
+      {view === 'credits' && (
+        <div className="title-panel-wrap">
+          <CreditsPanel onBack={() => setView('main')} />
         </div>
       )}
       {view === 'controls' && (

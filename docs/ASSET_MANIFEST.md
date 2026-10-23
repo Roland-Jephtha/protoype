@@ -3,9 +3,39 @@
 Every third-party file must be listed here **before** it is committed: name, creator,
 source URL, download date, license, attribution, modifications, path, use.
 
-## Current assets (Phase 1)
+## Third-party assets in the repo
 
-**No third-party assets are used.** Everything visible is generated in code:
+| Asset | Creator | Source | Downloaded | Licence | Attribution | Modifications | Path | Use |
+|---|---|---|---|---|---|---|---|---|
+| Universal Animation Library [Standard] — "Mannequin" rig + 18 of 46 clips | Quaternius | https://opengameart.org/content/universal-animation-library (file `universal_animation_librarystandard.zip`, Godot glb) | 2026-10-23 | CC0 1.0 | Not required (credited anyway) | Kept 18 clips, resampled, meshopt-compressed via `scripts/prepare-hero.mjs`; recoloured at runtime into an original super-suit (vertex colours by bone), procedural cape + generic diamond emblem attached to the spine bone | `public/models/hero-ual.glb` (2.6 MB) | Main hero (default) |
+
+Verified: loads in three.js (smoke test check "rigged hero model loaded"), 1 skin / 53 joints, scaled to 1.9 m, faces +Z, animations play (idle, walk, jog, sprint, jump start/loop/land, crouch).
+Regenerate: `node scripts/prepare-hero.mjs "<unzipped>/Godot/AnimationLibrary_Godot_Standard.glb"`.
+
+## Optional: "Hatch Superman" (user-downloaded)
+
+| Field | Value |
+|---|---|
+| Asset | "Hatch Superman" (rigged, 8 animations, ~3k vertices) |
+| Creator | nitwit.friends (HatchXR) |
+| URL | https://sketchfab.com/3d-models/hatch-superman-e023b533044a4c37a8f899c9517c9804 |
+| Licence | CC BY 4.0 — "Author must be credited. Commercial use is allowed." (checked via Sketchfab API 2026-10-23) |
+| Attribution | Shown on the in-game Credits screen (from `src/config/assets.ts`) |
+| Status | **Not downloaded** — Sketchfab requires a logged-in account, so it can't be fetched by script |
+
+To install: log in to Sketchfab → open the URL → Download 3D Model → **glTF** → unzip so
+that `public/models/hatch-superman/scene.gltf` exists (with its `scene.bin` and
+`textures/`). The game picks it up automatically (it's first in `HERO_MODEL_PRIORITY`)
+and falls back to the Quaternius hero if it's missing or fails. Note: it has no cape,
+so the procedural cape is attached; animation clip names are matched by pattern and
+may need tuning in `src/config/assets.ts` once the file is inspected.
+
+Other Sketchfab "Superman" uploads were reviewed and **rejected** because they appear
+to be re-uploaded game rips under licences the uploader can't grant: "Superman |
+MultiVersus" (King_45), "Injustice 2 | DCEU collection" (kanimator), and 3dworldz's
+"Superman Man of Steel" / "Superman (Textured)(Rigged)" (match commercial game skins).
+
+## Original (code-generated) assets
 
 | Asset | Type | Source | License | Path |
 |---|---|---|---|---|

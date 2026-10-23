@@ -15,7 +15,7 @@ import { input } from '../../input/InputManager';
 import { useApp } from '../../state/appStore';
 import { runtime } from '../runtime';
 import { GroundMotor } from './groundMovement';
-import { PlaceholderHero } from './PlaceholderHero';
+import { HeroVisual } from './HeroVisual';
 
 const SPAWN_FACING = Math.PI; // facing -Z, toward the landmark tower
 
@@ -127,7 +127,7 @@ export function Player() {
     <RigidBody ref={body} type="kinematicPosition" colliders={false} position={PLAYER.spawn}>
       <CapsuleCollider ref={collider} args={[PLAYER.capsuleHalfHeight, PLAYER.capsuleRadius]} />
       <group ref={visual} position={[0, feetOffset, 0]}>
-        <PlaceholderHero motor={motor} />
+        <HeroVisual motor={motor} />
       </group>
     </RigidBody>
   );

@@ -10,9 +10,9 @@ Test categories are kept separate and reported honestly:
 |---|---|---|
 | `npm run typecheck` | tsc over src + tests | ✅ pass |
 | `npm run lint` | oxlint | ✅ 0 warnings, 0 errors |
-| `npm run test` | 42 vitest unit tests: stick math, input manager (latching, multi-source, release), ground motor (accel/decel, jump height, variable jump, coyote, buffer, hard landing, wall bleed, facing), settings sanitization/corruption, city layout (determinism, no overlaps, spawn clear), camera math | ✅ 42/42 |
+| `npm run test` | 48 vitest unit tests (42 + 6 hero/orientation): stick math, input manager (latching, multi-source, release), ground motor (accel/decel, jump height, variable jump, coyote, buffer, hard landing, wall bleed, facing), settings sanitization/corruption, city layout (determinism, no overlaps, spawn clear), camera math | ✅ 48/48 |
 | `npm run build` | production build | ✅ pass (chunk-size warning for game chunk, expected) |
-| `npm run smoke` | 27 browser checks on the production build in headless Chrome (desktop + touch emulation via CDP) | ✅ 27/27 |
+| `npm run smoke` | 32 browser checks on the production build in headless Chrome (desktop + touch emulation + portrait phone via CDP) | ✅ 32/32 (2026-10-23, after hero/landscape update) |
 
 Smoke checks: title renders · world loads, player grounded · W moves forward · run
 speed · decelerates · jump +2.25 m · lands · pause opens · sim frozen while paused ·

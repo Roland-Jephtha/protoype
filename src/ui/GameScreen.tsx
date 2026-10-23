@@ -20,6 +20,7 @@ export function GameScreen() {
   const resume = useApp((s) => s.resume);
   const showDebug = useSettings((s) => s.showDebug);
   const touchUi = useTouchControlsVisible();
+  const forceLandscape = useSettings((s) => s.forceLandscape);
 
   useEffect(() => {
     if (!rootRef.current) return;
@@ -57,7 +58,7 @@ export function GameScreen() {
       )}
       {ready && !paused && <Hud touchUi={touchUi} />}
       {ready && !paused && touchUi && <TouchControls />}
-      {ready && touchUi && <OrientationPrompt />}
+      {ready && touchUi && !forceLandscape && <OrientationPrompt />}
       {paused && <PauseMenu onResume={onResume} />}
       {showDebug && <DebugOverlay />}
     </div>

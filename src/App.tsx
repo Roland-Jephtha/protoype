@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { useApp } from './state/appStore';
+import { useForcedLandscape } from './ui/orientation';
 import { TitleScreen } from './ui/TitleScreen';
 
 // The game chunk (three.js, Rapier WASM, world) loads only when play starts,
@@ -23,6 +24,7 @@ function GameLoading() {
 export default function App() {
   const screen = useApp((s) => s.screen);
   const setTouchDetected = useApp((s) => s.setTouchDetected);
+  const rotated = useForcedLandscape();
 
   useEffect(() => {
     const onPointer = (e: PointerEvent) => {
@@ -38,11 +40,16 @@ export default function App() {
     };
   }, [setTouchDetected]);
 
-  return screen === 'game' ? (
-    <Suspense fallback={<GameLoading />}>
-      <GameScreen />
-    </Suspense>
-  ) : (
-    <TitleScreen />
+  // On phones held upright the whole frame is rotated so the game stays horizontal.
+  return (
+    <div className={`app-frame${rotated ? ' rotated' : ''}`}>
+      {screen === 'game' ? (
+        <Suspense fallback={<GameLoading />}>
+          <GameScreen />
+        </Suspense>
+      ) : (
+        <TitleScreen />
+      )}
+    </div>
   );
 }

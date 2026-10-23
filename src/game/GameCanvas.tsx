@@ -92,6 +92,9 @@ export function GameCanvas({ onReady }: { onReady: () => void }) {
       key={quality}
       shadows={preset.shadows ? 'soft' : false}
       dpr={[1, preset.maxDpr]}
+      // Layout (offset) size, not the visual bounding box: stays correct when the
+      // app frame is CSS-rotated into landscape on phones.
+      resize={{ offsetSize: true }}
       gl={{ antialias: quality !== 'low', powerPreference: 'high-performance' }}
       camera={{ fov: CAMERA.fov, near: CAMERA.near, far: CAMERA.far, position: [PLAYER.spawn[0], 4, PLAYER.spawn[2] + 6] }}
     >
