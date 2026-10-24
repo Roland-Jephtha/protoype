@@ -8,6 +8,8 @@ export function PauseMenu({ onResume }: { onResume: () => void }) {
   const view = useApp((s) => s.pauseView);
   const setView = useApp((s) => s.setPauseView);
   const restart = useApp((s) => s.restartCheckpoint);
+  const mode = useApp((s) => s.mode);
+  const restartMission = useApp((s) => s.restartMission);
   const toTitle = useApp((s) => s.returnToTitle);
 
   return (
@@ -22,6 +24,11 @@ export function PauseMenu({ onResume }: { onResume: () => void }) {
             <button type="button" className="menu-btn" onClick={restart}>
               Restart checkpoint
             </button>
+            {mode === 'story' && (
+              <button type="button" className="menu-btn" onClick={restartMission}>
+                Restart mission
+              </button>
+            )}
             <button type="button" className="menu-btn" onClick={() => setView('travel')}>
               Travel
             </button>

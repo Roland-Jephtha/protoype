@@ -8,6 +8,7 @@ import { useApp } from '../state/appStore';
 import { useSettings } from '../state/settings';
 import { DebugOverlay } from './DebugOverlay';
 import { Hud } from './Hud';
+import { MissionBriefing, MissionComplete } from './MissionScreens';
 import { OrientationPrompt } from './OrientationPrompt';
 import { PauseMenu } from './PauseMenu';
 import { TouchControls } from './touch/TouchControls';
@@ -20,6 +21,7 @@ export function GameScreen() {
   const pendingRegion = useApp((s) => s.pendingRegion);
   const regionId = useApp((s) => s.regionId);
   const paused = useApp((s) => s.paused);
+  const missionPhase = useApp((s) => s.missionPhase);
   const resume = useApp((s) => s.resume);
   const showDebug = useSettings((s) => s.showDebug);
   const touchUi = useTouchControlsVisible();
@@ -66,8 +68,10 @@ export function GameScreen() {
           <p>{pendingRegion ? `Travelling to ${loadingName}…` : `Loading ${loadingName}…`}</p>
         </div>
       )}
-      {ready && !paused && <Hud touchUi={touchUi} />}
-      {ready && !paused && touchUi && <TouchControls />}
+      {ready && !paused && missionPhase !== 'briefing' && missionPhase !== 'complete' && <Hud touchUi={touchUi} />}
+      {ready && !paused && missionPhase !== 'briefing' && missionPhase !== 'complete' && touchUi && <TouchControls />}
+      {ready && !paused && missionPhase === 'briefing' && <MissionBriefing />}
+      {ready && !paused && missionPhase === 'complete' && <MissionComplete />}
       {ready && touchUi && !forceLandscape && <OrientationPrompt />}
       {paused && <PauseMenu onResume={onResume} />}
       {showDebug && <DebugOverlay />}

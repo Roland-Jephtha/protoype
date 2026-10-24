@@ -20,6 +20,7 @@ export function TouchControls() {
   const scale = useSettings((s) => s.touchControlScale);
   const pause = useApp((s) => s.pause);
   const flying = useApp((s) => s.flying);
+  const interactPrompt = useApp((s) => s.interactPrompt);
 
   useEffect(() => () => input.releaseSource('touch'), []);
 
@@ -29,6 +30,11 @@ export function TouchControls() {
       <div className="touch-left">
         <VirtualStick scale={scale} />
       </div>
+      {interactPrompt && (
+        <div className="touch-interact">
+          <TouchButton action="interact" label={interactPrompt.split(' · ')[0]} icon="✋" size={76 * scale} className="btn-interact" />
+        </div>
+      )}
       <div className="touch-right">
         {flying && <TouchButton action="descend" label="Down" icon="▼" size={60 * scale} className="btn-down" />}
         <TouchButton action="sprint" label={flying ? 'Boost' : 'Sprint'} icon="»" size={64 * scale} className="btn-sprint" />

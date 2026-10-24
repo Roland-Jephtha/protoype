@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { REGIONS, type Side } from '../config/regions';
 import { runtime } from '../game/runtime';
 import { useApp } from '../state/appStore';
+import { MissionHud } from './MissionScreens';
 
 const STATE_LABEL: Record<string, string> = {
   idle: 'Standing',
@@ -33,6 +34,7 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
   const edgeRef = useRef<HTMLDivElement>(null);
   const pointerLocked = useApp((s) => s.pointerLocked);
   const regionId = useApp((s) => s.regionId);
+  const mode = useApp((s) => s.mode);
   const region = REGIONS[regionId];
 
   useEffect(() => {
@@ -65,10 +67,14 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
 
   return (
     <div className="hud">
-      <div className="hud-objective">
-        <span className="hud-kicker">Free roam · {region.name}</span>
-        <span className="hud-objective-text">{region.description}</span>
-      </div>
+      {mode === 'story' ? (
+        <MissionHud touchUi={touchUi} />
+      ) : (
+        <div className="hud-objective">
+          <span className="hud-kicker">Free roam · {region.name}</span>
+          <span className="hud-objective-text">{region.description}</span>
+        </div>
+      )}
       <div ref={edgeRef} className="hud-edge" style={{ display: 'none' }} />
       <div className={`hud-speed ${touchUi ? 'touch' : ''}`}>
         <span ref={speedRef} className="hud-speed-value">0</span>

@@ -124,7 +124,8 @@ function ReadySignal() {
 export function GameCanvas() {
   const quality = useSettings((s) => s.graphicsQuality);
   const preset = GRAPHICS_PRESETS[quality];
-  const paused = useApp((s) => s.paused);
+  // The briefing and the mission-complete screen freeze the world like the pause menu.
+  const paused = useApp((s) => s.paused || s.missionPhase === 'briefing' || s.missionPhase === 'complete');
   const regionId = useApp((s) => s.regionId);
   const region = REGIONS[regionId];
   const look = region.look;

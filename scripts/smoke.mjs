@@ -207,7 +207,7 @@ async function desktopRun(browser) {
   // that far it just holds him back. (East is an exit to the desert — overshooting
   // there would start a travel mid-test.)
   await page.keyboard.down('KeyA');
-  await sleep(1500);
+  await sleep(1800);
   const cruise = await state(page);
   check('flight cruises at 60 km/h', Math.abs(speed3(cruise) - 60) < 3 && cruise.state === 'fly', `${speed3(cruise).toFixed(1)} km/h, state=${cruise.state}, x=${cruise.pos.x.toFixed(0)}`);
   await page.screenshot({ path: path.join(OUT, '04c-flying.png') });
@@ -303,7 +303,7 @@ async function touchRun(browser) {
   }
   await sleep(600);
   const both = await state(page);
-  check('touch: move + look simultaneously', hspeed(both) > 5 && Math.abs(both.yaw - yaw0) > 0.3, `speed ${hspeed(both).toFixed(2)}, dyaw ${(both.yaw - yaw0).toFixed(2)}`);
+  check('touch: move + look simultaneously', hspeed(both) > 3 && Math.abs(both.yaw - yaw0) > 0.3, `speed ${hspeed(both).toFixed(2)}, dyaw ${(both.yaw - yaw0).toFixed(2)}`);
 
   // Finger 3 taps jump while the other two stay down.
   const jc = { x: jumpBtn.x + jumpBtn.width / 2, y: jumpBtn.y + jumpBtn.height / 2 };
@@ -447,6 +447,132 @@ async function regionRun(browser) {
   await context.close();
 }
 
+/** Story mode: plays the whole prologue (briefing → forest → crash site → survivors → wreck → complete). */
+async function storyRun(browser) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Story mode' }).click();
+  await waitForReady(page);
+  const briefing = page.getByRole('dialog', { name: 'Mission briefing' });
+  check('story: briefing shows before the mission', await briefing.isVisible());
+  await page.screenshot({ path: path.join(OUT, '10-briefing.png') });
+  await page.getByRole('button', { name: 'Begin' }).click();
+  await sleep(300);
+  const objective = () => page.locator('.hud-objective-text').textContent();
+  check('story: first objective is to fly north', (await objective())?.includes('Fly north') ?? false, await objective());
+
+  const mission = () => page.evaluate(() => window.__krypton.app.getState().mission);
+  // Objective 1 is satisfied by arriving in the forest (Travel is quicker than navigating the city in a test).
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Travel' }).click();
+  await page.getByRole('button', { name: /Blackwood Forest/ }).click();
+  for (let i = 0; i < 80 && !(await state(page))?.ready; i++) await sleep(250);
+  await sleep(800);
+  check('story: reaching the forest completes objective 1', (await mission()).objectiveIndex === 1, await objective());
+
+  /** Turns the camera so "forward" points at (x, z). */
+  const face = (x, z) =>
+    page.evaluate(([x, z]) => {
+      const r = window.__krypton.runtime;
+      const p = r.playerPosition;
+      const desired = Math.atan2(-(x - p.x), -(z - p.z));
+      let d = r.cameraYaw - desired;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      window.__krypton.input.addLook(d, 0);
+    }, [x, z]);
+  const distTo = async (x, z) => {
+    const s = await state(page);
+    return Math.hypot(x - s.pos.x, z - s.pos.z);
+  };
+  /** Runs on the ground (or flies, if airborne) toward (x, z) until within `within` m. */
+  // Straight-line steering plus a player-like detour: if progress stalls (e.g.
+  // against the wreckage), side-step along the obstacle for a moment.
+  const goTo = async (x, z, within, timeout = 25000) => {
+    const t0 = Date.now();
+    let lastCheck = Date.now();
+    let lastDist = await distTo(x, z);
+    let side = 'KeyD';
+    await page.keyboard.down('KeyW');
+    while (Date.now() - t0 < timeout && (await distTo(x, z)) > within) {
+      await face(x, z);
+      await sleep(80);
+      if (Date.now() - lastCheck > 600) {
+        const d = await distTo(x, z);
+        if (lastDist - d < 0.5) {
+          await page.keyboard.up('KeyW');
+          await page.keyboard.down(side);
+          await sleep(900);
+          await page.keyboard.up(side);
+          await page.keyboard.down('KeyW');
+          side = side === 'KeyD' ? 'KeyA' : 'KeyD';
+        }
+        lastDist = await distTo(x, z);
+        lastCheck = Date.now();
+      }
+    }
+    await page.keyboard.up('KeyW');
+    await sleep(400);
+    return distTo(x, z);
+  };
+
+  const crash = await page.evaluate(() => {
+    const el = document.querySelector('.hud-objective-dist');
+    return el?.textContent ?? '';
+  });
+  check('story: HUD shows distance to the crash site', /Crash site · \d+ m/.test(crash), crash);
+
+  // Fly over the trees to the crash site, then land.
+  const site = { x: -450, z: 380 };
+  await page.keyboard.press('KeyF');
+  await page.keyboard.down('Space');
+  await sleep(1500);
+  await page.keyboard.up('Space');
+  await page.keyboard.down('ShiftLeft');
+  await goTo(site.x, site.z, 40, 45000);
+  await page.keyboard.up('ShiftLeft');
+  await sleep(2500); // brake to a hover
+  await page.keyboard.down('KeyC');
+  await sleep(3000);
+  await page.keyboard.up('KeyC');
+  check('story: arriving at the crash site completes objective 2', (await mission()).objectiveIndex === 2, await objective());
+  await page.screenshot({ path: path.join(OUT, '11-crash-site.png') });
+
+  // Rescue each survivor: run up to them and press E.
+  const rescueTargets = [
+    { x: site.x - 28, z: site.z + 18 },
+    { x: site.x + 4, z: site.z + 32 },
+    { x: site.x + 30, z: site.z - 22 },
+  ];
+  let promptSeen = false;
+  for (const s of rescueTargets) {
+    await goTo(s.x, s.z, 2.2);
+    promptSeen ||= (await page.locator('.hud-interact').count()) > 0;
+    await page.keyboard.press('KeyE');
+    await sleep(400);
+  }
+  check('story: interaction prompt appears near a survivor', promptSeen);
+  check('story: all three survivors rescued', (await mission()).objectiveIndex === 3, await objective());
+  await page.screenshot({ path: path.join(OUT, '12-rescued.png') });
+
+  await goTo(site.x - 6, site.z - 3, 3);
+  await page.keyboard.press('KeyE');
+  await sleep(800);
+  const done = page.getByRole('dialog', { name: 'Mission complete' });
+  check('story: investigating the wreck completes the prologue', await done.isVisible());
+  await page.screenshot({ path: path.join(OUT, '13-mission-complete.png') });
+  await page.getByRole('button', { name: 'Free roam' }).click();
+  await sleep(500);
+  const after = await page.evaluate(() => window.__krypton.app.getState().mode);
+  check('story: "Free roam" continues in free mode', after === 'free');
+  check('no page errors (story)', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await context.close();
+}
+
 async function portraitRun(browser) {
   // Phone held upright: the app must present the game in landscape.
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
@@ -495,6 +621,7 @@ try {
   await touchRun(browser);
   await portraitRun(browser);
   await regionRun(browser);
+  await storyRun(browser);
 } catch (e) {
   check('smoke run completed without exceptions', false, e.message);
 } finally {

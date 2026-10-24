@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useApp } from '../state/appStore';
+import { loadCompletedMissions } from '../missions/storyProgress';
+import { useApp, type GameMode } from '../state/appStore';
 import { tryLockLandscape } from './orientation';
 import { ControlsReference } from './ControlsReference';
 import { CreditsPanel } from './CreditsPanel';
@@ -17,10 +18,11 @@ export function TitleScreen() {
   const startGame = useApp((s) => s.startGame);
   const touchDetected = useApp((s) => s.touchDetected);
 
-  const play = () => {
+  const prologueDone = loadCompletedMissions().includes('prologue');
+  const play = (mode: GameMode) => {
     // Phones: fullscreen + landscape lock where supported (must run in the tap gesture).
     if (touchDetected || window.matchMedia('(pointer: coarse)').matches) void tryLockLandscape();
-    startGame();
+    startGame(mode);
   };
 
   return (
@@ -33,10 +35,15 @@ export function TitleScreen() {
           <h1 className="title-logo">
             Shadow over <span>Metropolis</span>
           </h1>
-          <p className="title-build">Prototype · Phase 1 — playable foundation</p>
+          <p className="title-build">Prototype · city, desert, forest · story mode prologue</p>
           <nav className="menu-list title-menu">
-            <button type="button" className="menu-btn primary" onClick={play} autoFocus>
+            <button type="button" className="menu-btn primary" onClick={() => play('story')} autoFocus>
+              Story mode
+              <span className="menu-sub">{prologueDone ? 'Prologue complete ✓ — replay' : 'Prologue: The Night the Lights Went Out'}</span>
+            </button>
+            <button type="button" className="menu-btn" onClick={() => play('free')}>
               Free roam
+              <span className="menu-sub">City, desert and forest — no objectives</span>
             </button>
             <button type="button" className="menu-btn" onClick={() => setView('settings')}>
               Settings

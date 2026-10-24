@@ -657,6 +657,96 @@ input[type='range']::-moz-range-thumb {
   font-weight: 400;
 }
 
+.menu-sub {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  opacity: 0.8;
+}
+
+.title-menu .menu-btn {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.mission-overlay {
+  background: radial-gradient(ellipse at center, rgba(8, 12, 20, 0.7), rgba(4, 6, 10, 0.92));
+}
+
+.mission-panel {
+  width: min(620px, 100%);
+}
+
+.mission-title {
+  margin: 4px 0 16px;
+  font-family: var(--font-display);
+  font-size: clamp(24px, 4vw, 36px);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mission-first {
+  margin: 4px 0 0;
+  color: var(--c-accent-2);
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+.hud-objective-dist {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--c-accent-2);
+  text-transform: uppercase;
+}
+
+.hud-interact {
+  position: absolute;
+  left: 50%;
+  bottom: calc(34% + var(--safe-b));
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 3px;
+  background: rgba(5, 8, 14, 0.75);
+  border: 1px solid rgba(242, 193, 78, 0.8);
+  color: #fff;
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hud-toast {
+  position: absolute;
+  left: 50%;
+  top: calc(18% + var(--safe-t));
+  transform: translateX(-50%);
+  max-width: min(560px, 86vw);
+  padding: 10px 18px;
+  border-left: 3px solid var(--c-accent-2);
+  background: rgba(5, 8, 14, 0.75);
+  color: #fff;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-align: center;
+  animation: panel-in 0.2s ease-out;
+}
+
+.touch-interact {
+  position: absolute;
+  right: calc(220px + var(--safe-r));
+  bottom: calc(150px + var(--safe-b));
+}
+
+.btn-interact {
+  border-color: rgba(242, 193, 78, 0.95);
+  background: rgba(242, 193, 78, 0.3);
+}
+
 .hud-edge {
   position: absolute;
   top: calc(14px + var(--safe-t));
