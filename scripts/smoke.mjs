@@ -479,6 +479,32 @@ async function lifeRun(browser) {
   check('city: pedestrians walk the sidewalks', peds > 5, `${peds} walking`);
   check('city: dogs and cats are out', animals >= 6, `${animals} animals`);
 
+  // Lifting: stand in a lane until a car stops in front, lift it, throw it.
+  await page.evaluate(() => window.__krypton.app.getState().travelTo('metropolis', { at: { x: 31.5, z: 60, facing: Math.PI } }));
+  await sleep(500);
+  for (let i = 0; i < 200; i++) {
+    if (await page.evaluate(() => window.__krypton.ready)) break;
+    await sleep(250);
+  }
+  let liftPrompt = null;
+  for (let i = 0; i < 80 && !liftPrompt; i++) {
+    liftPrompt = await page.evaluate(() => window.__krypton.app.getState().liftPrompt);
+    await sleep(250);
+  }
+  await page.evaluate(() => {
+    window.__krypton.input.setButton('keyboard', 'interact', true);
+    window.__krypton.input.setButton('keyboard', 'interact', false);
+  });
+  await sleep(500);
+  const carrying = await page.evaluate(() => window.__krypton.runtime.carrying?.type ?? null);
+  check('lifting: E lifts a car from traffic', !!liftPrompt && !!carrying, `prompt=${liftPrompt}, carrying=${carrying}`);
+  await page.evaluate(() => {
+    window.__krypton.input.setButton('mouse', 'attack', true);
+    window.__krypton.input.setButton('mouse', 'attack', false);
+  });
+  await sleep(400);
+  check('lifting: click throws it', (await page.evaluate(() => window.__krypton.runtime.carrying)) === null);
+
   // Forest: arrive beside the railway, behind the train's front, then fly alongside and pass it.
   await page.evaluate(() => window.__krypton.app.getState().travelTo('forest', { at: { x: -340, z: 552, facing: Math.PI / 2 } }));
   for (let i = 0; i < 240; i++) {
@@ -639,6 +665,11 @@ async function villainRun(browser) {
   check('skills: freeze breath blows and uses solar energy', breathing === 'freeze' && (await page.evaluate(() => window.__krypton.runtime.combat.solar)) < solar0 + 2, `breath=${breathing}`);
   await sleep(2500);
   const before = await rt();
+  // Test setup: full health and energy, so Doomsday knocking the hero out mid-charge can't cancel it.
+  await page.evaluate(() => {
+    const c = window.__krypton.runtime.combat;
+    c.reset();
+  });
   await btn('nova', true);
   await sleep(1500);
   await btn('nova', false);

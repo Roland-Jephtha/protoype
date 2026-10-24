@@ -85,3 +85,16 @@ describe('offsetPath', () => {
     expect(offsetPath([[0, 0], [10, 0]], 3)[0][1]).toBeCloseTo(3);
   });
 });
+
+describe('vehicles taken off the road', () => {
+  it('stand still and are ignored until they come back', () => {
+    const lead: Vehicle = { ...car(20, 0), out: 2 };
+    const follower = car(0, 14);
+    simulate([lead, follower], [straight()], 1.5, far);
+    expect(lead.s).toBe(20);
+    expect(follower.s).toBeGreaterThan(20); // drove through where the taken car stood
+    simulate([lead, follower], [straight()], 1, far);
+    expect(lead.out).toBe(0);
+    expect(lead.speed).toBeGreaterThan(0);
+  });
+});

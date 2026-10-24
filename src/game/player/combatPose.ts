@@ -15,6 +15,8 @@ function findBone(root: Object3D, mixamo: string, aliases?: BoneAliases): Object
 
 /** Torso twist at full punch extension (rad). */
 const PUNCH_TWIST = 0.3;
+/** Forward lean of the torso at full punch extension (rad). */
+const PUNCH_LEAN = 0.38;
 
 /** Punch arm extension over the punch (0..1 progress): snap out, hold, pull back. */
 export function punchWeight(progress: number) {
@@ -83,9 +85,13 @@ export class CombatPose {
     const w = punchWeight(progress);
     const arm = this.arms[side];
     if (w <= 0 || !arm.upper || !arm.fore || !arm.hand) return;
-    // Drive the punching shoulder forward: twist the torso about the body's up axis.
+    // Drive the punching shoulder forward (torso twist) and lean the whole body into the blow.
     if (this.spine) {
       this.q.full.setFromAxisAngle(this.v.up.set(0, 1, 0), (side === 'right' ? -PUNCH_TWIST : PUNCH_TWIST) * w);
+      this.rotateWorld(this.spine, this.q.full);
+      // Lateral axis = up × forward; a positive turn about it tips the chest forward.
+      this.v.dir.crossVectors(this.v.up, forward).normalize();
+      this.q.full.setFromAxisAngle(this.v.dir, PUNCH_LEAN * w);
       this.rotateWorld(this.spine, this.q.full);
     }
     // Fist target: in front of the chest, at shoulder height, slightly toward the centre line.
@@ -94,6 +100,19 @@ export class CombatPose {
     target.y -= 0.03 * height;
     this.aim(arm.upper, arm.fore, target, w);
     this.aim(arm.fore, arm.hand, target, w);
+  }
+
+  /** Both arms raised overhead (holding something up), blended by `weight`. */
+  applyLift(forward: Vector3, height: number, weight: number) {
+    for (const side of ['left', 'right'] as const) {
+      const arm = this.arms[side];
+      if (!arm.upper || !arm.fore || !arm.hand) continue;
+      const shoulder = arm.upper.getWorldPosition(this.v.c);
+      const target = this.v.target.copy(shoulder).addScaledVector(forward, 0.04 * height);
+      target.y += 0.5 * height;
+      this.aim(arm.upper, arm.fore, target, weight);
+      this.aim(arm.fore, arm.hand, target, weight);
+    }
   }
 
   /** Midpoint between the eyes (world), or false if the rig has no head bone. */

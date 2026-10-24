@@ -99,6 +99,9 @@ export const CAMERA = {
   aimDistance: 3.6,
   aimShoulderOffset: 0.85,
   aimFovBoost: -10,
+  /** Carrying a vehicle overhead: look from higher and further back so it doesn't block the view (m). */
+  carryHeightBoost: 1.6,
+  carryDistanceBoost: 2.5,
   /** Camera shake: offset (m) at full intensity, and decay rate (1/s). */
   shakeAmplitude: 0.5,
   shakeDecay: 6,

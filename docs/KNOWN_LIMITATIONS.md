@@ -3,10 +3,10 @@
 ## Not built yet (by design — later phases)
 
 - Super-speed beyond 90 km/h on foot and flight beyond 150 km/h (the brief's 250/500 m/s tiers) aren't built; the test district is too small for them until streaming exists (Phase 5).
-- Combat v1: punches (combo, homing power punch), heat vision, speed dash, super breath, freeze breath and the Super Nova work against drones and villains. Skills don't affect traffic, pedestrians, animals or scenery yet (no destruction), and there's no lifting/throwing yet. The punch is a procedural arm pose (the hero rigs have no punch clip). Drones fly through buildings/terrain features (none are placed in the city for that reason).
+- Combat v1: punches (combo, homing power punch), heat vision, speed dash, super breath, freeze breath and the Super Nova work against drones and villains. Skills don't affect traffic, pedestrians, animals or scenery yet (no destruction), Lifting works on traffic vehicles only (not props, enemies or pedestrians); thrown and dropped vehicles stay as physics wrecks for 25 s, and the car returns to traffic after 40 s. Punches are procedural poses (arm, torso twist, forward lean, a push-off step), not hand-animated. The punch is a procedural arm pose (the hero rigs have no punch clip). Drones fly through buildings/terrain features (none are placed in the city for that reason).
 - Missions, saves, save slots, Continue/Load (Phase 7). Free roam only; nothing is saved except settings.
 - Intro cinematic / video player, story (Phase 8).
-- Audio of any kind (Phase 9). Settings show no audio options until it exists.
+- **No audio yet** (next milestone). Settings show no audio options until it exists.
 - District streaming (Phase 5). The test district (5×5 blocks, ~300 m square) loads at once.
 - Gamepad support and key rebinding UI (Phase 2).
 

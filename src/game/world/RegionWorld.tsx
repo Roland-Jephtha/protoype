@@ -4,6 +4,7 @@ import { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
 import { MissionDirector } from '../missions/MissionDirector';
 import { CombatDriver } from '../combat/CombatDriver';
 import { Drones } from '../combat/Drones';
+import { Lifting } from '../combat/Lifting';
 import { Villains } from '../villains/Villains';
 import { CityLife } from '../life/CityLife';
 import { TerrainLife } from '../life/TerrainLife';
@@ -39,6 +40,7 @@ export const RegionWorld = memo(function RegionWorld({ regionId }: { regionId: R
         <ThirdPersonCamera />
         <MissionDirector regionId={regionId} ground={cityGround} />
         <CombatDriver />
+        <Lifting />
       </>
     );
   }
@@ -61,6 +63,7 @@ function TerrainCombat({ regionId }: { regionId: RegionId }) {
   return (
     <>
       <CombatDriver />
+      <Lifting />
       <Drones regionId={regionId} ground={ground} />
       <Villains regionId={regionId} ground={ground} />
     </>

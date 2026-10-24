@@ -27,6 +27,8 @@ export const HERO_COMBAT = {
     /** An enemy just out of reach pulls the punch toward it: within this extra distance (m), at this speed (m/s). */
     magnetRange: 3.5,
     magnetSpeed: 9,
+    /** Every punch pushes off: a short step forward into the blow (m/s). */
+    stepSpeed: 5,
   },
 
   heat: {
@@ -107,6 +109,29 @@ export const HERO_COMBAT = {
     knockback: 52,
     lift: 16,
   },
+};
+
+/** Lifting and throwing vehicles. */
+export const LIFT = {
+  /** Reach to grab a vehicle (m) on foot / in flight. */
+  reach: 4.5,
+  flightReach: 6,
+  /** Held this far above the hero's feet (m). */
+  holdHeight: 2.9,
+  /** Throw speed along the crosshair (m/s) plus a little lift. */
+  throwSpeed: 44,
+  throwLift: 5,
+  /** A thrown vehicle hurts enemies it hits while faster than `minHitSpeed` (m/s). */
+  damage: 120,
+  knockback: 42,
+  minHitSpeed: 10,
+  /** Wrecks stay this long (s); at most `maxThrown` at once. */
+  wreckLife: 25,
+  maxThrown: 6,
+  /** A taken vehicle reappears in traffic after this long (s). */
+  respawnDelay: 40,
+  /** Rapier collider density (lower = lighter, flies further after bounces). */
+  density: 0.25,
 };
 
 /** Prometheus drones: flying, armed, original design. */

@@ -49,6 +49,8 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
   const pointerLocked = useApp((s) => s.pointerLocked);
   const regionId = useApp((s) => s.regionId);
   const mode = useApp((s) => s.mode);
+  const liftPrompt = useApp((s) => s.liftPrompt);
+  const interactPrompt = useApp((s) => s.interactPrompt);
   const region = REGIONS[regionId];
 
   useEffect(() => {
@@ -154,6 +156,11 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
         <span ref={stateRef} className="hud-speed-state" />
       </div>
       {!touchUi && !pointerLocked && <div className="hud-prompt">Click to control the camera</div>}
+      {!touchUi && liftPrompt && !interactPrompt && (
+        <div className="hud-interact">
+          {liftPrompt.startsWith('Drop') ? 'Click · Throw    E · Drop' : `E · ${liftPrompt.split(' · ')[0]}`}
+        </div>
+      )}
     </div>
   );
 }

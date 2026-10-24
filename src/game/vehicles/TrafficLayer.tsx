@@ -3,10 +3,20 @@ import { useFrame } from '@react-three/fiber';
 import { useRapier } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
 import { Color, Euler, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type BufferGeometry } from 'three';
+import { LIFT } from '../../config/combat';
 import { useApp } from '../../state/appStore';
+import { liftSources, type LiftCandidate, type LiftSource } from '../combat/liftables';
 import { runtime } from '../runtime';
 import { lightState, stepTraffic, type Lane, type Vehicle } from './traffic';
 import { VEHICLES, type VehicleType } from './vehicleGeometry';
+
+const HIDDEN = new Matrix4().makeScale(0, 0, 0);
+
+/** Takes a vehicle off the road for `seconds` (the hero lifted it). */
+function takeVehicle(v: Vehicle, seconds: number) {
+  v.out = seconds;
+  v.speed = 0;
+}
 
 export interface VehicleSetup {
   lane: number;
@@ -61,6 +71,28 @@ export function TrafficLayer({ lanes, setup, groundY, roadLift = 0 }: { lanes: L
     };
   }, [world, rapier, setup]);
 
+  // The hero can pick these vehicles up.
+  useEffect(() => {
+    const source: LiftSource = {
+      nearest: (x, y, z, maxDistance) => {
+        let best: LiftCandidate | null = null;
+        sim.vehicles.forEach((v, i) => {
+          if (v.out) return;
+          const p = lanes[v.lane].path.at(v.s);
+          const vy = groundY(p.x, p.z) + roadLift;
+          const d = Math.hypot(p.x - x, vy + 0.8 - y, p.z - z);
+          if (d <= maxDistance && (!best || d < best.distance)) best = { source, key: i, type: setup[i].type, paint: setup[i].paint, x: p.x, y: vy, z: p.z, yaw: p.angle, distance: d };
+        });
+        return best;
+      },
+      take: (key) => takeVehicle(sim.vehicles[key], LIFT.respawnDelay),
+    };
+    liftSources.add(source);
+    return () => {
+      liftSources.delete(source);
+    };
+  }, [sim, lanes, setup, groundY, roadLift]);
+
   const meshes = useRef<Partial<Record<VehicleType, InstancedMesh>>>({});
   const scratch = useMemo(() => ({ m: new Matrix4(), q: new Quaternion(), e: new Euler(), p: new Vector3(), s: new Vector3(1, 1, 1), c: new Color() }), []);
 
@@ -82,6 +114,12 @@ export function TrafficLayer({ lanes, setup, groundY, roadLift = 0 }: { lanes: L
     sim.vehicles.forEach((v, i) => {
       const type = setup[i].type;
       const spec = VEHICLES[type];
+      // Lifted or thrown by the hero: hidden here until it comes back.
+      if (v.out) {
+        meshes.current[type]?.setMatrixAt(sim.indexInType[i], HIDDEN);
+        bodies.current[i]?.setNextKinematicTranslation({ x: 0, y: -100 - i, z: 0 });
+        return;
+      }
       const pos = lanes[v.lane].path.at(v.s);
       const y = groundY(pos.x, pos.z) + roadLift;
       e.set(0, pos.angle, 0);

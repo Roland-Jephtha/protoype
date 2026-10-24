@@ -303,7 +303,8 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       ct.forward.set(0, 0, 1).applyQuaternion(ct.q);
       ct.up.set(0, 1, 0).applyQuaternion(ct.q);
       const c = runtime.combat;
-      if (c.punching) built.pose.applyPunch(c.side, c.punchTime / HERO_COMBAT.punch.duration, ct.forward, def.heightMeters);
+      if (runtime.carrying) built.pose.applyLift(ct.forward, def.heightMeters, 1);
+      else if (c.punching) built.pose.applyPunch(c.side, c.punchTime / HERO_COMBAT.punch.duration, ct.forward, def.heightMeters);
       runtime.heroEyesValid = built.pose.eyes(runtime.heroEyes, ct.forward, ct.up, def.heightMeters);
     }
 

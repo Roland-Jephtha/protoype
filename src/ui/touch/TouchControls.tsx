@@ -31,6 +31,9 @@ export function TouchControls() {
   const pause = useApp((s) => s.pause);
   const flying = useApp((s) => s.flying);
   const interactPrompt = useApp((s) => s.interactPrompt);
+  const liftPrompt = useApp((s) => s.liftPrompt);
+  const carrying = liftPrompt?.startsWith('Drop') ?? false;
+  const contextPrompt = interactPrompt ?? liftPrompt;
 
   useEffect(() => () => input.releaseSource('touch'), []);
 
@@ -40,15 +43,15 @@ export function TouchControls() {
       <div className="touch-left">
         <VirtualStick scale={scale} />
       </div>
-      {interactPrompt && (
+      {contextPrompt && (
         <div className="touch-interact">
-          <TouchButton action="interact" label={interactPrompt.split(' · ')[0]} icon="✋" size={76 * scale} className="btn-interact" />
+          <TouchButton action="interact" label={contextPrompt.split(' · ')[0]} icon="✋" size={76 * scale} className="btn-interact" />
         </div>
       )}
       <div className="touch-right">
         <div className="touch-col">
           <TouchButton action="aim" label="Heat" icon="◉" size={60 * scale} className="btn-heat" dragToLook />
-          <TouchButton action="attack" label="Punch" icon="✊" size={72 * scale} className="btn-punch" />
+          <TouchButton action="attack" label={carrying ? 'Throw' : 'Punch'} icon="✊" size={72 * scale} className="btn-punch" />
         </div>
         <div className="touch-col">
           <div className="touch-power">

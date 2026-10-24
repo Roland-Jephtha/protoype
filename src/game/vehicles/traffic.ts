@@ -50,6 +50,8 @@ export interface Vehicle {
   /** Personal cruising speed as a fraction of the lane limit. */
   temper: number;
   length: number;
+  /** Seconds until a vehicle taken by the hero (lifted, thrown) reappears; 0 = on the road. */
+  out?: number;
 }
 
 export interface TrafficContext {
@@ -81,6 +83,12 @@ export function stepTraffic(vehicles: Vehicle[], lanes: Lane[], dt: number, ctx:
   // Sort each lane's vehicles by distance so everyone knows who's ahead.
   const byLane = new Map<number, Vehicle[]>();
   for (const v of vehicles) {
+    // Taken off the road: no driving, nobody follows it, back after a while.
+    if (v.out && v.out > 0) {
+      v.out = Math.max(0, v.out - dt);
+      v.speed = 0;
+      continue;
+    }
     const list = byLane.get(v.lane);
     if (list) list.push(v);
     else byLane.set(v.lane, [v]);
@@ -129,6 +137,7 @@ export function stepTraffic(vehicles: Vehicle[], lanes: Lane[], dt: number, ctx:
     });
   }
   for (const v of vehicles) {
+    if (v.out) continue;
     const lane = lanes[v.lane];
     v.s += v.speed * dt;
     if (v.s > lane.path.length) v.s -= lane.path.length;

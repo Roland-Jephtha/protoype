@@ -45,8 +45,9 @@ export function CombatDriver() {
     const aimHeld = input.isHeld('aim');
     const events = c.step(
       {
-        attackPressed: input.consumePressed('attack'),
-        attackHeld: input.isHeld('attack'),
+        // While carrying a vehicle, punch throws it instead (handled by Lifting).
+        attackPressed: !runtime.carrying && input.consumePressed('attack'),
+        attackHeld: !runtime.carrying && input.isHeld('attack'),
         aimHeld,
         dashPressed: input.consumePressed('dash'),
         breathHeld: input.isHeld('breath'),
@@ -98,6 +99,11 @@ export function CombatDriver() {
     for (const e of events) {
       if (e.type === 'punch') {
         const t = faceNearest(reach + punch.magnetRange, punch.duration);
+        // Push off into the punch.
+        const f = facing();
+        runtime.heroImpulse.x += f.x * punch.stepSpeed;
+        runtime.heroImpulse.z += f.z * punch.stepSpeed;
+        runtime.heroControlLoss = Math.max(runtime.heroControlLoss, 0.1);
         // Just out of reach: step into the punch.
         if (t) {
           const dx = t.position.x - chest.x;

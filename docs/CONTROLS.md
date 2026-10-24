@@ -23,7 +23,8 @@ Only controls that work today are listed as active. Bindings live in
 | R (hold) | Super breath (wind) | ✅ |
 | Q (hold) | Freeze breath | ✅ |
 | X (hold, release when charged) | Super Nova | ✅ |
-| E | Interact / rescue (story mode) | ✅ |
+| E | Interact / rescue (story mode); lift a nearby vehicle; drop it | ✅ |
+| Left mouse while carrying | Throw the vehicle along the crosshair | ✅ |
 
 Losing focus, hiding the tab, or losing pointer lock pauses the game and releases all keys.
 

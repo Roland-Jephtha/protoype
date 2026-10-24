@@ -52,6 +52,8 @@ interface AppState {
   missionPhase: MissionPhase | null;
   /** Context prompt when an interaction is in range (e.g. "Help Survivor"), else null. */
   interactPrompt: string | null;
+  /** Lift / drop prompt near a car or while carrying one ("Lift car · E"). */
+  liftPrompt: string | null;
   /** Short on-screen message (objective complete, survivor safe…). */
   toast: { id: number; text: string } | null;
 
@@ -63,6 +65,7 @@ interface AppState {
   restartMission: () => void;
   continueInFreeRoam: () => void;
   setInteractPrompt: (p: string | null) => void;
+  setLiftPrompt: (p: string | null) => void;
   showToast: (text: string) => void;
   returnToTitle: () => void;
   pause: () => void;
@@ -97,6 +100,7 @@ export const useApp = create<AppState>((set, get) => ({
   mission: null,
   missionPhase: null,
   interactPrompt: null,
+  liftPrompt: null,
   toast: null,
 
   startGame: (mode = 'free') => {
@@ -142,6 +146,9 @@ export const useApp = create<AppState>((set, get) => ({
   continueInFreeRoam: () => {
     input.releaseAll();
     set({ mode: 'free', mission: null, missionPhase: null, interactPrompt: null });
+  },
+  setLiftPrompt: (liftPrompt) => {
+    if (get().liftPrompt !== liftPrompt) set({ liftPrompt });
   },
   setInteractPrompt: (interactPrompt) => {
     if (get().interactPrompt !== interactPrompt) set({ interactPrompt });

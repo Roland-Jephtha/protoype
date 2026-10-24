@@ -59,7 +59,8 @@ export function ThirdPersonCamera() {
 
     // --- follow ---------------------------------------------------------
     const goal = tmp.pivot.copy(runtime.playerRenderPosition);
-    goal.y += CAMERA.targetHeight;
+    const carrying = runtime.carrying ? 1 : 0;
+    goal.y += CAMERA.targetHeight + carrying * CAMERA.carryHeightBoost;
     if (!s.initialised) {
       s.target.copy(goal);
       s.initialised = true;
@@ -75,7 +76,7 @@ export function ThirdPersonCamera() {
       : st === 'flyBoost' ? CAMERA.boostDistance : st === 'fly' ? CAMERA.flyDistance : st === 'sprint' ? CAMERA.sprintDistance : CAMERA.distance;
     // Ease between mode distances; only real collisions may pull the camera in instantly.
     s.modeDistance += (modeDistance - s.modeDistance) * damp(CAMERA.distanceSharpness, dt);
-    const desiredDistance = s.modeDistance;
+    const desiredDistance = s.modeDistance + carrying * CAMERA.carryDistanceBoost;
     const boost = aiming ? CAMERA.aimFovBoost : st === 'flyBoost' ? CAMERA.boostFovBoost : st === 'sprint' ? CAMERA.sprintFovBoost : st === 'fly' ? CAMERA.flyFovBoost : 0;
     const fovBoost = boost * (settings.reducedMotion ? 0.3 : 1);
     s.fov += (CAMERA.fov + fovBoost - s.fov) * damp(CAMERA.fovSharpness, dt);
