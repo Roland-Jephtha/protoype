@@ -17,7 +17,7 @@ import { createNoise2D, distanceToPath, type PathDef } from './terrainNoise';
  */
 
 /** Strips UVs, adds a flat vertex colour, and moves the geometry. */
-function part(g: BufferGeometry, color: ColorRepresentation, x = 0, y = 0, z = 0): BufferGeometry {
+export function part(g: BufferGeometry, color: ColorRepresentation, x = 0, y = 0, z = 0): BufferGeometry {
   const geo = g.index ? g.toNonIndexed() : g;
   geo.deleteAttribute('uv');
   geo.translate(x, y, z);
@@ -29,7 +29,7 @@ function part(g: BufferGeometry, color: ColorRepresentation, x = 0, y = 0, z = 0
   return geo;
 }
 
-function merged(parts: BufferGeometry[]): BufferGeometry {
+export function merged(parts: BufferGeometry[]): BufferGeometry {
   const g = mergeGeometries(parts, false);
   if (!g) throw new Error('mergeGeometries failed');
   parts.forEach((p) => p.dispose());

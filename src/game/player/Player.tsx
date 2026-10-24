@@ -50,7 +50,7 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
   // once per mount, and the camera is aimed to match before it first renders.
   const [spawn] = useState<Spawn>(() => {
     const arrival = useApp.getState().arrival;
-    const entry = (arrival?.side && region.entries[arrival.side]) || region.spawn;
+    const entry = arrival?.at ?? ((arrival?.side && region.entries[arrival.side]) || region.spawn);
     const groundY = ground ? ground(entry.x, entry.z) + CAPSULE_REST_HEIGHT + 0.2 : PLAYER.spawn[1];
     const flying = !!arrival?.flying;
     const y = groundY + (flying ? ARRIVE_FLYING_ALTITUDE : 0);

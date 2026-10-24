@@ -127,6 +127,7 @@ export function GameCanvas() {
   // The briefing and the mission-complete screen freeze the world like the pause menu.
   const paused = useApp((s) => s.paused || s.missionPhase === 'briefing' || s.missionPhase === 'complete');
   const regionId = useApp((s) => s.regionId);
+  const travelCount = useApp((s) => s.travelCount);
   const region = REGIONS[regionId];
   const look = region.look;
   // Cities fog by the quality preset; open regions see further, scaled by quality.
@@ -152,7 +153,7 @@ export function GameCanvas() {
       <Lighting look={look} shadows={preset.shadows} mapSize={preset.shadowMapSize} />
       <Suspense fallback={null}>
         {/* Keyed by region: travelling disposes the old world, colliders and player entirely. */}
-        <Physics key={regionId} timeStep={PHYSICS.timeStep} paused={paused} updatePriority={-50} gravity={[0, -PHYSICS.gravity, 0]}>
+        <Physics key={`${regionId}:${travelCount}`} timeStep={PHYSICS.timeStep} paused={paused} updatePriority={-50} gravity={[0, -PHYSICS.gravity, 0]}>
           <RegionWorld regionId={regionId} />
           <ReadySignal />
         </Physics>

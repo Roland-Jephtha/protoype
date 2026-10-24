@@ -2,6 +2,9 @@ import { memo, useEffect, useMemo } from 'react';
 import { REGIONS, type RegionId, type TerrainRegion } from '../../config/regions';
 import { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
 import { MissionDirector } from '../missions/MissionDirector';
+import { CityLife } from '../life/CityLife';
+import { TerrainLife } from '../life/TerrainLife';
+import { CityTraffic } from '../vehicles/CityTraffic';
 import { Player } from '../player/Player';
 import { runtime } from '../runtime';
 import { generateCityLayout } from './cityLayout';
@@ -27,6 +30,8 @@ export const RegionWorld = memo(function RegionWorld({ regionId }: { regionId: R
     return (
       <>
         <TestDistrict />
+        <CityTraffic />
+        <CityLife />
         <Player region={region} half={cityHalf} />
         <ThirdPersonCamera />
         <MissionDirector regionId={regionId} ground={cityGround} />
@@ -36,6 +41,7 @@ export const RegionWorld = memo(function RegionWorld({ regionId }: { regionId: R
   return (
     <Terrain region={region}>
       {region.terrain.kind === 'desert' ? <DesertContent /> : <ForestContent />}
+      <TerrainLife />
       <TerrainPlayer region={region} />
       <ThirdPersonCamera />
       <TerrainMissions regionId={regionId} />

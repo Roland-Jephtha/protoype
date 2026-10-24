@@ -447,6 +447,71 @@ async function regionRun(browser) {
   await context.close();
 }
 
+/** Life: traffic and lights, pedestrians and animals in the city, wildlife and the train race in the forest. */
+async function lifeRun(browser) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Free roam' }).click();
+  await waitForReady(page);
+  const rt = () => page.evaluate(() => {
+    const r = window.__krypton.runtime;
+    return { region: r.regionId, moving: r.trafficMoving, stopped: r.trafficStopped, animals: r.animalsMounted, peds: r.pedestriansWalking, train: r.trainFront, toast: window.__krypton.app.getState().toast?.text ?? '', ready: window.__krypton.ready };
+  });
+
+  // City: over a full light cycle, traffic both flows and queues at red lights.
+  let maxMoving = 0;
+  let maxStopped = 0;
+  let peds = 0;
+  let animals = 0;
+  for (let i = 0; i < 40; i++) {
+    await sleep(500);
+    const s = await rt();
+    maxMoving = Math.max(maxMoving, s.moving);
+    maxStopped = Math.max(maxStopped, s.stopped);
+    peds = Math.max(peds, s.peds);
+    animals = Math.max(animals, s.animals);
+  }
+  check('city: traffic drives and stops at red lights', maxMoving > 10 && maxStopped > 3, `max moving ${maxMoving}, max stopped ${maxStopped}`);
+  check('city: pedestrians walk the sidewalks', peds > 5, `${peds} walking`);
+  check('city: dogs and cats are out', animals >= 6, `${animals} animals`);
+
+  // Forest: arrive beside the railway, behind the train's front, then fly alongside and pass it.
+  await page.evaluate(() => window.__krypton.app.getState().travelTo('forest', { at: { x: -340, z: 552, facing: Math.PI / 2 } }));
+  for (let i = 0; i < 240; i++) {
+    const s = await rt();
+    if (s.region === 'forest' && s.ready) break;
+    await sleep(250);
+  }
+  const a = await rt();
+  await sleep(1000);
+  const b = await rt();
+  check('forest: the freight train is running', b.train - a.train > 15, `moved ${(b.train - a.train).toFixed(1)} m in ~1 s`);
+  check('forest: wildlife is present', b.animals >= 10, `${b.animals} animals`);
+  await page.keyboard.press('KeyF');
+  await page.keyboard.down('Space');
+  await sleep(2500);
+  await page.keyboard.up('Space');
+  await page.keyboard.down('ShiftLeft');
+  await page.keyboard.down('KeyW');
+  const toasts = new Set();
+  for (let i = 0; i < 60; i++) {
+    await sleep(250);
+    toasts.add((await rt()).toast);
+    if (toasts.has('You beat the train!')) break;
+  }
+  await page.keyboard.up('KeyW');
+  await page.keyboard.up('ShiftLeft');
+  check('forest: racing the train is announced and can be won', [...toasts].some((t) => t.startsWith('Racing the freight train')) && toasts.has('You beat the train!'), [...toasts].filter(Boolean).join(' / '));
+  await page.screenshot({ path: path.join(OUT, '12-train-race.png') });
+
+  check('no page errors (life)', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await context.close();
+}
+
 /** Story mode: plays the whole prologue (briefing → forest → crash site → survivors → wreck → complete). */
 async function storyRun(browser) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
@@ -639,6 +704,7 @@ try {
   await touchRun(browser);
   await portraitRun(browser);
   await regionRun(browser);
+  await lifeRun(browser);
   await storyRun(browser);
 } catch (e) {
   check('smoke run completed without exceptions', false, e.message);

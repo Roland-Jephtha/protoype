@@ -8,6 +8,7 @@ source URL, download date, license, attribution, modifications, path, use.
 | Asset | Creator | Source | Downloaded | Licence | Attribution | Modifications | Path | Use |
 |---|---|---|---|---|---|---|---|---|
 | Universal Animation Library [Standard] — "Mannequin" rig + 18 of 46 clips | Quaternius | https://opengameart.org/content/universal-animation-library (file `universal_animation_librarystandard.zip`, Godot glb) | 2026-10-23 | CC0 1.0 | Not required (credited anyway) | Kept 18 clips, resampled, meshopt-compressed via `scripts/prepare-hero.mjs`; recoloured at runtime into an original super-suit (vertex colours by bone), procedural cape + generic diamond emblem attached to the spine bone | `public/models/hero-ual.glb` (2.6 MB) | Main hero (default) |
+| Animated Animals pack — wolf, dog, cat, eagle, piranha (FBX, each with walk/fly/swim + idle clips) | Quaternius | https://opengameart.org/content/animated-animales-low-poly | 2026-10-24 | CC0 1.0 | Not required (credited anyway) | None to the files; at runtime: draw groups merged per material, recoloured by material name (the pack's materials are untextured white), scaled from the animated pose, per-model yaw fix | `public/models/animals/*.fbx` (2.2 MB total) | Wildlife (wolves, coyotes = tinted wolf, eagles, piranhas) and city dogs/cats |
 
 Verified: loads in three.js (smoke test check "rigged hero model loaded"), 1 skin / 53 joints, scaled to 1.9 m, faces +Z, animations play (idle, walk, jog, sprint, jump start/loop/land, crouch).
 Regenerate: `node scripts/prepare-hero.mjs "<unzipped>/Godot/AnimationLibrary_Godot_Standard.glb"`.
@@ -36,7 +37,7 @@ MultiVersus" (King_45), "Injustice 2 | DCEU collection" (kanimator), and 3dworld
 
 ## Original (code-generated) assets
 
-Regions (Milestone 1) use no third-party files: terrain (seeded noise), rocks, cacti, scrub, conifer/broadleaf trees (procedural low-poly with vertex colours, `src/game/world/propGeometries.ts`), the highway, rail line, river surface, dam, ranger tower, cabins, crash-site wreckage and the Prometheus base are all generated in code. Downloaded CC0 nature kits (Kenney/Quaternius) are a planned upgrade.
+Regions (Milestone 1) use no third-party files: terrain (seeded noise), rocks, cacti, scrub, conifer/broadleaf trees (procedural low-poly with vertex colours, `src/game/world/propGeometries.ts`), the highway, rail line, river surface, dam, ranger tower, cabins, crash-site wreckage and the Prometheus base are all generated in code. So are the vehicles (sedan, taxi, van, pickup, bus, semi — `src/game/vehicles/vehicleGeometry.ts`), traffic lights, the forest road and the freight train (`src/game/vehicles/Train.tsx`). City pedestrians reuse the CC0 Quaternius mannequin above with per-person outfit colours. Downloaded CC0 nature kits (Kenney/Quaternius) are a planned upgrade.
 
 | Asset | Type | Source | License | Path |
 |---|---|---|---|---|

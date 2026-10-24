@@ -9,6 +9,8 @@ import { bushGeometry, cactusGeometry, nearPath, pointsAlong, ribbonGeometry, ro
 import { useTerrain } from '../terrainContext';
 import type { DesertParams } from '../terrainNoise';
 import { useStaticColliders } from '../useStaticColliders';
+import { spawnVehicles, twoWayRoad } from '../../vehicles/roadTraffic';
+import { TrafficLayer } from '../../vehicles/TrafficLayer';
 
 /**
  * Red Mesa Desert dressing: rocks, cacti, scrub, the desert highway with
@@ -119,6 +121,19 @@ function Highway() {
     return { posts, arms };
   }, [p, t]);
 
+  // Highway traffic: cars, pickups and semis at highway speed.
+  const lanes = useMemo(() => twoWayRoad(p.highway.points, 24, 'highway'), [p]);
+  const vehicles = useMemo(
+    () =>
+      spawnVehicles(lanes, 6, [
+        ['sedan', 45],
+        ['pickup', 25],
+        ['semi', 20],
+        ['van', 10],
+      ], 313),
+    [lanes],
+  );
+
   useStaticColliders(
     (rapier) =>
       pylons.posts.map((b) => rapier.ColliderDesc.cuboid(b.size[0] / 2, b.size[1] / 2, b.size[2] / 2).setTranslation(...b.position)),
@@ -131,6 +146,7 @@ function Highway() {
       <InstancedBoxes items={dashes} material={materials.marking} castShadow={false} />
       <InstancedBoxes items={pylons.posts} material={materials.steel} />
       <InstancedBoxes items={pylons.arms} material={materials.steel} />
+      <TrafficLayer lanes={lanes} setup={vehicles} groundY={t.ground} roadLift={0.18} />
     </group>
   );
 }

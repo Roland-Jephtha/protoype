@@ -35,6 +35,17 @@ export const runtime = {
   cameraPitch: 0,
   cameraDistance: 0,
   cameraPosition: new Vector3(),
+  /** Shared clock for traffic lights (s). */
+  trafficTime: 0,
+  /** Vehicles of the last-updated traffic layer that are moving / standing (smoke test). */
+  trafficMoving: 0,
+  trafficStopped: 0,
+  /** Ambient life currently mounted (diagnostics/smoke test). */
+  animalsMounted: 0,
+  pedestriansWalking: 0,
+  /** Forest freight train: front distance along the line (m) and locomotive position. */
+  trainFront: 0,
+  trainPosition: new Vector3(),
   /** Total fixed physics steps taken (diagnostics: steps per rendered frame). */
   physicsSteps: 0,
   fps: 0,

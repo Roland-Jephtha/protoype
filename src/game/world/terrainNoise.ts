@@ -140,6 +140,8 @@ export interface ForestParams {
   hillScale: number;
   river: PathDef & { width: number; depth: number };
   rail: PathDef & { width: number };
+  /** Two-lane forest road from the city arrival westward. */
+  road: PathDef & { width: number };
   flats: FlatArea[];
 }
 
@@ -202,6 +204,7 @@ export function createHeightFunction(params: TerrainParams): (x: number, z: numb
       const k = 1 - smoothstep(params.river.width / 2, params.river.width / 2 + 14, r.distance);
       h = h + (bed - h) * k;
       h = flattenAlong(h, params.rail, x, z, natural);
+      h = flattenAlong(h, params.road, x, z, natural);
     }
     for (const f of params.flats) {
       const d = Math.hypot(x - f.x, z - f.z);

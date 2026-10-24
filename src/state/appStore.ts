@@ -17,6 +17,8 @@ export interface Arrival {
   side?: Side;
   /** Arrive in flight (crossed the edge while flying). */
   flying?: boolean;
+  /** Exact arrival point (mission starts, tests); overrides `side`. */
+  at?: { x: number; z: number; facing: number };
 }
 
 /**
@@ -42,6 +44,8 @@ interface AppState {
   /** False from the start of a load/travel until the region's world has mounted. */
   regionReady: boolean;
   arrival: Arrival | null;
+  /** Bumped on every travel, so travelling within the current region still remounts it. */
+  travelCount: number;
 
   mode: GameMode;
   mission: MissionState | null;
@@ -88,6 +92,7 @@ export const useApp = create<AppState>((set, get) => ({
   pendingRegion: null,
   regionReady: false,
   arrival: null,
+  travelCount: 0,
   mode: 'free',
   mission: null,
   missionPhase: null,
@@ -172,7 +177,7 @@ export const useApp = create<AppState>((set, get) => ({
     if (get().pendingRegion) return; // already travelling
     input.releaseAll();
     set({ pendingRegion: id, regionReady: false, paused: false, pauseView: 'main' });
-    setTimeout(() => set({ regionId: id, pendingRegion: null, arrival, flying: false }), TRAVEL_PAINT_DELAY_MS);
+    setTimeout(() => set((s) => ({ regionId: id, pendingRegion: null, arrival, flying: false, travelCount: s.travelCount + 1 })), TRAVEL_PAINT_DELAY_MS);
   },
   setRegionReady: () => {
     if (!get().regionReady && !get().pendingRegion) set({ regionReady: true });

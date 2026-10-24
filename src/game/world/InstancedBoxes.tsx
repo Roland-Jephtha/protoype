@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
 import { BoxGeometry, Color, InstancedMesh, Matrix4, Quaternion, Vector3, type Material } from 'three';
 
 export interface BoxInstance {
@@ -21,13 +21,19 @@ export function InstancedBoxes({
   material,
   castShadow = true,
   receiveShadow = true,
+  meshRef,
 }: {
   items: BoxInstance[];
   material: Material;
   castShadow?: boolean;
   receiveShadow?: boolean;
+  /** Optional handle to the instanced mesh (e.g. to recolour instances later). */
+  meshRef?: MutableRefObject<InstancedMesh | null>;
 }) {
   const ref = useRef<InstancedMesh>(null);
+  useLayoutEffect(() => {
+    if (meshRef) meshRef.current = ref.current;
+  });
   const hasColors = useMemo(() => items.some((i) => i.color !== undefined), [items]);
 
   useLayoutEffect(() => {

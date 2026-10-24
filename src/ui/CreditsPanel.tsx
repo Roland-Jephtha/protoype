@@ -14,6 +14,10 @@ export function CreditsPanel({ onBack }: { onBack: () => void }) {
             <li key={m.id}>{m.credit}</li>
           ))}
         </ul>
+        <h3 className="settings-group">Wildlife</h3>
+        <ul className="credits-list">
+          <li>Animated animals (wolf, dog, cat, eagle, piranha) by Quaternius — CC0</li>
+        </ul>
         <h3 className="settings-group">Software</h3>
         <p className="panel-text">three.js, React Three Fiber, Drei, Rapier, React, Vite (MIT / Apache-2.0).</p>
         <p className="settings-note">

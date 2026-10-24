@@ -184,6 +184,20 @@ export const REGIONS: Record<RegionId, RegionDef> = {
         ],
         width: 10,
       },
+      // Stays south of the railway (no level crossing), from the city arrival to the west edge.
+      road: {
+        points: [
+          [60, 1200],
+          [45, 1080],
+          [-20, 980],
+          [-130, 915],
+          [-350, 860],
+          [-700, 800],
+          [-1000, 760],
+          [-1200, 740],
+        ],
+        width: 14,
+      },
       flats: [
         { x: 0, z: 1050, radius: 40, falloff: 40 }, // arrival from the city
         { x: -450, z: 380, radius: 70, falloff: 40 }, // crash site (prologue)

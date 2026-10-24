@@ -9,6 +9,9 @@ import { broadleafGeometry, coniferGeometry, nearPath, pointsAlong, ribbonGeomet
 import { useTerrain } from '../terrainContext';
 import { createNoise2D, type ForestParams } from '../terrainNoise';
 import { useStaticColliders } from '../useStaticColliders';
+import { spawnVehicles, twoWayRoad } from '../../vehicles/roadTraffic';
+import { TrafficLayer } from '../../vehicles/TrafficLayer';
+import { Train } from '../../vehicles/Train';
 
 /**
  * Blackwood Forest dressing: dense woods (conifer + broadleaf), rocks, the
@@ -29,6 +32,7 @@ export function ForestContent() {
     const clear = (x: number, z: number) =>
       !nearPath(p.river, x, z, p.river.width / 2 + 10) &&
       !nearPath(p.rail, x, z, p.rail.width / 2 + 6) &&
+      !nearPath(p.road, x, z, p.road.width / 2 + 5) &&
       p.flats.every((f) => Math.hypot(x - f.x, z - f.z) > f.radius + 6) &&
       t.slope(x, z) < 0.35;
     // Woods are dense in patches (noise mask), with open meadows between.
@@ -42,7 +46,7 @@ export function ForestContent() {
       // Higher ground favours conifers.
       (t.ground(x, z) > 18 + forestMask(x / 90, z / 90) * 12 ? conifers : broadleaves).push(inst);
     }
-    const rocks = scatter(rand, t.size - 40, Math.round(500 * density), (x, z) => !nearPath(p.river, x, z, p.river.width / 2 + 4)).map(([x, z]) => {
+    const rocks = scatter(rand, t.size - 40, Math.round(500 * density), (x, z) => !nearPath(p.river, x, z, p.river.width / 2 + 4) && !nearPath(p.road, x, z, p.road.width / 2 + 3) && !nearPath(p.rail, x, z, p.rail.width / 2 + 3)).map(([x, z]) => {
       const s = 0.5 + rand() ** 2 * 3;
       return { x, y: t.ground(x, z) - s * 0.3, z, scale: [s, s * 0.7, s * 1.1] as [number, number, number], rotationY: rand() * 6.28, tint: 0x9a968e };
     });
@@ -75,6 +79,8 @@ export function ForestContent() {
       <InstancedProps geometry={geo.conifer} instances={outer} maxDistance={draw} cellSize={900} castShadow={false} />
       <River />
       <Railway />
+      <Train rail={p.rail} ground={t.ground} railTop={0.56} />
+      <ForestRoad />
       <Dam />
       <Landmarks />
     </group>
@@ -135,6 +141,40 @@ function Railway() {
       <mesh geometry={bed} material={materials.ballast} receiveShadow />
       <InstancedBoxes items={parts.sleepers} material={materials.wood} castShadow={false} />
       <InstancedBoxes items={parts.rails} material={materials.steel} castShadow={false} />
+    </group>
+  );
+}
+
+/** Two-lane road through the woods with light traffic. */
+function ForestRoad() {
+  const t = useTerrain();
+  const p = t.region.terrain as ForestParams;
+  const road = useMemo(() => ribbonGeometry(p.road, p.road.width - 2, t.ground, 0.18, 4), [p, t]);
+  const materials = useMemo(() => ({ asphalt: new MeshStandardMaterial({ color: '#36383a', roughness: 0.95 }), marking: new MeshStandardMaterial({ color: '#e8e2c8', roughness: 0.8 }) }), []);
+  useEffect(
+    () => () => {
+      road.dispose();
+      Object.values(materials).forEach((m) => m.dispose());
+    },
+    [road, materials],
+  );
+  const dashes: BoxInstance[] = useMemo(() => pointsAlong(p.road, 10).map(({ x, z, angle }) => ({ position: [x, t.ground(x, z) + 0.21, z], size: [0.2, 0.02, 3], rotationY: angle })), [p, t]);
+  const lanes = useMemo(() => twoWayRoad(p.road.points, 16, 'forest-road'), [p]);
+  const vehicles = useMemo(
+    () =>
+      spawnVehicles(lanes, 4, [
+        ['sedan', 40],
+        ['pickup', 35],
+        ['van', 15],
+        ['semi', 10],
+      ], 919),
+    [lanes],
+  );
+  return (
+    <group>
+      <mesh geometry={road} material={materials.asphalt} receiveShadow />
+      <InstancedBoxes items={dashes} material={materials.marking} castShadow={false} />
+      <TrafficLayer lanes={lanes} setup={vehicles} groundY={t.ground} roadLift={0.18} />
     </group>
   );
 }
