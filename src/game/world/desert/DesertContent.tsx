@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { MeshStandardMaterial } from 'three';
 import { OUTDOOR_DENSITY } from '../../../config/regions';
+import { ROAD_TRAFFIC } from '../../../config/world';
 import { useSettings } from '../../../state/settings';
 import { mulberry32 } from '../cityLayout';
 import { InstancedBoxes, type BoxInstance } from '../InstancedBoxes';
@@ -122,10 +123,10 @@ function Highway() {
   }, [p, t]);
 
   // Highway traffic: cars, pickups and semis at highway speed.
-  const lanes = useMemo(() => twoWayRoad(p.highway.points, 24, 'highway'), [p]);
+  const lanes = useMemo(() => twoWayRoad(p.highway.points, ROAD_TRAFFIC.desertHighway.speedLimit, 'highway'), [p]);
   const vehicles = useMemo(
     () =>
-      spawnVehicles(lanes, 6, [
+      spawnVehicles(lanes, ROAD_TRAFFIC.desertHighway.perLane, [
         ['sedan', 45],
         ['pickup', 25],
         ['semi', 20],

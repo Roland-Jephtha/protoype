@@ -1,12 +1,10 @@
 import { useCallback, useMemo } from 'react';
+import { LIFE } from '../../config/world';
 import { useSettings } from '../../state/settings';
 import { nearPath } from '../world/propGeometries';
 import { useTerrain } from '../world/terrainContext';
 import type { Circler } from './behaviour';
 import { Circlers, Herd, LifeBoundary, RiverFish, type HerdDef } from './Wildlife';
-
-const PACK_SIZE = { low: 2, medium: 3, high: 3 } as const;
-const FISH = { low: 5, medium: 8, high: 12 } as const;
 
 /**
  * Wildlife for the outdoor regions. Desert: coyotes and circling eagles.
@@ -29,9 +27,9 @@ export function TerrainLife() {
   );
 
   const herds = useMemo<HerdDef[]>(() => {
-    const n = PACK_SIZE[quality];
+    const n = LIFE.packSize[quality];
     const pack = (kind: HerdDef['kind'], x: number, z: number, radius: number): HerdDef =>
-      kind === 'coyote' ? { kind, count: n, home: { x, z, radius }, walkSpeed: 1.3, runSpeed: 9, fleeRadius: 18 } : { kind, count: n, home: { x, z, radius }, walkSpeed: 1.6, runSpeed: 10, fleeRadius: 16 };
+      ({ kind, count: n, home: { x, z, radius }, ...(kind === 'coyote' ? LIFE.coyote : LIFE.wolf) });
     return terrain.kind === 'desert'
       ? [pack('coyote', -950, 470, 90), pack('coyote', -300, 700, 130), pack('coyote', 500, 200, 150)]
       : [pack('wolf', -170, 1010, 80), pack('wolf', -700, 100, 120), pack('wolf', 500, 350, 130)];
@@ -50,7 +48,7 @@ export function TerrainLife() {
             [-450, 380, 110, 70],
             [400, -300, 140, 80],
           ]
-      ).map(([cx, cz, radius, altitude], i) => ({ cx, cz, radius, altitude, rate: (i % 2 ? -1 : 1) * (12 / radius), phase: i * 2.1 })),
+      ).map(([cx, cz, radius, altitude], i) => ({ cx, cz, radius, altitude, rate: (i % 2 ? -1 : 1) * (LIFE.birdSpeed / radius), phase: i * 2.1 })),
     [terrain],
   );
 
@@ -62,7 +60,7 @@ export function TerrainLife() {
         <Herd key={i} def={h} seed={500 + i * 31} ground={t.ground} walkable={walkable} />
       ))}
       <Circlers birds={birds} ground={t.ground} />
-      {terrain.kind === 'forest' && <RiverFish river={terrain.river.points} count={FISH[quality]} waterY={waterY} seed={77} />}
+      {terrain.kind === 'forest' && <RiverFish river={terrain.river.points} count={LIFE.riverFish[quality]} waterY={waterY} seed={77} />}
     </LifeBoundary>
   );
 }

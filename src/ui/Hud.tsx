@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { HERO_COMBAT } from '../config/combat';
 import { REGIONS, type Side } from '../config/regions';
 import { runtime } from '../game/runtime';
 import { useApp } from '../state/appStore';
@@ -32,6 +33,12 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
   const speedRef = useRef<HTMLSpanElement>(null);
   const stateRef = useRef<HTMLSpanElement>(null);
   const edgeRef = useRef<HTMLDivElement>(null);
+  const healthRef = useRef<HTMLDivElement>(null);
+  const heatRef = useRef<HTMLDivElement>(null);
+  const heatBarRef = useRef<HTMLDivElement>(null);
+  const crossRef = useRef<HTMLDivElement>(null);
+  const hurtRef = useRef<HTMLDivElement>(null);
+  const lastHealth = useRef<number>(HERO_COMBAT.maxHealth);
   const pointerLocked = useApp((s) => s.pointerLocked);
   const regionId = useApp((s) => s.regionId);
   const mode = useApp((s) => s.mode);
@@ -44,6 +51,23 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
       const kmh = (FLIGHT_STATES.has(runtime.playerState) ? Math.hypot(v.x, v.y, v.z) : Math.hypot(v.x, v.z)) * 3.6;
       if (speedRef.current) speedRef.current.textContent = kmh.toFixed(0);
       if (stateRef.current) stateRef.current.textContent = STATE_LABEL[runtime.playerState] ?? '';
+
+      const c = runtime.combat;
+      if (healthRef.current) healthRef.current.style.transform = `scaleX(${c.health / HERO_COMBAT.maxHealth})`;
+      if (heatRef.current) heatRef.current.style.transform = `scaleX(${c.heat / HERO_COMBAT.heat.capacity})`;
+      heatBarRef.current?.classList.toggle('overheated', c.overheated);
+      if (crossRef.current) crossRef.current.style.display = runtime.aiming ? '' : 'none';
+      // Flash red when hurt; the CSS transition fades it out.
+      if (hurtRef.current && c.health < lastHealth.current - 0.5) {
+        const el = hurtRef.current;
+        el.style.transition = 'none';
+        el.style.opacity = '1';
+        requestAnimationFrame(() => {
+          el.style.transition = '';
+          el.style.opacity = '0';
+        });
+      }
+      lastHealth.current = c.health;
 
       // Nearest edge: point the way to the neighbouring region, or warn it's the boundary.
       if (edgeRef.current) {
@@ -76,6 +100,16 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
         </div>
       )}
       <div ref={edgeRef} className="hud-edge" style={{ display: 'none' }} />
+      <div ref={hurtRef} className="hud-hurt" />
+      <div ref={crossRef} className="hud-crosshair" style={{ display: 'none' }} />
+      <div className={`hud-vitals ${touchUi ? 'touch' : ''}`}>
+        <div className="hud-bar hud-health" aria-label="Health">
+          <div ref={healthRef} className="hud-bar-fill" />
+        </div>
+        <div ref={heatBarRef} className="hud-bar hud-heat" aria-label="Heat vision">
+          <div ref={heatRef} className="hud-bar-fill" />
+        </div>
+      </div>
       <div className={`hud-speed ${touchUi ? 'touch' : ''}`}>
         <span ref={speedRef} className="hud-speed-value">0</span>
         <span className="hud-speed-unit">km/h</span>

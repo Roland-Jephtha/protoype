@@ -33,6 +33,8 @@ export interface MotorInput {
   flyPressed?: boolean;
   /** Fly down (held). */
   descendHeld?: boolean;
+  /** Face this yaw regardless of movement (aiming heat vision, punching a target). */
+  faceYaw?: number;
 }
 
 export interface Vec3Like {
@@ -200,12 +202,8 @@ export class GroundMotor {
 
     // --- facing ---------------------------------------------------------
     const hSpeed = Math.hypot(v.x, v.z);
-    if (hSpeed > 0.4) {
-      const desired = Math.atan2(v.x, v.z);
-      const diff = wrapAngle(desired - this.facingYaw);
-      const step = t.turnSpeed * dt;
-      this.facingYaw = wrapAngle(this.facingYaw + Math.max(-step, Math.min(step, diff)));
-    }
+    if (inp.faceYaw !== undefined) this.turnToward(inp.faceYaw, t.turnSpeed * dt);
+    else if (hSpeed > 0.4) this.turnToward(Math.atan2(v.x, v.z), t.turnSpeed * dt);
 
     return { x: v.x * dt, y: v.y * dt, z: v.z * dt };
   }
@@ -248,12 +246,15 @@ export class GroundMotor {
     }
 
     const hSpeed = Math.hypot(v.x, v.z);
-    if (hSpeed > 0.5) {
-      const diff = wrapAngle(Math.atan2(v.x, v.z) - this.facingYaw);
-      const turn = FLIGHT.turnSpeed * dt;
-      this.facingYaw = wrapAngle(this.facingYaw + Math.max(-turn, Math.min(turn, diff)));
-    }
+    // Aiming in flight turns at ground speed: the hero pivots, the flight path doesn't.
+    if (inp.faceYaw !== undefined) this.turnToward(inp.faceYaw, this.t.turnSpeed * dt);
+    else if (hSpeed > 0.5) this.turnToward(Math.atan2(v.x, v.z), FLIGHT.turnSpeed * dt);
     return { x: v.x * dt, y: v.y * dt, z: v.z * dt };
+  }
+
+  private turnToward(yaw: number, maxStep: number) {
+    const diff = wrapAngle(yaw - this.facingYaw);
+    this.facingYaw = wrapAngle(this.facingYaw + Math.max(-maxStep, Math.min(maxStep, diff)));
   }
 
   /** Start already in flight (arriving in a region mid-flight). */

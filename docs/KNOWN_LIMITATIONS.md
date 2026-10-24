@@ -3,7 +3,7 @@
 ## Not built yet (by design — later phases)
 
 - Super-speed beyond 90 km/h on foot and flight beyond 150 km/h (the brief's 250/500 m/s tiers) aren't built; the test district is too small for them until streaming exists (Phase 5).
-- Powers, combat, enemies (Phase 6). Left/right mouse are bound but do nothing.
+- Combat v1: punches and heat vision vs Prometheus drones only (desert base, highway, forest dam). No lifting/throwing, super breath, dash or villains yet. The punch is a procedural arm pose (the hero rigs have no punch clip). Drones fly through buildings/terrain features (none are placed in the city for that reason).
 - Missions, saves, save slots, Continue/Load (Phase 7). Free roam only; nothing is saved except settings.
 - Intro cinematic / video player, story (Phase 8).
 - Audio of any kind (Phase 9). Settings show no audio options until it exists.

@@ -3,24 +3,12 @@ import { useFrame } from '@react-three/fiber';
 import { useRapier } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
 import { BoxGeometry, Color, CylinderGeometry, Euler, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3 } from 'three';
+import { TRAIN } from '../../config/world';
 import { useApp } from '../../state/appStore';
 import { runtime } from '../runtime';
 import { merged, part } from '../world/propGeometries';
 import type { PathDef } from '../world/terrainNoise';
 import { samplePath } from './traffic';
-
-/** Freight train timings and sizes (m, m/s). 24 m/s ≈ 86 km/h: a sprint can just keep up, flight wins. */
-const TRAIN = {
-  speed: 24,
-  locoLength: 18,
-  wagonLength: 15,
-  gap: 1.2,
-  wagons: 6,
-  width: 3.1,
-  height: 4.2,
-  /** Hidden run past the end of the line before the train starts over (m). */
-  layover: 400,
-};
 
 const WAGON_PAINT = ['#7a3a24', '#2f4f6b', '#6b6b2f', '#8c8f93', '#7a3a24', '#3d5a3a'];
 const DARK = '#1c1d20';
@@ -108,7 +96,7 @@ export function Train({ rail, ground, railTop }: { rail: PathDef; ground: (x: nu
 
   const scratch = useMemo(() => ({ m: new Matrix4(), q: new Quaternion(), e: new Euler(), p: new Vector3(), s: new Vector3(1, 1, 1), hidden: new Matrix4().makeTranslation(0, -200, 0) }), []);
   /** Front of the train, distance along the line. Starts partway in so it's visible soon after arrival. */
-  const front = useRef(path.length * 0.35);
+  const front = useRef(path.length * TRAIN.startFraction);
   const race = useRef<'idle' | 'level' | 'won'>('idle');
   const raceCheck = useRef(0);
 
@@ -165,10 +153,10 @@ export function Train({ rail, ground, railTop }: { rail: PathDef; ground: (x: nu
       if (side > 120 || !onLine) race.current = 'idle';
       return;
     }
-    if (race.current === 'idle' && ahead > -cars.total && ahead < 10 && speed > 15) {
+    if (race.current === 'idle' && ahead > -cars.total && ahead < 10 && speed > TRAIN.raceMinSpeed) {
       race.current = 'level';
       useApp.getState().showToast(`Racing the freight train: ${Math.round(TRAIN.speed * 3.6)} km/h`);
-    } else if (race.current === 'level' && ahead > 60) {
+    } else if (race.current === 'level' && ahead > TRAIN.raceWinLead) {
       race.current = 'won';
       useApp.getState().showToast('You beat the train!');
     }

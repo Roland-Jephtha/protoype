@@ -34,6 +34,11 @@ Other Sketchfab "Superman" uploads were reviewed and **rejected** because they a
 to be re-uploaded game rips under licences the uploader can't grant: "Superman |
 MultiVersus" (King_45), "Injustice 2 | DCEU collection" (kanimator), and 3dworldz's
 "Superman Man of Steel" / "Superman (Textured)(Rigged)" (match commercial game skins).
+Also rejected (2026-10-24, downloaded by the owner, kept out of git): "Superman" by
+shreyhaldkar0 (sketchfab.com/3d-models/superman-ebc5bf9fa17e40ccb35edd774d8f0cfe), tagged
+CC BY 4.0 but extracted from MultiVersus — material `C003_Base_MIC` (MultiVersus's
+internal Superman ID, Unreal naming) and 188 game clips (`C003_UpSpecial_*`, season
+emotes, `UI_Art_BeetlejuiceShaderLinup_Superman`).
 
 ## Original (code-generated) assets
 

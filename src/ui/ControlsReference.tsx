@@ -6,6 +6,8 @@ const DESKTOP: [string, string][] = [
   ['F', 'Take off / drop out of flight'],
   ['C', 'Flying: down'],
   ['Mouse while flying', 'Look up/down to climb/dive'],
+  ['Left mouse', 'Punch (tap quickly for a 3-hit combo)'],
+  ['Right mouse (hold)', 'Heat vision: aim with the crosshair'],
   ['Esc / P', 'Pause'],
   ['F3', 'Diagnostics overlay'],
 ];
@@ -17,6 +19,8 @@ const TOUCH: [string, string][] = [
   ['» Sprint / Boost', 'Sprint · flying: boost (hold)'],
   ['✈ Fly / Land', 'Take off / drop out of flight'],
   ['▼ Down', 'Flying: down'],
+  ['✊ Punch', 'Punch (tap quickly for a 3-hit combo)'],
+  ['◉ Heat (hold)', 'Heat vision — slide your thumb on it to aim'],
   ['❚❚ top-right', 'Pause'],
 ];
 
@@ -49,7 +53,7 @@ export function ControlsReference({ onBack }: { onBack: () => void }) {
           </dl>
         </section>
       </div>
-      <p className="settings-note">Powers (heat vision, strength) arrive in a later phase.</p>
+      <p className="settings-note">More powers (super breath, lifting, dash) arrive in later phases.</p>
       <div className="panel-actions">
         <button type="button" className="menu-btn" onClick={onBack} autoFocus>
           Back

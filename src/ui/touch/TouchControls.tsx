@@ -13,7 +13,7 @@ import { VirtualStick } from './VirtualStick';
  *  - top-right: pause
  * Only actions that actually do something are shown. In flight, Jump becomes
  * Up, Sprint becomes Boost, and a Down button appears.
- * Attack / heat vision / interact buttons arrive with their systems.
+ * Punch and Heat (hold; slide the thumb to aim) sit left of the movement cluster.
  */
 export function TouchControls() {
   const opacity = useSettings((s) => s.touchControlOpacity);
@@ -36,6 +36,10 @@ export function TouchControls() {
         </div>
       )}
       <div className="touch-right">
+        <div className="touch-col">
+          <TouchButton action="aim" label="Heat" icon="◉" size={60 * scale} className="btn-heat" dragToLook />
+          <TouchButton action="attack" label="Punch" icon="✊" size={72 * scale} className="btn-punch" />
+        </div>
         {flying && <TouchButton action="descend" label="Down" icon="▼" size={60 * scale} className="btn-down" />}
         <TouchButton action="sprint" label={flying ? 'Boost' : 'Sprint'} icon="»" size={64 * scale} className="btn-sprint" />
         <div className="touch-col">

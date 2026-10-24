@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { DoubleSide, MeshStandardMaterial } from 'three';
 import { OUTDOOR_DENSITY } from '../../../config/regions';
+import { ROAD_TRAFFIC } from '../../../config/world';
 import { useSettings } from '../../../state/settings';
 import { mulberry32 } from '../cityLayout';
 import { InstancedBoxes, type BoxInstance } from '../InstancedBoxes';
@@ -159,10 +160,10 @@ function ForestRoad() {
     [road, materials],
   );
   const dashes: BoxInstance[] = useMemo(() => pointsAlong(p.road, 10).map(({ x, z, angle }) => ({ position: [x, t.ground(x, z) + 0.21, z], size: [0.2, 0.02, 3], rotationY: angle })), [p, t]);
-  const lanes = useMemo(() => twoWayRoad(p.road.points, 16, 'forest-road'), [p]);
+  const lanes = useMemo(() => twoWayRoad(p.road.points, ROAD_TRAFFIC.forestRoad.speedLimit, 'forest-road'), [p]);
   const vehicles = useMemo(
     () =>
-      spawnVehicles(lanes, 4, [
+      spawnVehicles(lanes, ROAD_TRAFFIC.forestRoad.perLane, [
         ['sedan', 40],
         ['pickup', 35],
         ['van', 15],

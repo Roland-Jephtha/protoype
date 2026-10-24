@@ -21,7 +21,7 @@ Roadmap (approved 2026-10-24, owner wants most action outside the city):
 |---|---|---|
 | 1 | Region system + desert + forest | ✅ v1 done (2026-10-24) |
 | 2 | City life: pedestrians, traffic + lights, street props; wildlife/convoys outdoors | ✅ v1 done (2026-10-24) — street props still to add |
-| 3 | Combat: heat vision, punches, lift/throw, health, enemy AI (drones, soldiers) | ⏭ Next |
+| 3 | Combat: heat vision, punches, lift/throw, health, enemy AI (drones, soldiers) | 🔶 In progress — heat vision, punch combo, health/heat HUD, drones done |
 | 4 | Villains: DC models the owner downloads (licence-checked) + original henchmen, boss AI | ☐ |
 | 5 | Missions + IndexedDB saves (3 slots, autosave, versioned) | ☐ |
 | 6 | Campaign levels (prologue → chapter 5, side missions) — mostly desert/forest | ☐ |

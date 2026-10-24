@@ -16,8 +16,8 @@ Only controls that work today are listed as active. Bindings live in
 | Mouse (in flight) | Look up/down to climb/dive; flight follows the camera | ✅ |
 | Esc / P | Pause / back out of a pause sub-page | ✅ |
 | F3 | Diagnostics overlay | ✅ |
-| Left mouse | Primary attack / heat vision | Phase 6 (bound, no effect yet) |
-| Right mouse | Aim / focus | Phase 6 (bound, no effect yet) |
+| Left mouse | Punch; quick taps chain a 3-hit combo, the third knocks enemies flying | ✅ |
+| Right mouse (hold) | Heat vision through the crosshair (closer camera, meter overheats) | ✅ |
 | E | Interact / rescue | Phase 7 |
 | Q | Power selection | Phase 6 |
 
@@ -42,7 +42,9 @@ the phone sideways. Toggle: Settings → *Always landscape on phones*.
 | ✈ Fly / Land (above Jump) | Take off / drop out of flight | ✅ |
 | ▼ Down (flight only) | Fly down (hold) | ✅ |
 | ❚❚ (top-right) | Pause | ✅ |
-| Attack, heat vision, interact | — | Added with their phases |
+| ✊ Punch | Punch / combo | ✅ |
+| ◉ Heat (hold) | Heat vision; slide the thumb on the button to aim, strong aim assist | ✅ |
+| ✋ (contextual) | Interact when a prompt shows (story mode) | ✅ |
 
 Flight: 60 km/h with a full stick, 150 km/h boosting; release everything to brake into a hover; touch any surface while not climbing to land (fast impacts play the heavy landing).
 

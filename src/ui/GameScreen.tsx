@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { REGIONS } from '../config/regions';
 import { GameCanvas } from '../game/GameCanvas';
+import { targets } from '../game/combat/targets';
 import { runtime } from '../game/runtime';
 import { input } from '../input/InputManager';
 import { attachKeyboardMouse } from '../input/keyboardMouse';
@@ -39,6 +40,7 @@ export function GameScreen() {
       runtime,
       input,
       app: useApp,
+      targets,
       get ready() {
         return useApp.getState().regionReady;
       },

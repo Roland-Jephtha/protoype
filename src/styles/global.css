@@ -618,6 +618,83 @@ input[type='range']::-moz-range-thumb {
   color: var(--c-text-dim);
 }
 
+/* Health (red) and heat-vision (orange) bars. */
+.hud-vitals {
+  position: absolute;
+  bottom: calc(22px + var(--safe-b));
+  left: calc(22px + var(--safe-l));
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 190px;
+}
+
+/* On touch layouts the bottom-left belongs to the stick: sit beside the pause button. */
+.hud-vitals.touch {
+  bottom: auto;
+  left: auto;
+  top: calc(28px + var(--safe-t));
+  right: calc(76px + var(--safe-r));
+  width: 140px;
+}
+
+.hud-bar {
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(5, 8, 14, 0.55);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+
+.hud-bar-fill {
+  height: 100%;
+  transform-origin: left center;
+  transition: transform 0.12s linear;
+}
+
+.hud-health .hud-bar-fill {
+  background: linear-gradient(90deg, #c0182a, #ff5a5a);
+}
+
+.hud-heat {
+  height: 5px;
+}
+
+.hud-heat .hud-bar-fill {
+  background: linear-gradient(90deg, #ff6a1a, #ffd36a);
+}
+
+.hud-heat.overheated .hud-bar-fill {
+  background: #7a2a1a;
+  animation: overheat-blink 0.5s steps(2) infinite;
+}
+
+@keyframes overheat-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.hud-crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid rgba(255, 210, 160, 0.9);
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(255, 90, 30, 0.8);
+}
+
+.hud-hurt {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(200, 20, 30, 0.55) 100%);
+  transition: opacity 0.7s ease-out;
+}
+
 .hud-speed-state {
   grid-column: 1 / -1;
   font-size: 11px;
@@ -907,6 +984,14 @@ input[type='range']::-moz-range-thumb {
 
 .btn-fly {
   border-color: rgba(120, 170, 255, 0.7);
+}
+
+.btn-heat {
+  border-color: rgba(255, 120, 60, 0.75);
+}
+
+.btn-punch {
+  margin-bottom: 18px;
 }
 
 .btn-down {

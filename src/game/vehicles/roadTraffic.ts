@@ -1,3 +1,4 @@
+import { ROAD_TRAFFIC } from '../../config/world';
 import { mulberry32 } from '../world/cityLayout';
 import { offsetPath, samplePath, type Lane } from './traffic';
 import type { VehicleSetup } from './TrafficLayer';
@@ -35,10 +36,10 @@ export function spawnVehicles(lanes: Lane[], perLane: number, mix: [VehicleType,
   return out;
 }
 
-/** Two lanes (right-hand traffic) along an open road path, each way 3.2 m off the centre line. */
+/** Two lanes (right-hand traffic) along an open road path, each offset from the centre line. */
 export function twoWayRoad(points: [number, number][], speedLimit: number, id: string): Lane[] {
   return [
-    { id: `${id}-a`, path: samplePath(offsetPath(points, 3.2)), stops: [], speedLimit },
-    { id: `${id}-b`, path: samplePath(offsetPath([...points].reverse(), 3.2)), stops: [], speedLimit },
+    { id: `${id}-a`, path: samplePath(offsetPath(points, ROAD_TRAFFIC.laneOffset)), stops: [], speedLimit },
+    { id: `${id}-b`, path: samplePath(offsetPath([...points].reverse(), ROAD_TRAFFIC.laneOffset)), stops: [], speedLimit },
   ];
 }

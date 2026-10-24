@@ -135,6 +135,7 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
         jumpHeld: input.isHeld('jump'),
         flyPressed: input.consumePressed('fly'),
         descendHeld: input.isHeld('descend'),
+        faceYaw: runtime.combatFaceYaw ?? undefined,
       },
       dt,
     );
@@ -191,6 +192,7 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
 
     runtime.playerPosition.set(nx, ny, nz);
     runtime.playerVelocity.set(motor.velocity.x, motor.velocity.y, motor.velocity.z);
+    runtime.heroFacingYaw = motor.facingYaw;
     runtime.playerState = motor.state;
     runtime.moveMode = motor.mode;
     runtime.grounded = motor.grounded;

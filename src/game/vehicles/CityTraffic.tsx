@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import { Color, MeshBasicMaterial, MeshStandardMaterial, type InstancedMesh } from 'three';
+import { CITY_TRAFFIC } from '../../config/world';
 import { useSettings } from '../../state/settings';
 import { runtime } from '../runtime';
 import { generateCityLayout } from '../world/cityLayout';
@@ -9,9 +10,7 @@ import { spawnVehicles } from './roadTraffic';
 import { lightState, offsetPath, samplePath, type Lane, type LightGroup } from './traffic';
 import { TrafficLayer } from './TrafficLayer';
 
-/** Distance from an intersection centre to its stop line (street half-width + margin). */
-const STOP_BACK = 8.5;
-const PER_LANE = { low: 2, medium: 3, high: 4 } as const;
+const STOP_BACK = CITY_TRAFFIC.stopBack;
 
 /**
  * Downtown traffic: two lanes on every street, stop lines at every
@@ -36,8 +35,8 @@ export function CityTraffic() {
         ];
         out.push({
           id: `z${x}${dir}`,
-          path: samplePath(offsetPath(centre, 3.5)),
-          speedLimit: 13,
+          path: samplePath(offsetPath(centre, CITY_TRAFFIC.laneOffset)),
+          speedLimit: CITY_TRAFFIC.speedLimit,
           stops: zLines.map((z) => ({ s: (z * dir + ext) - STOP_BACK, group: 'z' as LightGroup })),
         });
       }
@@ -51,8 +50,8 @@ export function CityTraffic() {
         ];
         out.push({
           id: `x${z}${dir}`,
-          path: samplePath(offsetPath(centre, 3.5)),
-          speedLimit: 13,
+          path: samplePath(offsetPath(centre, CITY_TRAFFIC.laneOffset)),
+          speedLimit: CITY_TRAFFIC.speedLimit,
           stops: xLines.map((x) => ({ s: (x * dir + ext) - STOP_BACK, group: 'x' as LightGroup })),
         });
       }
@@ -64,7 +63,7 @@ export function CityTraffic() {
     () =>
       spawnVehicles(
         lanes,
-        PER_LANE[quality],
+        CITY_TRAFFIC.perLane[quality],
         [
           ['sedan', 50],
           ['taxi', 18],

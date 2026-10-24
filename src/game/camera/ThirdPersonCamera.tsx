@@ -26,6 +26,7 @@ export function ThirdPersonCamera() {
     distance: number;
     modeDistance: number;
     fov: number;
+    shoulder: number;
     target: Vector3;
     initialised: boolean;
   }>({
@@ -34,6 +35,7 @@ export function ThirdPersonCamera() {
     distance: CAMERA.distance,
     modeDistance: CAMERA.distance,
     fov: CAMERA.fov,
+    shoulder: CAMERA.shoulderOffset,
     target: new Vector3().copy(runtime.playerRenderPosition),
     initialised: false,
   });
@@ -67,12 +69,14 @@ export function ThirdPersonCamera() {
 
     // --- mode-dependent distance & FOV ----------------------------------
     const st = runtime.playerState;
-    const modeDistance: number =
-      st === 'flyBoost' ? CAMERA.boostDistance : st === 'fly' ? CAMERA.flyDistance : st === 'sprint' ? CAMERA.sprintDistance : CAMERA.distance;
+    const aiming = runtime.aiming;
+    const modeDistance: number = aiming
+      ? CAMERA.aimDistance
+      : st === 'flyBoost' ? CAMERA.boostDistance : st === 'fly' ? CAMERA.flyDistance : st === 'sprint' ? CAMERA.sprintDistance : CAMERA.distance;
     // Ease between mode distances; only real collisions may pull the camera in instantly.
     s.modeDistance += (modeDistance - s.modeDistance) * damp(CAMERA.distanceSharpness, dt);
     const desiredDistance = s.modeDistance;
-    const boost = st === 'flyBoost' ? CAMERA.boostFovBoost : st === 'sprint' ? CAMERA.sprintFovBoost : st === 'fly' ? CAMERA.flyFovBoost : 0;
+    const boost = aiming ? CAMERA.aimFovBoost : st === 'flyBoost' ? CAMERA.boostFovBoost : st === 'sprint' ? CAMERA.sprintFovBoost : st === 'fly' ? CAMERA.flyFovBoost : 0;
     const fovBoost = boost * (settings.reducedMotion ? 0.3 : 1);
     s.fov += (CAMERA.fov + fovBoost - s.fov) * damp(CAMERA.fovSharpness, dt);
     if (Math.abs(camera.fov - s.fov) > 0.01) {
@@ -82,8 +86,9 @@ export function ThirdPersonCamera() {
 
     // Shoulder offset shifts the pivot right of the hero so they don't block the view.
     const pivot = tmp.pivot.copy(s.target);
-    pivot.x += Math.cos(s.yaw) * CAMERA.shoulderOffset;
-    pivot.z += -Math.sin(s.yaw) * CAMERA.shoulderOffset;
+    s.shoulder += ((aiming ? CAMERA.aimShoulderOffset : CAMERA.shoulderOffset) - s.shoulder) * damp(CAMERA.distanceSharpness, dt);
+    pivot.x += Math.cos(s.yaw) * s.shoulder;
+    pivot.z += -Math.sin(s.yaw) * s.shoulder;
 
     // --- collision ------------------------------------------------------
     const o = orbitOffset(s.yaw, s.pitch);
@@ -109,6 +114,7 @@ export function ThirdPersonCamera() {
     camera.position.set(pivot.x + o.x * s.distance, pivot.y + o.y * s.distance, pivot.z + o.z * s.distance);
     camera.lookAt(pivot);
     runtime.cameraPosition.copy(camera.position);
+    runtime.cameraForward.copy(pivot).sub(camera.position).normalize();
   }, -30);
 
   return null;

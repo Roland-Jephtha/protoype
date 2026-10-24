@@ -1,5 +1,6 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
+import { LIFE } from '../../config/world';
 import { useApp } from '../../state/appStore';
 import { useSettings } from '../../state/settings';
 import { Civilian, type CivilianHandle } from '../characters/Civilian';
@@ -10,8 +11,6 @@ import { Animal, type AnimalHandle, type AnimalKind } from './Animal';
 import { stepPathWalker, walkerPose, type PathWalker, type PathWalkerOptions } from './behaviour';
 import { LifeBoundary } from './Wildlife';
 
-const PEOPLE = { low: 16, medium: 32, high: 48 } as const;
-const PETS = { low: 3, medium: 5, high: 7 } as const;
 
 /**
  * Sidewalk loop around a block, `inset` m inside the kerb, swinging out at the
@@ -62,10 +61,10 @@ export function CityLife() {
         const path = dir > 0 ? pair[0] : pair[1];
         return { path, w: { s: rand() * path.length, dir, speed: 0, cruise: cruise(), pause: 0, walkFor: 4 + rand() * 10 }, opts: { ...opts, closed: true, rand } };
       });
-    const people = make(PEOPLE[quality], () => 1.1 + rand() * 0.5, { walkTime: 40, pauseTime: 4 });
+    const people = make(LIFE.pedestrians[quality], () => 1.1 + rand() * 0.5, { walkTime: 40, pauseTime: 4 });
     const pets: (Walker & { kind: AnimalKind; tint?: string })[] = [
-      ...make(PETS[quality], () => 1.2 + rand() * 0.6, { walkTime: 10, pauseTime: 5, personalSpace: 2.2 }).map((w, i) => ({ ...w, kind: 'dog' as const, tint: ['#8a5a32', '#2b2623', '#d9c4a0', '#6e6a64'][i % 4] })),
-      ...make(PETS[quality], () => 0.6 + rand() * 0.3, { walkTime: 5, pauseTime: 14, personalSpace: 2.5 }).map((w) => ({ ...w, kind: 'cat' as const })),
+      ...make(LIFE.pets[quality], () => 1.2 + rand() * 0.6, { walkTime: 10, pauseTime: 5, personalSpace: 2.2 }).map((w, i) => ({ ...w, kind: 'dog' as const, tint: ['#8a5a32', '#2b2623', '#d9c4a0', '#6e6a64'][i % 4] })),
+      ...make(LIFE.pets[quality], () => 0.6 + rand() * 0.3, { walkTime: 5, pauseTime: 14, personalSpace: 2.5 }).map((w) => ({ ...w, kind: 'cat' as const })),
     ];
     return { people, pets };
   }, [layout, quality]);

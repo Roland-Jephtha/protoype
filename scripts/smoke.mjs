@@ -487,9 +487,10 @@ async function lifeRun(browser) {
     await sleep(250);
   }
   const a = await rt();
-  await sleep(1000);
+  await sleep(2000);
   const b = await rt();
-  check('forest: the freight train is running', b.train - a.train > 15, `moved ${(b.train - a.train).toFixed(1)} m in ~1 s`);
+  // The train advances by frame time (capped per frame), so a slow headless frame rate slows it in wall time.
+  check('forest: the freight train is running', b.train - a.train > 15, `moved ${(b.train - a.train).toFixed(1)} m in ~2 s`);
   check('forest: wildlife is present', b.animals >= 10, `${b.animals} animals`);
   await page.keyboard.press('KeyF');
   await page.keyboard.down('Space');
@@ -509,6 +510,70 @@ async function lifeRun(browser) {
   await page.screenshot({ path: path.join(OUT, '12-train-race.png') });
 
   check('no page errors (life)', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await context.close();
+}
+
+/** Combat: drones engage the hero at the Prometheus base; heat vision destroys them; punches play. */
+async function combatRun(browser) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Free roam' }).click();
+  await waitForReady(page);
+  await page.evaluate(() => window.__krypton.app.getState().travelTo('desert', { at: { x: 350, z: 610, facing: Math.PI } }));
+  for (let i = 0; i < 240; i++) {
+    if (await page.evaluate(() => window.__krypton.runtime.regionId === 'desert' && window.__krypton.ready)) break;
+    await sleep(250);
+  }
+  const rt = () => page.evaluate(() => {
+    const r = window.__krypton.runtime;
+    return { health: r.combat.health, heat: r.combat.heat, alive: r.dronesAlive, destroyed: r.dronesDestroyed, beam: r.beam.active, punch: r.combat.punchTime };
+  });
+  let minHealth = 100;
+  for (let i = 0; i < 24; i++) {
+    await sleep(250);
+    minHealth = Math.min(minHealth, (await rt()).health);
+  }
+  const s0 = await rt();
+  check('combat: drones patrol the Prometheus base and attack the hero', s0.alive >= 4 && minHealth < 100, `${s0.alive} drones, lowest health ${minHealth.toFixed(0)}`);
+
+  await page.evaluate(() => window.__krypton.input.setButton('mouse', 'attack', true));
+  await page.evaluate(() => window.__krypton.input.setButton('mouse', 'attack', false));
+  await sleep(80);
+  check('combat: left click throws a punch', (await rt()).punch >= 0);
+
+  // Heat vision: keep the crosshair on the nearest drone.
+  await page.evaluate(() => window.__krypton.input.setButton('mouse', 'aim', true));
+  let fired = false;
+  for (let i = 0; i < 40; i++) {
+    await page.evaluate(() => {
+      const k = window.__krypton;
+      const cam = k.runtime.cameraPosition;
+      let best = null;
+      for (const t of k.targets) {
+        if (!t.alive) continue;
+        const d = Math.hypot(t.position.x - cam.x, t.position.y - cam.y, t.position.z - cam.z);
+        if (!best || d < best.d) best = { t, d };
+      }
+      if (!best) return;
+      const p = best.t.position;
+      const dx = p.x - cam.x, dy = p.y - cam.y, dz = p.z - cam.z;
+      const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+      k.input.addLook(-wrap(Math.atan2(dx, dz) - Math.PI - k.runtime.cameraYaw), Math.atan2(dy, Math.hypot(dx, dz)) - k.runtime.cameraPitch);
+    });
+    await sleep(120);
+    const s = await rt();
+    fired ||= s.beam;
+    if (s.destroyed > 0) break;
+  }
+  await page.screenshot({ path: path.join(OUT, '13-heat-vision.png') });
+  await page.evaluate(() => window.__krypton.input.setButton('mouse', 'aim', false));
+  const s1 = await rt();
+  check('combat: heat vision fires and destroys a drone', fired && s1.destroyed > 0, `destroyed ${s1.destroyed}, heat ${s1.heat.toFixed(0)}`);
+  check('no page errors (combat)', errors.length === 0, errors.slice(0, 3).join(' | '));
   await context.close();
 }
 
@@ -705,6 +770,7 @@ try {
   await portraitRun(browser);
   await regionRun(browser);
   await lifeRun(browser);
+  await combatRun(browser);
   await storyRun(browser);
 } catch (e) {
   check('smoke run completed without exceptions', false, e.message);

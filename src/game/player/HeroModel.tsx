@@ -31,6 +31,8 @@ import { FootSoles, nextFootLift } from './footGrounding';
 import type { GroundMotor } from './groundMovement';
 import { LOCOMOTION, LOOPING, resolveClips, roleForState } from './heroAnimation';
 import { applySuperSuit, measureModel } from './superSuit';
+import { CombatPose } from './combatPose';
+import { HERO_COMBAT } from '../../config/combat';
 
 /** Diagnostics: `?nofootfix` disables foot grounding to compare before/after. */
 const FOOT_FIX_ENABLED = typeof window === 'undefined' || !new URLSearchParams(window.location.search).has('nofootfix');
@@ -146,8 +148,9 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     }
 
     const soles = new FootSoles(model);
+    const pose = new CombatPose(model);
 
-    return { model, scale, minY: m.minY, centerX: m.centerX, cape, capeAnchor, soles, ownedMaterials, ownedGeometries };
+    return { model, scale, minY: m.minY, centerX: m.centerX, cape, capeAnchor, soles, pose, ownedMaterials, ownedGeometries };
   }, [gltf, def]);
 
   useEffect(
@@ -155,6 +158,7 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       built.ownedMaterials.forEach((mat) => mat.dispose());
       built.ownedGeometries.forEach((g) => g.dispose());
       built.cape?.dispose();
+      runtime.heroEyesValid = false;
     },
     [built],
   );
@@ -182,6 +186,7 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
   const pivotY = def.heightMeters * 0.6;
   const flight = useRef({ pitch: 0, bob: 0 });
   const tmpPos = useMemo(() => new Vector3(), []);
+  const combatTmp = useRef({ q: new Quaternion(), forward: new Vector3(), up: new Vector3() });
 
   const anim = useMemo(() => {
     const mixer = new AnimationMixer(built.model);
@@ -289,6 +294,17 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       }
       runtime.heroSoleAboveGround = soleAboveGround + footLift.current;
       runtime.heroFootLift = footLift.current;
+    }
+
+    // Combat overlay: the punching arm, and where the eyes are for heat vision.
+    if (pitchGroup.current) {
+      const ct = combatTmp.current;
+      pitchGroup.current.getWorldQuaternion(ct.q);
+      ct.forward.set(0, 0, 1).applyQuaternion(ct.q);
+      ct.up.set(0, 1, 0).applyQuaternion(ct.q);
+      const c = runtime.combat;
+      if (c.punching) built.pose.applyPunch(c.side, c.punchTime / HERO_COMBAT.punch.duration, ct.forward, def.heightMeters);
+      runtime.heroEyesValid = built.pose.eyes(runtime.heroEyes, ct.forward, ct.up, def.heightMeters);
     }
 
     if (built.cape && built.capeAnchor && !useApp.getState().paused) {

@@ -2,6 +2,8 @@ import { memo, useEffect, useMemo } from 'react';
 import { REGIONS, type RegionId, type TerrainRegion } from '../../config/regions';
 import { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
 import { MissionDirector } from '../missions/MissionDirector';
+import { CombatDriver } from '../combat/CombatDriver';
+import { Drones } from '../combat/Drones';
 import { CityLife } from '../life/CityLife';
 import { TerrainLife } from '../life/TerrainLife';
 import { CityTraffic } from '../vehicles/CityTraffic';
@@ -35,6 +37,7 @@ export const RegionWorld = memo(function RegionWorld({ regionId }: { regionId: R
         <Player region={region} half={cityHalf} />
         <ThirdPersonCamera />
         <MissionDirector regionId={regionId} ground={cityGround} />
+        <CombatDriver />
       </>
     );
   }
@@ -45,11 +48,22 @@ export const RegionWorld = memo(function RegionWorld({ regionId }: { regionId: R
       <TerrainPlayer region={region} />
       <ThirdPersonCamera />
       <TerrainMissions regionId={regionId} />
+      <TerrainCombat regionId={regionId} />
     </Terrain>
   );
 });
 
 const cityGround = () => 0;
+
+function TerrainCombat({ regionId }: { regionId: RegionId }) {
+  const { ground } = useTerrain();
+  return (
+    <>
+      <CombatDriver />
+      <Drones regionId={regionId} ground={ground} />
+    </>
+  );
+}
 
 function TerrainMissions({ regionId }: { regionId: RegionId }) {
   const { ground } = useTerrain();

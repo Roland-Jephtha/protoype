@@ -93,6 +93,10 @@ export const CAMERA = {
   sprintDistance: 7,
   flyDistance: 7.5,
   boostDistance: 10,
+  /** Closer over-the-shoulder framing while aiming heat vision (m), with a slight zoom (deg). */
+  aimDistance: 3.6,
+  aimShoulderOffset: 0.85,
+  aimFovBoost: -10,
   /** Pitch limits in radians (negative = looking down from above). */
   minPitch: -1.2,
   maxPitch: 0.75,

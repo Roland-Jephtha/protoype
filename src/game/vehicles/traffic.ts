@@ -4,6 +4,8 @@
  * No rendering/physics — TrafficLayer turns this into meshes and colliders.
  */
 
+import { TRAFFIC } from '../../config/world';
+
 export type LightGroup = 'x' | 'z';
 export type LightState = 'green' | 'yellow' | 'red';
 
@@ -58,21 +60,9 @@ export interface TrafficContext {
   light: (group: LightGroup) => LightState;
 }
 
-export const TRAFFIC = {
-  accel: 3.5,
-  brake: 9,
-  /** Bumper gap kept at standstill (m) and time headway (s). */
-  minGap: 3,
-  headway: 0.9,
-  /** Stop this far before the stop line. */
-  stopBuffer: 1,
-  /** Hero detection box ahead of a vehicle. */
-  playerAhead: 14,
-  playerLateral: 2.2,
-};
 
 /** Light cycle shared by every intersection: X-axis streets, then Z-axis streets. */
-export function lightState(group: LightGroup, time: number, cycle = 18): LightState {
+export function lightState(group: LightGroup, time: number, cycle = TRAFFIC.lightCycle): LightState {
   const t = ((time % cycle) + cycle) % cycle;
   const half = cycle / 2;
   const local = group === 'x' ? t : (t + half) % cycle;

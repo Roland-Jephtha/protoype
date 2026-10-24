@@ -1,6 +1,7 @@
 import type { RapierRigidBody } from '@react-three/rapier';
 import type { RegionId } from '../config/regions';
 import { Vector3 } from 'three';
+import { HeroCombat } from './combat/heroCombat';
 import type { MoveMode, PlayerMoveState } from './player/groundMovement';
 
 /**
@@ -35,6 +36,23 @@ export const runtime = {
   cameraPitch: 0,
   cameraDistance: 0,
   cameraPosition: new Vector3(),
+  /** Camera view direction (unit), for aiming. */
+  cameraForward: new Vector3(0, 0, -1),
+  /** Hero combat state (health, heat, punches). Simulated in CombatDriver. */
+  combat: new HeroCombat(),
+  /** Hero facing yaw (published each physics step). */
+  heroFacingYaw: 0,
+  /** Midpoint between the hero's eyes, from the head bone (valid once the model is posed). */
+  heroEyes: new Vector3(),
+  heroEyesValid: false,
+  /** Combat asks the motor to face this way (aiming, punching a target); null = free. */
+  combatFaceYaw: null as number | null,
+  aiming: false,
+  /** Heat-vision beam this step: eye → end point; `surface` when it hit the world (scorch). */
+  beam: { active: false, from: new Vector3(), to: new Vector3(), surface: false, normal: new Vector3(0, 1, 0), hitTarget: false },
+  /** Drones alive in the region and destroyed since load (smoke test, HUD). */
+  dronesAlive: 0,
+  dronesDestroyed: 0,
   /** Shared clock for traffic lights (s). */
   trafficTime: 0,
   /** Vehicles of the last-updated traffic layer that are moving / standing (smoke test). */

@@ -31,3 +31,6 @@ smoke-output
 
 # Raw Sketchfab download (processed copy lives in public/models/hatch-superman/).
 /hatch_superman/
+
+# Rejected download (MultiVersus rip, see docs/ASSET_MANIFEST.md) — never commit
+superman/
