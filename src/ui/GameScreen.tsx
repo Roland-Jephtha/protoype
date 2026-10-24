@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { REGIONS } from '../config/regions';
 import { GameCanvas } from '../game/GameCanvas';
 import { runtime } from '../game/runtime';
 import { input } from '../input/InputManager';
@@ -15,7 +16,9 @@ import { useTouchControlsVisible } from './touch/useTouchControlsVisible';
 /** In-game shell: 3D canvas + HUD + touch controls + pause menu + diagnostics. */
 export function GameScreen() {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(false);
+  const ready = useApp((s) => s.regionReady);
+  const pendingRegion = useApp((s) => s.pendingRegion);
+  const regionId = useApp((s) => s.regionId);
   const paused = useApp((s) => s.paused);
   const resume = useApp((s) => s.resume);
   const showDebug = useSettings((s) => s.showDebug);
@@ -30,10 +33,15 @@ export function GameScreen() {
   // Automated smoke tests (scripts/smoke.mjs) read live state via ?test.
   useEffect(() => {
     if (!new URLSearchParams(window.location.search).has('test')) return;
-    (window as unknown as { __krypton?: unknown }).__krypton = { runtime, input, ready };
-  }, [ready]);
-
-  const onReady = useCallback(() => setReady(true), []);
+    (window as unknown as { __krypton?: unknown }).__krypton = {
+      runtime,
+      input,
+      app: useApp,
+      get ready() {
+        return useApp.getState().regionReady;
+      },
+    };
+  }, []);
 
   const onResume = useCallback(() => {
     resume();
@@ -47,13 +55,15 @@ export function GameScreen() {
     }
   }, [resume]);
 
+  const loadingName = REGIONS[pendingRegion ?? regionId].name;
+
   return (
     <div ref={rootRef} className="game-root">
-      <GameCanvas onReady={onReady} />
+      <GameCanvas />
       {!ready && (
         <div className="overlay loading-overlay">
           <div className="loading-spinner" />
-          <p>Loading physics and district…</p>
+          <p>{pendingRegion ? `Travelling to ${loadingName}…` : `Loading ${loadingName}…`}</p>
         </div>
       )}
       {ready && !paused && <Hud touchUi={touchUi} />}

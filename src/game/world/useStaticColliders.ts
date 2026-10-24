@@ -1,0 +1,26 @@
+import type RAPIER from '@dimforge/rapier3d-compat';
+import { useRapier } from '@react-three/rapier';
+import { useEffect } from 'react';
+
+/**
+ * Creates many static colliders imperatively on one fixed body — far cheaper
+ * than thousands of <Collider> React elements (trees, rocks, terrain).
+ * Removed again on unmount (region change, return to title).
+ *
+ * `build` receives the Rapier namespace and returns collider descriptions; it
+ * re-runs only when `deps` change.
+ */
+export function useStaticColliders(build: (rapier: typeof RAPIER) => RAPIER.ColliderDesc[], deps: unknown[]) {
+  const { world, rapier } = useRapier();
+  useEffect(() => {
+    const body = world.createRigidBody(rapier.RigidBodyDesc.fixed());
+    for (const desc of build(rapier)) world.createCollider(desc, body);
+    return () => {
+      // When a whole region unmounts, the physics world is torn down before this
+      // cleanup runs; removing a body it no longer has makes Rapier panic.
+      // (Same guard @react-three/rapier uses for its own bodies.)
+      if (world.getRigidBody(body.handle)) world.removeRigidBody(body); // also removes its colliders
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [world, rapier, ...deps]);
+}

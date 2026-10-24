@@ -1,4 +1,5 @@
 import type { RapierRigidBody } from '@react-three/rapier';
+import type { RegionId } from '../config/regions';
 import { Vector3 } from 'three';
 import type { MoveMode, PlayerMoveState } from './player/groundMovement';
 
@@ -8,6 +9,10 @@ import type { MoveMode, PlayerMoveState } from './player/groundMovement';
  * anyone; UI readers should poll at a low rate.
  */
 export const runtime = {
+  /** Region currently mounted. */
+  regionId: 'metropolis' as RegionId,
+  /** Half the side length of the current region (m). */
+  regionHalf: 150,
   /** Player rigid body, for queries that must ignore the player (camera collision). */
   playerBody: null as RapierRigidBody | null,
   /** Interpolated (render-time) player feet position, used by the camera. */

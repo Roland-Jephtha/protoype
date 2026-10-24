@@ -1,6 +1,7 @@
 import { useApp } from '../state/appStore';
 import { ControlsReference } from './ControlsReference';
 import { SettingsPanel } from './SettingsPanel';
+import { TravelPanel } from './TravelPanel';
 
 /** `onResume` runs inside the click gesture so the game can re-capture the mouse. */
 export function PauseMenu({ onResume }: { onResume: () => void }) {
@@ -21,6 +22,9 @@ export function PauseMenu({ onResume }: { onResume: () => void }) {
             <button type="button" className="menu-btn" onClick={restart}>
               Restart checkpoint
             </button>
+            <button type="button" className="menu-btn" onClick={() => setView('travel')}>
+              Travel
+            </button>
             <button type="button" className="menu-btn" onClick={() => setView('settings')}>
               Settings
             </button>
@@ -35,6 +39,7 @@ export function PauseMenu({ onResume }: { onResume: () => void }) {
       )}
       {view === 'settings' && <SettingsPanel onBack={() => setView('main')} />}
       {view === 'controls' && <ControlsReference onBack={() => setView('main')} />}
+      {view === 'travel' && <TravelPanel onBack={() => setView('main')} />}
       {view === 'confirmQuit' && (
         <div className="panel menu-panel">
           <h2 className="panel-title">Return to title?</h2>

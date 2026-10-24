@@ -627,6 +627,52 @@ input[type='range']::-moz-range-thumb {
   text-align: center;
 }
 
+.travel-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 18px;
+  min-height: 64px;
+}
+
+.travel-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+}
+
+.travel-name em {
+  font-style: normal;
+  color: var(--c-accent-2);
+  font-size: 11px;
+}
+
+.travel-desc {
+  font-family: var(--font-body);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--c-text-dim);
+  font-weight: 400;
+}
+
+.hud-edge {
+  position: absolute;
+  top: calc(14px + var(--safe-t));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 3px;
+  background: rgba(5, 8, 14, 0.6);
+  border: 1px solid rgba(242, 193, 78, 0.6);
+  color: var(--c-accent-2);
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .hud-prompt {
   position: absolute;
   left: 50%;

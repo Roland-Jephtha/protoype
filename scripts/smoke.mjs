@@ -82,6 +82,8 @@ const state = (page) =>
       held: k.input.debugSnapshot().held,
       hero: r.heroModel,
       mode: r.moveMode,
+      region: r.regionId,
+      sole: r.heroSoleAboveGround,
     };
   });
 
@@ -101,7 +103,7 @@ async function desktopRun(browser) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
   const errors = [];
-  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message} @ ${(e.stack ?? '').split(String.fromCharCode(10)).slice(1, 6).join(' <- ')}`));
   page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
 
   await page.goto(BASE);
@@ -174,12 +176,15 @@ async function desktopRun(browser) {
   // Sprint from spawn toward +Z (S = backwards relative to the camera): a clear street.
   await page.keyboard.down('ShiftLeft');
   await page.keyboard.down('KeyS');
-  // Short burst: at 90 km/h a longer one reaches the buildings across the street.
+  // Short, time-boxed burst (~0.75 s): full speed is reached inside the plaza, then the
+  // hero coasts to a stop mid-street. Longer bursts at 90 km/h end in the buildings
+  // across the street, which also ruins the flight test that starts from here.
   // Sample the animation weight through the run→sprint switch: it must never fade
   // toward the rest pose (the old "gliding with arms out" bug).
   let minWeight = 1;
-  for (let i = 0; i < 11; i++) {
-    await sleep(100);
+  const burstStart = Date.now();
+  while (Date.now() - burstStart < 750) {
+    await sleep(60);
     minWeight = Math.min(minWeight, await page.evaluate(() => window.__krypton.runtime.heroAnimWeight));
   }
   const sprint = await state(page);
@@ -189,7 +194,7 @@ async function desktopRun(browser) {
   check('sprint keeps the run animation fully applied', minWeight > 0.95, `min weight ${minWeight.toFixed(2)}`);
   await page.screenshot({ path: path.join(OUT, '04b-sprint.png') });
 
-  // --- Flight: we're now standing on the street (z ≈ 28); fly along it (+X). ---
+  // --- Flight: we're now standing on the street (z ≈ 28); fly west along it (-X). ---
   await sleep(800);
   const speed3 = (s) => Math.hypot(s.vel.x, s.vel.y, s.vel.z) * 3.6;
   await page.keyboard.press('KeyF');
@@ -197,22 +202,25 @@ async function desktopRun(browser) {
   await sleep(1000);
   await page.keyboard.up('Space');
   const climbed = await state(page);
-  check('F takes off and Space climbs', climbed.mode === 'flight' && climbed.pos.y > 5, `y=${climbed.pos.y.toFixed(1)} state=${climbed.state}`);
-  await page.keyboard.down('KeyD');
-  await sleep(2000);
+  check('F takes off and Space climbs', climbed.mode === 'flight' && climbed.pos.y > 5, `y=${climbed.pos.y.toFixed(1)} state=${climbed.state} x=${climbed.pos.x.toFixed(0)} z=${climbed.pos.z.toFixed(0)}`);
+  // West, because the city's west edge has no exit: if timing jitter carries the hero
+  // that far it just holds him back. (East is an exit to the desert — overshooting
+  // there would start a travel mid-test.)
+  await page.keyboard.down('KeyA');
+  await sleep(1500);
   const cruise = await state(page);
-  check('flight cruises at 60 km/h', Math.abs(speed3(cruise) - 60) < 3 && cruise.state === 'fly', `${speed3(cruise).toFixed(1)} km/h, state=${cruise.state}`);
+  check('flight cruises at 60 km/h', Math.abs(speed3(cruise) - 60) < 3 && cruise.state === 'fly', `${speed3(cruise).toFixed(1)} km/h, state=${cruise.state}, x=${cruise.pos.x.toFixed(0)}`);
   await page.screenshot({ path: path.join(OUT, '04c-flying.png') });
   await page.keyboard.down('ShiftLeft');
-  await sleep(1600);
+  await sleep(1350);
   const boost = await state(page);
-  check('boost reaches 150 km/h', speed3(boost) > 145 && boost.state === 'flyBoost', `${speed3(boost).toFixed(1)} km/h, state=${boost.state}`);
+  check('boost reaches 150 km/h', speed3(boost) > 145 && boost.state === 'flyBoost', `${speed3(boost).toFixed(1)} km/h, state=${boost.state}, x=${boost.pos.x.toFixed(0)}`);
   await page.screenshot({ path: path.join(OUT, '04d-boost.png') });
   await page.keyboard.up('ShiftLeft');
-  await page.keyboard.up('KeyD');
+  await page.keyboard.up('KeyA');
   await sleep(2400);
   const hover = await state(page);
-  check('releasing controls brakes to a hover in the air', hover.state === 'hover' && speed3(hover) < 2 && hover.pos.y > 3, `${speed3(hover).toFixed(1)} km/h, y=${hover.pos.y.toFixed(1)}, state=${hover.state}`);
+  check('releasing controls brakes to a hover in the air', hover.state === 'hover' && speed3(hover) < 2 && hover.pos.y > 3, `${speed3(hover).toFixed(1)} km/h, y=${hover.pos.y.toFixed(1)}, state=${hover.state}, region=${hover.region}, x=${hover.pos.x.toFixed(0)} z=${hover.pos.z.toFixed(0)}`);
   await page.screenshot({ path: path.join(OUT, '04e-hover.png') });
   await page.keyboard.down('KeyC');
   await sleep(2500);
@@ -252,7 +260,7 @@ async function touchRun(browser) {
   });
   const page = await context.newPage();
   const errors = [];
-  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message} @ ${(e.stack ?? '').split(String.fromCharCode(10)).slice(1, 6).join(' <- ')}`));
   page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
   const cdp = await context.newCDPSession(page);
 
@@ -352,12 +360,99 @@ async function touchRun(browser) {
   await context.close();
 }
 
+/** Outdoor regions: travel, ground contact on terrain, flight + landing, and crossing an edge. */
+async function regionRun(browser) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Free roam' }).click();
+  await waitForReady(page);
+
+  const waitForRegion = async (id, timeout = 60000) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < timeout) {
+      const s = await state(page);
+      if (s?.region === id && s.ready && (s.grounded || s.mode === 'flight')) return s;
+      await sleep(250);
+    }
+    return state(page);
+  };
+  const travel = async (name) => {
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Travel' }).click();
+    await page.getByRole('button', { name: new RegExp(name) }).click();
+  };
+  /** Holds keys for `ms`, sampling the lowest sole height while grounded. */
+  const moveAndSample = async (keys, ms) => {
+    for (const k of keys) await page.keyboard.down(k);
+    let minSole = Infinity;
+    let maxSpeed = 0;
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms) {
+      await sleep(100);
+      const s = await state(page);
+      if (s.grounded) minSole = Math.min(minSole, s.sole);
+      maxSpeed = Math.max(maxSpeed, hspeed(s));
+    }
+    for (const k of keys) await page.keyboard.up(k);
+    return { minSole, maxSpeed };
+  };
+
+  for (const [id, name, shot] of [
+    ['desert', 'Red Mesa Desert', '08-desert'],
+    ['forest', 'Blackwood Forest', '09-forest'],
+  ]) {
+    const t0 = Date.now();
+    await travel(name);
+    const arrived = await waitForRegion(id);
+    check(`${id}: travel from the pause menu loads the region`, arrived.region === id && arrived.grounded, `${((Date.now() - t0) / 1000).toFixed(1)} s, y=${arrived.pos.y.toFixed(1)}`);
+    await sleep(800);
+    await page.screenshot({ path: path.join(OUT, `${shot}.png`) });
+
+    const run = await moveAndSample(['KeyW'], 2000);
+    const sprint = await moveAndSample(['ShiftLeft', 'KeyW'], 2000);
+    check(`${id}: running and sprinting keep the feet on top of the terrain`, Math.min(run.minSole, sprint.minSole) > -0.01, `min sole ${(Math.min(run.minSole, sprint.minSole) * 100).toFixed(1)} cm, top speed ${(sprint.maxSpeed * 3.6).toFixed(0)} km/h`);
+
+    await page.keyboard.press('KeyF');
+    await page.keyboard.down('Space');
+    await sleep(1500);
+    await page.keyboard.up('Space');
+    await page.screenshot({ path: path.join(OUT, `${shot}-aerial.png`) });
+    await page.keyboard.down('KeyC');
+    await sleep(3500);
+    await page.keyboard.up('KeyC');
+    await sleep(600);
+    const landed = await state(page);
+    check(`${id}: descending from flight lands on the terrain`, landed.mode === 'ground' && landed.grounded && landed.sole > -0.01, `state=${landed.state} sole=${(landed.sole * 100).toFixed(1)} cm`);
+    const perf = await state(page);
+    console.log(`      info: ${id} headless fps≈${perf.fps.toFixed(0)}, draw calls=${perf.draws}`);
+  }
+
+  // Edge crossing: from the forest's south arrival point, fly south (+Z) over the trees.
+  await page.keyboard.press('KeyF');
+  await page.keyboard.down('Space');
+  await sleep(1500);
+  await page.keyboard.up('Space');
+  await page.keyboard.down('ShiftLeft');
+  await page.keyboard.down('KeyS');
+  const city = await waitForRegion('metropolis', 30000);
+  await page.keyboard.up('KeyS');
+  await page.keyboard.up('ShiftLeft');
+  check('flying off the forest edge arrives in Metropolis, still flying', city.region === 'metropolis' && city.mode === 'flight', `region=${city.region} mode=${city.mode} pos=${city.pos.x.toFixed(0)},${city.pos.z.toFixed(0)}`);
+
+  check('no page errors (regions)', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await context.close();
+}
+
 async function portraitRun(browser) {
   // Phone held upright: the app must present the game in landscape.
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const page = await context.newPage();
   const errors = [];
-  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message} @ ${(e.stack ?? '').split(String.fromCharCode(10)).slice(1, 6).join(' <- ')}`));
   const cdp = await context.newCDPSession(page);
   await page.goto(BASE);
   await page.getByRole('button', { name: 'Free roam' }).tap();
@@ -399,6 +494,7 @@ try {
   await desktopRun(browser);
   await touchRun(browser);
   await portraitRun(browser);
+  await regionRun(browser);
 } catch (e) {
   check('smoke run completed without exceptions', false, e.message);
 } finally {

@@ -134,19 +134,7 @@ export function TestDistrict() {
             position={b.position}
           />
         ))}
-        {/* World boundary walls (invisible). Flight will need a softer boundary in Phase 3. */}
-        {[
-          [ext, 0],
-          [-ext, 0],
-          [0, ext],
-          [0, -ext],
-        ].map(([x, z], i) => (
-          <CuboidCollider
-            key={`wall${i}`}
-            args={x !== 0 ? [1, 300, ext] : [ext, 300, 1]}
-            position={[x + Math.sign(x), 300, z + Math.sign(z)]}
-          />
-        ))}
+        {/* Region edges are handled by the Player (exits travel on; other edges hold the hero back). */}
       </RigidBody>
 
       <InstancedBoxes items={sidewalks} material={materials.sidewalk} castShadow={false} />

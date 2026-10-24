@@ -3,22 +3,19 @@ import { advance, Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
 import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { DirectionalLight, Object3D } from 'three';
-import { CAMERA, GRAPHICS_PRESETS, PHYSICS, PLAYER } from '../config/gameConfig';
+import { CAMERA, GRAPHICS_PRESETS, PHYSICS } from '../config/gameConfig';
+import { OUTDOOR_DRAW_SCALE, REGIONS, type RegionLook } from '../config/regions';
 import { useApp } from '../state/appStore';
 import { useSettings } from '../state/settings';
-import { ThirdPersonCamera } from './camera/ThirdPersonCamera';
-import { Player } from './player/Player';
 import { runtime } from './runtime';
-import { TestDistrict } from './world/TestDistrict';
-
-const SUN_OFFSET: [number, number, number] = [-70, 55, -45];
-const SKY_COLOR = '#9fb0c4';
+import { RegionWorld } from './world/RegionWorld';
 
 /**
- * Dusk lighting. The shadow-casting sun follows the player so a small, sharp
- * shadow frustum covers the area that matters instead of the whole district.
+ * Region lighting. The shadow-casting sun follows the player so a small, sharp
+ * shadow frustum covers the area that matters instead of the whole region.
  */
-function Lighting({ shadows, mapSize }: { shadows: boolean; mapSize: number }) {
+function Lighting({ look, shadows, mapSize }: { look: RegionLook; shadows: boolean; mapSize: number }) {
+  const offset = look.sunOffset;
   const sun = useRef<DirectionalLight>(null);
   const target = useMemo(() => new Object3D(), []);
   const scene = useThree((s) => s.scene);
@@ -37,17 +34,17 @@ function Lighting({ shadows, mapSize }: { shadows: boolean; mapSize: number }) {
     const sx = Math.round(p.x / 2) * 2;
     const sz = Math.round(p.z / 2) * 2;
     target.position.set(sx, p.y, sz);
-    sun.current.position.set(sx + SUN_OFFSET[0], p.y + SUN_OFFSET[1], sz + SUN_OFFSET[2]);
+    sun.current.position.set(sx + offset[0], p.y + offset[1], sz + offset[2]);
     sun.current.target = target;
   });
 
   return (
     <>
-      <hemisphereLight args={['#c6d4ec', '#6a5d52', 1.5]} />
+      <hemisphereLight args={[look.hemisphere.sky, look.hemisphere.ground, look.hemisphere.intensity]} />
       <directionalLight
         ref={sun}
-        color="#ffc38a"
-        intensity={2.6}
+        color={look.sun.color}
+        intensity={look.sun.intensity}
         castShadow={shadows}
         shadow-mapSize={[mapSize, mapSize]}
         shadow-camera-left={-45}
@@ -114,16 +111,25 @@ function VsyncFrameLoop() {
   return null;
 }
 
-/** Signals when the physics WASM and world have finished their first mount. */
-function ReadySignal({ onReady }: { onReady: () => void }) {
-  useEffect(() => onReady(), [onReady]);
+/** Signals when the physics WASM and the region's world have finished mounting. */
+function ReadySignal() {
+  useEffect(() => {
+    // Wait one frame so the region's first render (terrain upload) is done.
+    const id = requestAnimationFrame(() => useApp.getState().setRegionReady());
+    return () => cancelAnimationFrame(id);
+  }, []);
   return null;
 }
 
-export function GameCanvas({ onReady }: { onReady: () => void }) {
+export function GameCanvas() {
   const quality = useSettings((s) => s.graphicsQuality);
   const preset = GRAPHICS_PRESETS[quality];
   const paused = useApp((s) => s.paused);
+  const regionId = useApp((s) => s.regionId);
+  const region = REGIONS[regionId];
+  const look = region.look;
+  // Cities fog by the quality preset; open regions see further, scaled by quality.
+  const fogFar = region.kind === 'city' ? preset.drawDistance : look.fog.far * OUTDOOR_DRAW_SCALE[quality];
 
   return (
     <Canvas
@@ -137,18 +143,17 @@ export function GameCanvas({ onReady }: { onReady: () => void }) {
       // app frame is CSS-rotated into landscape on phones.
       resize={{ offsetSize: true }}
       gl={{ antialias: quality !== 'low', powerPreference: 'high-performance' }}
-      camera={{ fov: CAMERA.fov, near: CAMERA.near, far: CAMERA.far, position: [PLAYER.spawn[0], 4, PLAYER.spawn[2] + 6] }}
+      camera={{ fov: CAMERA.fov, near: CAMERA.near, far: CAMERA.far, position: [0, 4, 14] }}
     >
-      <color attach="background" args={[SKY_COLOR]} />
-      <fog attach="fog" args={[SKY_COLOR, 90, preset.drawDistance]} />
-      <Sky distance={2000} sunPosition={SUN_OFFSET} turbidity={6} rayleigh={1.6} mieCoefficient={0.006} mieDirectionalG={0.85} />
-      <Lighting shadows={preset.shadows} mapSize={preset.shadowMapSize} />
+      <color attach="background" args={[look.background]} />
+      <fog attach="fog" args={[look.fog.color, look.fog.near, fogFar]} />
+      <Sky distance={2000} sunPosition={look.sunOffset} {...look.sky} />
+      <Lighting look={look} shadows={preset.shadows} mapSize={preset.shadowMapSize} />
       <Suspense fallback={null}>
-        <Physics timeStep={PHYSICS.timeStep} paused={paused} updatePriority={-50} gravity={[0, -PHYSICS.gravity, 0]}>
-          <TestDistrict />
-          <Player />
-          <ThirdPersonCamera />
-          <ReadySignal onReady={onReady} />
+        {/* Keyed by region: travelling disposes the old world, colliders and player entirely. */}
+        <Physics key={regionId} timeStep={PHYSICS.timeStep} paused={paused} updatePriority={-50} gravity={[0, -PHYSICS.gravity, 0]}>
+          <RegionWorld regionId={regionId} />
+          <ReadySignal />
         </Physics>
       </Suspense>
       <PerfProbe />

@@ -17,7 +17,9 @@
 - **Flight**: the collision capsule stays upright while the body flies horizontally, so the head/feet can poke into a wall the capsule hasn't reached. No banking into turns, no flight-specific audio/wind effects, no takeoff/landing animations (hover and fly clips blend). Hovering uses the standing idle.
 - City art is still a procedural greybox (box buildings, shader windows).
 - **Lighting**: areas in building shadow are quite dark; no environment map/reflections; one directional light with a ±45 m shadow area around the player.
-- **World boundary** is an invisible wall; there's no in-world explanation.
+- **Region edges**: edges with an exit travel on (east of the city → desert, north → forest); other edges hold the hero back invisibly (the HUD says "Edge of the region"). Distant scenery continues beyond, but you can't reach it.
+- **Desert/forest are v1**: procedural low-poly props (no downloaded nature assets yet), mesa cliffs show saw-tooth aliasing up close, the river has no swimming (you walk on the bed under the water), no wildlife/vehicles yet, no ambient audio. Terrain generation runs on the main thread (~0.5 s grid on desktop) behind the loading overlay.
+- **Forest cost**: ~11k instanced trees and colliders on Medium; real-device performance unknown.
 - Changing **Graphics quality** recreates the renderer and physics world, which respawns the player.
 - Camera collision uses one sphere cast; very thin geometry or tight corners can still allow brief near-clipping.
 - After Esc, Chrome may refuse to re-capture the mouse for ~1 s; clicking again works.

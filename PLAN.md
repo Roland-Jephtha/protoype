@@ -1,89 +1,61 @@
 # PLAN — Project Krypton: Shadow over Metropolis
 
-_Last updated: 2026-10-23_
+_Last updated: 2026-10-24_
 
-## Update 2026-10-23 (post Phase 1)
+## Where we are
 
-- Rigged, animated hero: Quaternius CC0 mannequin styled as a super-suit + cape (replaces primitive placeholder, which remains the fallback).
-- Hatch Superman (CC BY 4.0, nitwit.friends) integrated as the main hero: textured, Mixamo walk/run/fall clips, cape attached; 372 KB after processing. Quaternius mannequin is the fallback.
-- Phones always landscape: fullscreen + orientation lock, CSS rotation fallback, touch remapped.
-- Credits screen (CC BY attribution).
-- Ripped game models found in the project folder were excluded from git (see ASSET_MANIFEST.md).
+| Done | Notes |
+|---|---|
+| Phase 0–1: foundation | App shell, input (keyboard/mouse/touch), camera, pause/settings, tests |
+| Hero | Hatch Superman (CC BY 4.0) with cloth cape; CC0 Quaternius fallback |
+| Movement | Walk, run 20 km/h, sprint 90 km/h; exact ground contact (depenetration + snap); vsync frame loop (no judder) |
+| Flight | 60 km/h base, 150 km/h boost, hover, climb/dive by camera, landing |
+| Mobile | Landscape-only, analog stick, look pad, Fly/Up/Down/Boost buttons |
+| **Milestone 1: regions** | **Red Mesa Desert + Blackwood Forest + Metropolis**, travel via pause menu or flying off an edge (see below) |
 
-## Current phase
+Roadmap (approved 2026-10-24, owner wants most action outside the city):
 
-**Phase 1 — Playable foundation: COMPLETE (pending your hands-on playtest).**
-Next: **Phase 2 — Real mobile & desktop controls.**
-
-## Starting state (Phase 0 inspection, 2026-10-23)
-
-The repository directory was **completely empty** (no files, no git repo). Nothing
-existed to preserve. Tooling found: Node 25.7.0, npm 11.10.1, git 2.51, Chrome and
-Edge installed (used for automated browser tests). The project was scaffolded with
-`create-vite` (react-ts template); its demo files were removed.
-
-## MVP definition (vertical slice target, end of Phase 8)
-
-Title screen → save slot → intro cinematic (video path + in-engine fallback) →
-prologue rescue mission in one district with ground movement, flight and
-super-speed → mission complete → autosave → free roam. Desktop and touch.
-
-## Phase status
-
-| Phase | Status | Notes |
+| # | Milestone | Status |
 |---|---|---|
-| 0 Inspection & plan | ✅ Done | Docs created; stack chosen (see TECHNICAL_ARCHITECTURE.md) |
-| 1 Playable foundation | ✅ Done | See acceptance below |
-| 2 Real mobile & desktop controls | ⏭ Next | Shell already functional; needs hardening, tuning, gamepad optional |
-| 3 Flight & super-speed | ☐ | |
-| 4 First city district | ☐ | Phase 1 test district is a procedural greybox |
-| 5 Streaming | ☐ | |
-| 6 Powers & combat | ☐ | |
-| 7 Missions & saves | ☐ | |
-| 8 Story vertical slice | ☐ | |
-| 9 Content & polish (incl. asset sourcing) | ☐ | Asset research can start earlier, see ASSET_MANIFEST.md |
-| 10 Release candidate | ☐ | |
+| 1 | Region system + desert + forest | ✅ v1 done (2026-10-24) |
+| 2 | City life: pedestrians, traffic + lights, street props; wildlife/convoys outdoors | ⏭ Next |
+| 3 | Combat: heat vision, punches, lift/throw, health, enemy AI (drones, soldiers) | ☐ |
+| 4 | Villains: DC models the owner downloads (licence-checked) + original henchmen, boss AI | ☐ |
+| 5 | Missions + IndexedDB saves (3 slots, autosave, versioned) | ☐ |
+| 6 | Campaign levels (prologue → chapter 5, side missions) — mostly desert/forest | ☐ |
+| 7 | Presentation: intro cinematic (video + in-engine fallback), briefings, results | ☐ |
+| 8 | Flight polish + audio (banking, capsule orientation, wind, ambience, music) | ☐ |
+| 9 | Release candidate: device testing, performance, deploy docs | ☐ |
 
-## Phase 1 acceptance criteria
+The level/region plan and villain roster are in docs/GAME_DESIGN.md.
 
-| Criterion | Status | Evidence |
-|---|---|---|
-| App starts locally | ✅ | `npm run dev`, `npm run preview` |
-| A 3D scene renders | ✅ | Smoke test screenshots; 75 draw calls in test district |
-| Placeholder hero walks, runs, jumps, lands | ✅ | Unit tests (`groundMovement.test.ts`) + smoke test (run 8 m/s, jump +2.25 m, lands) |
-| Camera control works | ✅ | Mouse (pointer lock) + touch look pad; smoke test verifies touch yaw change. Mouse-look needs a human (pointer lock can't be automated headless) |
-| Basic collision works | ✅ | Rapier character controller; smoke test shows player stopped by stairs/platform; auto-step on 0.4 m steps |
-| Keyboard/mouse controls work | ✅ | Smoke test: W, Space, Shift, Esc |
-| Mobile UI shell and input abstraction exist | ✅ | Functional stick, look pad, jump, sprint, pause; multi-touch verified in Chrome touch emulation (not on a physical device) |
-| Pause menu works | ✅ | Smoke test: open, settings, Esc-back, restart checkpoint, return to title, re-enter |
-| Production build passes | ✅ | `npm run build` |
+## Milestone 1 — what was built
 
-## Phase 2 — next tasks
+- `src/config/regions.ts` — region definitions (look, terrain parameters, exits, entry points). Desert lies **east** of the city, forest **north**.
+- `src/game/world/terrainNoise.ts` — seeded height functions: dunes, mesas (calibrated so `mesaCoverage` ≈ map fraction), carved canyon and river, highway/rail bands that cut through terrain, flat sites.
+- `src/game/world/Terrain.tsx` — 4×4 chunk meshes + Rapier heightfield from one grid with identical triangulation (**collision matches the visible ground to < 1 mm**, unit-tested), biome colouring + detail shader, distant scenery ring and edge skirt.
+- Desert: highway + pylons, rocks, boulders, cacti, scrub, Prometheus test-range base. Forest: ~11k trees (medium quality) with trunk colliders, river surface, rail line, dam, ranger tower, cabins, crash site.
+- Travel: pause menu → Travel, or fly/run off an edge with an exit (arrive flying if you left flying); edges without exits hold the hero back. HUD shows region name + edge hint.
 
-1. Physical-device touch testing (iOS Safari, Android Chrome) — **needs you**; record results in docs/TEST_PLAN.md.
-2. Floating vs fixed stick option; stick re-centre on touch-down inside a larger capture zone.
-3. Look-pad acceleration curve and per-axis sensitivity; optional gyro (later).
-4. Action button layout config (size/position presets), left-handed mirror option.
-5. Gamepad API source (`input/gamepad.ts`) mapping to the same `InputManager`.
-6. Key rebinding UI (bindings are already centralized in `config/controls.ts`).
-7. Debug overlay: on-screen touch point visualization.
-8. Automated: extend `scripts/smoke.mjs` with pointer-cancel during camera drag, rapid tap spam, orientation change mid-touch.
+Acceptance (all verified by `npm run smoke`, 47/47, three consecutive runs): both regions load from the Travel menu (~2–5 s headless), running/sprinting keeps feet on the terrain (min sole ≥ 0 cm), flight + landing on terrain, flying off the forest edge arrives in Metropolis still flying, no page errors.
 
-Phase 2 acceptance criteria are in the brief and repeated in docs/TEST_PLAN.md.
+## Bugs found and fixed during Milestone 1
+
+- Rapier "unreachable" panic: the player's body was rebuilt on every UI re-render (new position array each render) and removed twice. Position memoised; `RegionWorld` memoised.
+- Same panic on travel: static colliders were removed from an already torn-down world. Guarded like @react-three/rapier does.
+- Road/rail strips faced downward (culled from above); fixed + unit test.
+- Mesas never appeared (threshold outside the noise range); recalibrated from the measured distribution.
 
 ## Blockers / decisions needed
 
-- None blocking. Two open questions for the product owner (sensible defaults chosen):
-  1. **Git**: the folder is not a repository. Recommend `git init` before Phase 2 so each phase is a reviewable commit. Not done without your approval.
-  2. **Hero art direction**: legally, a licensed Superman model is unlikely to be available; plan is an original, swappable hero (see ASSET_MANIFEST.md). Confirm you're OK with "Superman-inspired original" visuals for any public build.
+- None blocking. Physical-device testing (iPhone/Android) still needs the owner.
 
 ## Major technical risks
 
 | Risk | Mitigation / test |
 |---|---|
-| Tunnelling at 250–500 m/s flight | Rapier shape-cast character controller already sweeps; Phase 3 adds sub-stepping for very high speed + tests flying into buildings at max speed |
-| Mobile GPU performance | Instanced geometry, quality presets, DPR caps; measure on real devices in Phase 4 |
-| Streaming hitches | Phase 5: async chunk loading, idle-time GPU uploads, diagnostics |
-| Pointer lock / autoplay restrictions | Lock requested only in user gestures; intro video starts from Start click (Phase 8) |
-| Legal asset availability | Original/CC0 assets only; manifest tracks every file |
-| 3.2 MB game chunk (Rapier WASM inlined + three.js) | Game chunk lazy-loaded after title; consider non-compat Rapier build (separate .wasm) in Phase 9 |
+| Mobile GPU/CPU cost of forests (11k trees, ~1.1M tris on Medium) | Quality presets scale density 0.4/0.7/1.0; group culling by distance; needs real-device numbers |
+| Terrain generation time on phones (~0.5 s desktop for the grid) | Behind the loading overlay; move to a Web Worker if devices are slow |
+| Mesa cliffs alias on the 4–9 m grid (saw-teeth) | Softer transitions now; later: local refinement or cliff meshes |
+| Legal asset availability (villains) | Licence + origin check per model before download; manifest + credits |
+| 3.3 MB game chunk (Rapier WASM inlined + three.js) | Lazy-loaded after title; consider non-compat Rapier build |

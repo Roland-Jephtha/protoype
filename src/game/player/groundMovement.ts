@@ -256,6 +256,19 @@ export class GroundMotor {
     return { x: v.x * dt, y: v.y * dt, z: v.z * dt };
   }
 
+  /** Start already in flight (arriving in a region mid-flight). */
+  startFlying(vx: number, vy: number, vz: number) {
+    this.mode = 'flight';
+    this.grounded = false;
+    this.velocity = { x: vx, y: vy, z: vz };
+    this.setState('fly');
+  }
+
+  /** Stop motion along one axis (e.g. held back by a region edge). */
+  stopAxis(axis: 'x' | 'z') {
+    this.velocity[axis] = 0;
+  }
+
   /** Physics hit the altitude ceiling: stop climbing. */
   clampAltitude() {
     if (this.velocity.y > 0) this.velocity.y = 0;

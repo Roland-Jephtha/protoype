@@ -36,6 +36,8 @@ MultiVersus" (King_45), "Injustice 2 | DCEU collection" (kanimator), and 3dworld
 
 ## Original (code-generated) assets
 
+Regions (Milestone 1) use no third-party files: terrain (seeded noise), rocks, cacti, scrub, conifer/broadleaf trees (procedural low-poly with vertex colours, `src/game/world/propGeometries.ts`), the highway, rail line, river surface, dam, ranger tower, cabins, crash-site wreckage and the Prometheus base are all generated in code. Downloaded CC0 nature kits (Kenney/Quaternius) are a planned upgrade.
+
 | Asset | Type | Source | License | Path |
 |---|---|---|---|---|
 | Placeholder hero | Procedural primitives + procedural animation | Original (this project) | Project-owned | `src/game/player/PlaceholderHero.tsx` |

@@ -23,6 +23,8 @@ Only controls that work today are listed as active. Bindings live in
 
 Losing focus, hiding the tab, or losing pointer lock pauses the game and releases all keys.
 
+**Travel between regions:** pause → *Travel*, or fly/run off a region edge that has an exit (the HUD shows `→ Red Mesa Desert` near it). Leave while flying and you arrive flying.
+
 ## Touch (landscape only)
 
 The game is always horizontal on phones. On Play it requests fullscreen + a

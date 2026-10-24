@@ -77,6 +77,39 @@ saving people is as important as defeating enemies.
 - **Chapter 5 — The Last Light.** Infiltrate the Prometheus core, evacuate staff,
   confront Voss, stabilize the source. Resolution depends on restraint, not only force.
 
+## Regions (built: Milestone 1)
+
+Separate regions of a few km each; travel by flying/running off an edge with an exit,
+or the pause menu's Travel page. North is -Z.
+
+| Region | Terrain & landmarks | Used for |
+|---|---|---|
+| **Metropolis** (hub) | City grid, landmark tower, training plaza | City emergencies, siege (Ch.1, Ch.4) |
+| **Red Mesa Desert** (east of the city) | Dunes, mesas/buttes, the long canyon, desert highway with pylons, salt pan, **Prometheus test-range base** | Convoy hijack, canyon chase, Null battle, missile site, crater finale |
+| **Blackwood Forest** (north of the city) | Wooded hills, river + **dam**, rail line, ranger tower, cabins, **crash site** | Prologue crash rescue, lab under the dam, wildfire, lost hikers |
+| Later | Arctic, coast/ocean, mountains | Future chapters |
+
+## Levels (campaign mapped to regions — about two thirds outside the city)
+
+| Chapter | Missions | Region |
+|---|---|---|
+| Prologue — *The Night the Lights Went Out* | City blackout → Flight 2217 loses power → **guide it down and rescue survivors at the forest crash site** | City → **Forest** |
+| 1 — *The City's Guardian* | Tower fire rescue · **desert highway convoy hijack (vehicle pursuit)** · stolen-tech trail to the test range | City, **Desert** |
+| 2 — *The Impossible Enemy* | **Canyon chase** · **test-range battle vs Null (power-dampening field)** | **Desert** |
+| 3 — *The Power Within* | **Infiltrate the lab under the dam** · rescue Dr. Brandt · first DC villain fight | **Forest** |
+| 4 — *Metropolis Under Siege* | City defence vs gunships · **desert missile site** | City, **Desert** |
+| 5 — *The Last Light* | **Crater core** · Doomsday boss · Director Voss | **Desert** |
+| Side missions | Forest wildfire, lost hikers, river flood at the dam, canyon train derailment, desert sandstorm rescue | **Forest/Desert** |
+
+## Villains
+
+- **DC villains** (fan models the owner downloads from Sketchfab after a licence + origin
+  check; suspected game rips are rejected): Doomsday (Ch.5 boss), General Zod & Faora
+  (flight duels), Lex Luthor (mech suit), Darkseid, Bizarro, Brainiac, Metallo, Parasite.
+- **Original enemies:** Aegis drones and suppression troopers, Prometheus gunships,
+  Kade "Null" Varro (power-dampening field), Director Helena Voss.
+- Boss patterns (Milestone 4): Doomsday charge/slam, Zod/Faora aerial duels, Lex mech.
+
 ## First playable mission (Phase 7–8): "Flight 2217"
 
 Type: rescue. Chapter: prologue. Prereq: intro cinematic seen.
@@ -85,7 +118,7 @@ Type: rescue. Chapter: prologue. Prereq: intro cinematic seen.
 |---|---|---|---|
 | 1 | Reach the stricken airliner (waypoint over the district) | Within 60 m | Timer runs out (aircraft too low) → checkpoint |
 | 2 | Match speed and stabilize (hold brake/boost to align) | Alignment held 3 s | — (retry) |
-| 3 | Guide it to the river/runway marker | Enters landing zone | Hits building → checkpoint |
+| 3 | Guide it down to the forest clearing (Blackwood Forest crash site) | Enters landing zone | Hits terrain hard → checkpoint |
 | 4 | Rescue 3 civilians trapped by a blackout-hit tram | All carried to medics | — |
 | 5 | Investigate the substation | Interact with residue | — |
 
