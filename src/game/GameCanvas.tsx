@@ -89,16 +89,24 @@ function VsyncFrameLoop() {
   useEffect(() => {
     let raf = 0;
     let started = false;
+    let reported = false;
     const loop = (ts: number) => {
+      // Schedule the next frame first: an exception in a frame callback must
+      // never stop the loop (that would freeze the game for good).
+      raf = requestAnimationFrame(loop);
       const t = ts / 1000;
       if (!started) {
         // First frame: anchor the clock so the initial delta isn't the page's whole lifetime.
         clock.elapsedTime = t;
         started = true;
-      } else {
-        advance(t);
+        return;
       }
-      raf = requestAnimationFrame(loop);
+      try {
+        advance(t);
+      } catch (err) {
+        if (!reported) console.error('[frame] error in frame loop (continuing):', err);
+        reported = true;
+      }
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);

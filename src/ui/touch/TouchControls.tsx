@@ -11,13 +11,15 @@ import { VirtualStick } from './VirtualStick';
  *  - left: analog movement stick
  *  - right: camera look area beneath the action cluster
  *  - top-right: pause
- * Phase 1 shows only actions that actually do something (jump, sprint).
+ * Only actions that actually do something are shown. In flight, Jump becomes
+ * Up, Sprint becomes Boost, and a Down button appears.
  * Attack / heat vision / interact buttons arrive with their systems.
  */
 export function TouchControls() {
   const opacity = useSettings((s) => s.touchControlOpacity);
   const scale = useSettings((s) => s.touchControlScale);
   const pause = useApp((s) => s.pause);
+  const flying = useApp((s) => s.flying);
 
   useEffect(() => () => input.releaseSource('touch'), []);
 
@@ -28,8 +30,12 @@ export function TouchControls() {
         <VirtualStick scale={scale} />
       </div>
       <div className="touch-right">
-        <TouchButton action="sprint" label="Sprint" icon="»" size={64 * scale} className="btn-sprint" />
-        <TouchButton action="jump" label="Jump" icon="▲" size={84 * scale} className="btn-jump" />
+        {flying && <TouchButton action="descend" label="Down" icon="▼" size={60 * scale} className="btn-down" />}
+        <TouchButton action="sprint" label={flying ? 'Boost' : 'Sprint'} icon="»" size={64 * scale} className="btn-sprint" />
+        <div className="touch-col">
+          <TouchButton action="fly" label={flying ? 'Land' : 'Fly'} icon={flying ? '⤓' : '✈'} size={56 * scale} className="btn-fly" />
+          <TouchButton action="jump" label={flying ? 'Up' : 'Jump'} icon="▲" size={84 * scale} className="btn-jump" />
+        </div>
       </div>
       <button
         type="button"

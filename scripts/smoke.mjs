@@ -81,6 +81,7 @@ const state = (page) =>
       move: k.input.getMove(),
       held: k.input.debugSnapshot().held,
       hero: r.heroModel,
+      mode: r.moveMode,
     };
   });
 
@@ -187,6 +188,38 @@ async function desktopRun(browser) {
   check('Shift sprints', hspeed(sprint) > 20, `${hspeed(sprint).toFixed(2)} m/s, state=${sprint.state}`);
   check('sprint keeps the run animation fully applied', minWeight > 0.95, `min weight ${minWeight.toFixed(2)}`);
   await page.screenshot({ path: path.join(OUT, '04b-sprint.png') });
+
+  // --- Flight: we're now standing on the street (z ≈ 28); fly along it (+X). ---
+  await sleep(800);
+  const speed3 = (s) => Math.hypot(s.vel.x, s.vel.y, s.vel.z) * 3.6;
+  await page.keyboard.press('KeyF');
+  await page.keyboard.down('Space');
+  await sleep(1000);
+  await page.keyboard.up('Space');
+  const climbed = await state(page);
+  check('F takes off and Space climbs', climbed.mode === 'flight' && climbed.pos.y > 5, `y=${climbed.pos.y.toFixed(1)} state=${climbed.state}`);
+  await page.keyboard.down('KeyD');
+  await sleep(2000);
+  const cruise = await state(page);
+  check('flight cruises at 60 km/h', Math.abs(speed3(cruise) - 60) < 3 && cruise.state === 'fly', `${speed3(cruise).toFixed(1)} km/h, state=${cruise.state}`);
+  await page.screenshot({ path: path.join(OUT, '04c-flying.png') });
+  await page.keyboard.down('ShiftLeft');
+  await sleep(1600);
+  const boost = await state(page);
+  check('boost reaches 150 km/h', speed3(boost) > 145 && boost.state === 'flyBoost', `${speed3(boost).toFixed(1)} km/h, state=${boost.state}`);
+  await page.screenshot({ path: path.join(OUT, '04d-boost.png') });
+  await page.keyboard.up('ShiftLeft');
+  await page.keyboard.up('KeyD');
+  await sleep(2400);
+  const hover = await state(page);
+  check('releasing controls brakes to a hover in the air', hover.state === 'hover' && speed3(hover) < 2 && hover.pos.y > 3, `${speed3(hover).toFixed(1)} km/h, y=${hover.pos.y.toFixed(1)}, state=${hover.state}`);
+  await page.screenshot({ path: path.join(OUT, '04e-hover.png') });
+  await page.keyboard.down('KeyC');
+  await sleep(2500);
+  await page.keyboard.up('KeyC');
+  await sleep(500);
+  const landed2 = await state(page);
+  check('C descends and lands', landed2.mode === 'ground' && landed2.grounded, `state=${landed2.state} y=${landed2.pos.y.toFixed(2)}`);
 
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Return to title' }).click();
@@ -295,6 +328,17 @@ async function touchRun(browser) {
   const cancelled = await state(page);
   check('touch: sprint held before cancel', held.held.includes('sprint'));
   check('touch: touchcancel releases stick and buttons', cancelled.move.y === 0 && !cancelled.held.includes('sprint') && hspeed(cancelled) < 0.5);
+
+  // Fly button: takes off and swaps the buttons to their flight versions.
+  const flyBtn = await page.getByRole('button', { name: 'Fly' }).boundingBox();
+  await touch('touchStart', [{ x: flyBtn.x + flyBtn.width / 2, y: flyBtn.y + flyBtn.height / 2, id: 7 }]);
+  await touch('touchEnd', []);
+  await sleep(600);
+  const flyingTouch = await state(page);
+  const upVisible = await page.getByRole('button', { name: 'Up' }).isVisible();
+  const downVisible = await page.getByRole('button', { name: 'Down' }).isVisible();
+  check('touch: Fly button takes off and shows Up/Down/Boost', flyingTouch.mode === 'flight' && upVisible && downVisible, `mode=${flyingTouch.mode}`);
+  await page.screenshot({ path: path.join(OUT, '05b-touch-flying.png') });
 
   // Pause button.
   const pauseBtn = await page.getByRole('button', { name: 'Pause' }).boundingBox();

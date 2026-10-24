@@ -24,6 +24,7 @@ export function ThirdPersonCamera() {
     yaw: number;
     pitch: number;
     distance: number;
+    modeDistance: number;
     fov: number;
     target: Vector3;
     initialised: boolean;
@@ -31,6 +32,7 @@ export function ThirdPersonCamera() {
     yaw: runtime.cameraYaw,
     pitch: CAMERA.defaultPitch,
     distance: CAMERA.distance,
+    modeDistance: CAMERA.distance,
     fov: CAMERA.fov,
     target: new Vector3().copy(runtime.playerRenderPosition),
     initialised: false,
@@ -64,9 +66,14 @@ export function ThirdPersonCamera() {
     }
 
     // --- mode-dependent distance & FOV ----------------------------------
-    const sprinting = runtime.playerState === 'sprint';
-    const desiredDistance: number = sprinting ? CAMERA.sprintDistance : CAMERA.distance;
-    const fovBoost = sprinting ? CAMERA.sprintFovBoost * (settings.reducedMotion ? 0.3 : 1) : 0;
+    const st = runtime.playerState;
+    const modeDistance: number =
+      st === 'flyBoost' ? CAMERA.boostDistance : st === 'fly' ? CAMERA.flyDistance : st === 'sprint' ? CAMERA.sprintDistance : CAMERA.distance;
+    // Ease between mode distances; only real collisions may pull the camera in instantly.
+    s.modeDistance += (modeDistance - s.modeDistance) * damp(CAMERA.distanceSharpness, dt);
+    const desiredDistance = s.modeDistance;
+    const boost = st === 'flyBoost' ? CAMERA.boostFovBoost : st === 'sprint' ? CAMERA.sprintFovBoost : st === 'fly' ? CAMERA.flyFovBoost : 0;
+    const fovBoost = boost * (settings.reducedMotion ? 0.3 : 1);
     s.fov += (CAMERA.fov + fovBoost - s.fov) * damp(CAMERA.fovSharpness, dt);
     if (Math.abs(camera.fov - s.fov) > 0.01) {
       camera.fov = s.fov;

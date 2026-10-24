@@ -1,4 +1,4 @@
-import { GROUND_MOVEMENT, PHYSICS } from '../../config/gameConfig';
+import { FLIGHT, GROUND_MOVEMENT, PHYSICS } from '../../config/gameConfig';
 
 export type PlayerMoveState =
   | 'idle'
@@ -8,7 +8,13 @@ export type PlayerMoveState =
   | 'jump'
   | 'fall'
   | 'land'
-  | 'hardLand';
+  | 'hardLand'
+  | 'takeoff'
+  | 'hover'
+  | 'fly'
+  | 'flyBoost';
+
+export type MoveMode = 'ground' | 'flight';
 
 export interface MotorInput {
   /** Analog move input, x = right, y = forward (already dead-zoned, length ≤ 1). */
@@ -16,9 +22,17 @@ export interface MotorInput {
   moveY: number;
   /** Camera yaw; movement is relative to the camera. */
   cameraYaw: number;
+  /** Ground: sprint. Flight: boost. */
   sprintHeld: boolean;
   jumpPressed: boolean;
+  /** Ground: variable jump height. Flight: fly up. */
   jumpHeld: boolean;
+  /** Flight steering pitch (rad, + = up), relative to the camera's level framing. */
+  cameraPitch?: number;
+  /** Toggle flight (edge). */
+  flyPressed?: boolean;
+  /** Fly down (held). */
+  descendHeld?: boolean;
 }
 
 export interface Vec3Like {
@@ -28,6 +42,20 @@ export interface Vec3Like {
 }
 
 type Tuning = typeof GROUND_MOVEMENT;
+
+/**
+ * Flight wish vector in world space: stick forward follows the camera's look
+ * direction including pitch (look up to climb, down to dive), stick sideways
+ * strafes, and up/down add pure vertical motion. Length ≤ 1.
+ */
+export function flightDirection(moveX: number, moveY: number, yaw: number, pitch: number, up: number) {
+  const cp = Math.cos(pitch);
+  const x = Math.cos(yaw) * moveX - Math.sin(yaw) * cp * moveY;
+  const y = Math.sin(pitch) * moveY + up;
+  const z = -Math.sin(yaw) * moveX - Math.cos(yaw) * cp * moveY;
+  const len = Math.hypot(x, y, z);
+  return len > 1 ? { x: x / len, y: y / len, z: z / len } : { x, y, z };
+}
 
 /** Camera-relative input → world-space XZ direction. yaw 0 looks down -Z. */
 export function cameraRelativeDirection(moveX: number, moveY: number, yaw: number) {
@@ -54,8 +82,9 @@ function wrapAngle(a: number) {
 }
 
 /**
- * Ground/air locomotion for the hero: walk, run, sprint, jump (with coyote time,
- * jump buffering and variable height), fall and landing recovery.
+ * Locomotion for the hero: walk, run, sprint, jump (with coyote time, jump
+ * buffering and variable height), fall, landing recovery — and flight
+ * (takeoff, hover, fly, boost, landing on contact).
  *
  * Collision-agnostic: `step()` returns the desired displacement, the physics
  * layer resolves it against the world, then `resolve()` feeds back what really
@@ -64,6 +93,7 @@ function wrapAngle(a: number) {
 export class GroundMotor {
   velocity: Vec3Like = { x: 0, y: 0, z: 0 };
   grounded = false;
+  mode: MoveMode = 'ground';
   state: PlayerMoveState = 'fall';
   stateTime = 0;
   /** Visual facing yaw (rad), atan2(x, z) convention. */
@@ -75,6 +105,7 @@ export class GroundMotor {
   private jumpAscending = false;
   private landTimer = 0;
   private sprinting = false;
+  private boosting = false;
   private readonly t: Tuning;
 
   constructor(tuning: Tuning = GROUND_MOVEMENT) {
@@ -84,6 +115,8 @@ export class GroundMotor {
   reset(facingYaw = Math.PI) {
     this.velocity = { x: 0, y: 0, z: 0 };
     this.grounded = false;
+    this.mode = 'ground';
+    this.boosting = false;
     this.state = 'fall';
     this.stateTime = 0;
     this.facingYaw = facingYaw;
@@ -95,6 +128,21 @@ export class GroundMotor {
 
   /** Advances one fixed step and returns the desired displacement for this step. */
   step(inp: MotorInput, dt: number): Vec3Like {
+    // --- flight transitions ---------------------------------------------
+    if (this.mode === 'flight') {
+      if (inp.flyPressed) {
+        this.mode = 'ground'; // drop out of flight and fall
+        this.boosting = false;
+        this.setState('fall');
+      } else {
+        return this.stepFlight(inp, dt);
+      }
+    } else if (inp.flyPressed || (inp.jumpPressed && !this.grounded && this.coyoteTimer - dt <= 0 && this.state !== 'hardLand')) {
+      // F anywhere, or Jump again while airborne: take off.
+      this.takeOff();
+      return this.stepFlight(inp, dt);
+    }
+
     const t = this.t;
     const v = this.velocity;
 
@@ -162,11 +210,96 @@ export class GroundMotor {
     return { x: v.x * dt, y: v.y * dt, z: v.z * dt };
   }
 
+  private takeOff() {
+    this.mode = 'flight';
+    this.velocity.y = Math.max(this.velocity.y, this.grounded ? FLIGHT.takeoffVelocity : 2);
+    this.grounded = false;
+    this.jumpAscending = false;
+    this.jumpBufferTimer = 0;
+    this.setState('takeoff');
+  }
+
+  private stepFlight(inp: MotorInput, dt: number): Vec3Like {
+    const v = this.velocity;
+    const up = (inp.jumpHeld ? 1 : 0) - (inp.descendHeld ? 1 : 0);
+    const wish = flightDirection(inp.moveX, inp.moveY, inp.cameraYaw, inp.cameraPitch ?? 0, up);
+    const mag = Math.hypot(wish.x, wish.y, wish.z);
+    this.boosting = inp.sprintHeld && mag > 0.1;
+    const speed = (this.boosting ? FLIGHT.boostSpeed : FLIGHT.baseSpeed) * mag;
+    const tx = mag > 0 ? (wish.x / mag) * speed : 0;
+    const ty = mag > 0 ? (wish.y / mag) * speed : 0;
+    const tz = mag > 0 ? (wish.z / mag) * speed : 0;
+
+    // Accelerate toward the wish velocity in 3D; brake to a hover with no input.
+    const rate = mag > 0.01 ? (this.boosting ? FLIGHT.boostAcceleration : FLIGHT.acceleration) : FLIGHT.deceleration;
+    const dx = tx - v.x;
+    const dy = ty - v.y;
+    const dz = tz - v.z;
+    const dLen = Math.hypot(dx, dy, dz);
+    const maxDelta = rate * dt;
+    if (dLen <= maxDelta) {
+      v.x = tx;
+      v.y = ty;
+      v.z = tz;
+    } else {
+      v.x += (dx / dLen) * maxDelta;
+      v.y += (dy / dLen) * maxDelta;
+      v.z += (dz / dLen) * maxDelta;
+    }
+
+    const hSpeed = Math.hypot(v.x, v.z);
+    if (hSpeed > 0.5) {
+      const diff = wrapAngle(Math.atan2(v.x, v.z) - this.facingYaw);
+      const turn = FLIGHT.turnSpeed * dt;
+      this.facingYaw = wrapAngle(this.facingYaw + Math.max(-turn, Math.min(turn, diff)));
+    }
+    return { x: v.x * dt, y: v.y * dt, z: v.z * dt };
+  }
+
+  /** Physics hit the altitude ceiling: stop climbing. */
+  clampAltitude() {
+    if (this.velocity.y > 0) this.velocity.y = 0;
+  }
+
+  private resolveFlight(desired: Vec3Like, actual: Vec3Like, grounded: boolean, dt: number) {
+    const v = this.velocity;
+    // Blocked by a wall/roof/floor: lose the blocked part of the velocity.
+    for (const k of ['x', 'y', 'z'] as const) {
+      if (Math.abs(desired[k]) > 1e-6 && Math.abs(actual[k]) < Math.abs(desired[k]) - 1e-4 && dt > 0) v[k] = actual[k] / dt;
+    }
+    this.stateTime += dt;
+    // Touching a surface while not climbing: land.
+    if (grounded && v.y <= 0.5 && !(this.state === 'takeoff' && this.stateTime < FLIGHT.takeoffStateDuration)) {
+      const impact = Math.hypot(v.x, v.y, v.z);
+      this.mode = 'ground';
+      this.boosting = false;
+      this.grounded = true;
+      this.lastLandingSpeed = impact;
+      v.y = -2;
+      if (impact >= FLIGHT.hardLandingSpeed) {
+        this.setState('hardLand');
+        this.landTimer = this.t.hardLandStateDuration;
+      } else {
+        this.setState('land');
+        this.landTimer = this.t.landStateDuration;
+      }
+      return;
+    }
+    this.grounded = false;
+    if (this.state === 'takeoff' && this.stateTime < FLIGHT.takeoffStateDuration) return;
+    const speed = Math.hypot(v.x, v.y, v.z);
+    this.setState(speed < FLIGHT.hoverSpeed ? 'hover' : this.boosting && speed > FLIGHT.baseSpeed * 1.05 ? 'flyBoost' : 'fly');
+  }
+
   /**
    * Feeds back the collision-resolved movement. `desired` is what step()
    * returned; `actual` is what the character controller allowed.
    */
   resolve(desired: Vec3Like, actual: Vec3Like, grounded: boolean, dt: number) {
+    if (this.mode === 'flight') {
+      this.resolveFlight(desired, actual, grounded, dt);
+      return;
+    }
     const v = this.velocity;
     const wasGrounded = this.grounded;
 

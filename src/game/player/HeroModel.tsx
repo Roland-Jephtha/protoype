@@ -177,6 +177,10 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
   const groundRay = useRef<InstanceType<typeof rapier.Ray> | null>(null);
   const liftGroup = useRef<Group>(null);
   const footLift = useRef(0);
+  // Flight: body pitch follows the climb/dive angle (pivot at the hips).
+  const pitchGroup = useRef<Group>(null);
+  const pivotY = def.heightMeters * 0.6;
+  const flight = useRef({ pitch: 0, bob: 0 });
   const tmpPos = useMemo(() => new Vector3(), []);
 
   const anim = useMemo(() => {
@@ -253,6 +257,18 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     anim.mixer.update(dt);
     const f = facing.current;
     if (!f) return;
+
+    // Flight pose: the `fly` clip is already horizontal, so only climb (nose up)
+    // and dive (nose down) are added. Hovering adds a gentle bob.
+    const fl = flight.current;
+    const climbAngle = role === 'fly' && Math.hypot(hSpeed, v.y) > 2 ? -Math.atan2(v.y, Math.max(hSpeed, 0.01)) : 0;
+    const targetPitch = Math.max(-1.4, Math.min(1.4, climbAngle));
+    fl.pitch += (targetPitch - fl.pitch) * (1 - Math.exp(-6 * dt));
+    fl.bob += dt;
+    if (pitchGroup.current) {
+      pitchGroup.current.rotation.x = fl.pitch;
+      pitchGroup.current.position.y = pivotY + (role === 'hover' ? Math.sin(fl.bob * 2.2) * 0.04 : 0);
+    }
     // Bones were just posed by the mixer; refresh world matrices before sampling them.
     f.updateWorldMatrix(true, true);
 
@@ -283,12 +299,17 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
   return (
     <group ref={facing}>
       <group ref={liftGroup}>
-        <group
-          rotation-y={def.yawOffset}
-          scale={built.scale}
-          position={[-built.centerX * built.scale, -built.minY * built.scale, 0]}
-        >
-          <primitive object={built.model} />
+        {/* Flight pitch pivots around the hips. */}
+        <group ref={pitchGroup} position-y={pivotY}>
+          <group position-y={-pivotY}>
+            <group
+              rotation-y={def.yawOffset}
+              scale={built.scale}
+              position={[-built.centerX * built.scale, -built.minY * built.scale, 0]}
+            >
+              <primitive object={built.model} />
+            </group>
+          </group>
         </group>
       </group>
     </group>

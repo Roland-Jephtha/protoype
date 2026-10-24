@@ -58,12 +58,26 @@ export const GROUND_MOVEMENT = {
   hardLandSpeedFactor: 0.25,
 } as const;
 
-/** Reference speeds for later phases (from the brief); not yet used by gameplay. */
-export const FLIGHT_REFERENCE = {
-  hover: 8,
-  cruise: 80,
-  high: 250,
-  extreme: 500,
+export const FLIGHT = {
+  /** 60 km/h on the HUD: normal flight with full stick. */
+  baseSpeed: 60 / 3.6,
+  /** 150 km/h on the HUD: holding boost. */
+  boostSpeed: 150 / 3.6,
+  acceleration: 18,
+  boostAcceleration: 24,
+  /** Braking toward a hover when there is no input (m/s²). */
+  deceleration: 22,
+  /** Upward speed given on takeoff from the ground (m/s). */
+  takeoffVelocity: 9,
+  takeoffStateDuration: 0.35,
+  /** Below this speed (m/s) the hero is hovering rather than flying. */
+  hoverSpeed: 1.5,
+  /** Touching down faster than this (m/s) plays the heavy landing. */
+  hardLandingSpeed: 20,
+  /** Hard ceiling for flight altitude (m), below the world-boundary walls. */
+  maxAltitude: 450,
+  /** Turn rate of the body toward the flight direction (rad/s). */
+  turnSpeed: 7,
 } as const;
 
 export const CAMERA = {
@@ -77,6 +91,8 @@ export const CAMERA = {
   distance: 5.5,
   minDistance: 1.2,
   sprintDistance: 7,
+  flyDistance: 7.5,
+  boostDistance: 10,
   /** Pitch limits in radians (negative = looking down from above). */
   minPitch: -1.2,
   maxPitch: 0.75,
@@ -90,6 +106,8 @@ export const CAMERA = {
   distanceSharpness: 6,
   fovSharpness: 4,
   sprintFovBoost: 8,
+  flyFovBoost: 4,
+  boostFovBoost: 14,
   /** Camera collision probe radius (m) and padding from walls. */
   collisionPadding: 0.25,
   /** How fast the camera returns outward after a collision pulled it in (1/s). */

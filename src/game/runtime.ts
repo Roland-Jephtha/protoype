@@ -1,6 +1,6 @@
 import type { RapierRigidBody } from '@react-three/rapier';
 import { Vector3 } from 'three';
-import type { PlayerMoveState } from './player/groundMovement';
+import type { MoveMode, PlayerMoveState } from './player/groundMovement';
 
 /**
  * Mutable per-frame game telemetry shared between systems (camera, HUD,
@@ -15,6 +15,7 @@ export const runtime = {
   playerPosition: new Vector3(),
   playerVelocity: new Vector3(),
   playerState: 'idle' as PlayerMoveState,
+  moveMode: 'ground' as MoveMode,
   /** Which hero visual is active: a HERO_MODELS id or 'placeholder'. */
   heroModel: 'placeholder' as string,
   /** Lowest sole height above the ground after foot grounding (m; negative = sunk in). */

@@ -761,6 +761,22 @@ input[type='range']::-moz-range-thumb {
   margin-bottom: 0;
 }
 
+/* Fly/Land sits above Jump/Up so the right thumb reaches both. */
+.touch-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-fly {
+  border-color: rgba(120, 170, 255, 0.7);
+}
+
+.btn-down {
+  margin-bottom: 4px;
+}
+
 .touch-pause {
   position: absolute;
   top: calc(12px + var(--safe-t));

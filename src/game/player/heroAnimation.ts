@@ -11,6 +11,8 @@ export const LOOPING: Record<HeroAnim, boolean> = {
   airborne: true,
   land: false,
   hardLand: true,
+  hover: true,
+  fly: true,
 };
 export const LOCOMOTION: HeroAnim[] = ['walk', 'run', 'sprint'];
 
@@ -46,6 +48,12 @@ export function roleForState(state: PlayerMoveState, stateTime: number, jumpStar
       return 'land';
     case 'hardLand':
       return 'hardLand';
+    case 'takeoff':
+    case 'hover':
+      return 'hover';
+    case 'fly':
+    case 'flyBoost':
+      return 'fly';
     default:
       return 'idle';
   }

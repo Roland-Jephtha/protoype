@@ -10,9 +10,9 @@ Test categories are kept separate and reported honestly:
 |---|---|---|
 | `npm run typecheck` | tsc over src + tests | ✅ pass |
 | `npm run lint` | oxlint | ✅ 0 warnings, 0 errors |
-| `npm run test` | 54 vitest tests: ground contact integration (real Rapier controller + GroundMotor + depenetration/snap: sidewalk rest height, walk/run/sprint off a curb never sinks or flickers airborne, jumping still works), stick math, input manager (latching, multi-source, release), ground motor (accel/decel, jump height, variable jump, coyote, buffer, hard landing, wall bleed, facing), settings sanitization/corruption, city layout (determinism, no overlaps, spawn clear), camera math, hero clip mapping | ✅ 54/54 (2026-10-24) |
+| `npm run test` | 65 vitest tests: flight (takeoff by F and by double-jump, 60 km/h cruise, 150 km/h boost, hover braking, climbing by input and by camera pitch, soft and hard landings, drop out with F), ground contact integration (real Rapier controller + GroundMotor + depenetration/snap: sidewalk rest height, walk/run/sprint off a curb never sinks or flickers airborne, jumping still works), stick math, input manager (latching, multi-source, release), ground motor (accel/decel, jump height, variable jump, coyote, buffer, hard landing, wall bleed, facing), settings sanitization/corruption, city layout (determinism, no overlaps, spawn clear), camera math, hero clip mapping | ✅ 65/65 (2026-10-24) |
 | `npm run build` | production build | ✅ pass (chunk-size warning for game chunk, expected) |
-| `npm run smoke` | 33 browser checks on the production build in headless Chrome (desktop + touch emulation + portrait phone via CDP) | ✅ 33/33 (2026-10-24) |
+| `npm run smoke` | 39 browser checks on the production build in headless Chrome (desktop + touch emulation + portrait phone via CDP), incl. a full flight run: F + Space climb, 60 km/h cruise, 150 km/h boost, hover, C to land; touch Fly button | ✅ 39/39 (2026-10-24) |
 
 Smoke checks: title renders · world loads, player grounded · W moves forward · run
 speed · decelerates · jump +2.25 m · lands · pause opens · sim frozen while paused ·

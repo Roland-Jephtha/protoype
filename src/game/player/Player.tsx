@@ -10,7 +10,7 @@ import {
 } from '@react-three/rapier';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { Group } from 'three';
-import { PLAYER } from '../../config/gameConfig';
+import { CAMERA, FLIGHT, PLAYER } from '../../config/gameConfig';
 import { input } from '../../input/InputManager';
 import { useApp } from '../../state/appStore';
 import { runtime } from '../runtime';
@@ -33,6 +33,7 @@ export function Player() {
   const { world, rapier } = useRapier();
   const motor = useMemo(() => new GroundMotor(), []);
   const respawnToken = useApp((s) => s.respawnToken);
+  const flyingRef = useRef(false);
 
   // Created in an effect (not useMemo) so StrictMode's mount/unmount/mount
   // never leaves us holding a freed WASM controller.
@@ -91,12 +92,25 @@ export function Player() {
         moveX: move.x,
         moveY: move.y,
         cameraYaw: runtime.cameraYaw,
+        // Level flight at the camera's default framing; look up/down to climb/dive.
+        cameraPitch: runtime.cameraPitch - CAMERA.defaultPitch,
         sprintHeld: input.isHeld('sprint'),
         jumpPressed: input.consumePressed('jump'),
         jumpHeld: input.isHeld('jump'),
+        flyPressed: input.consumePressed('fly'),
+        descendHeld: input.isHeld('descend'),
       },
       dt,
     );
+
+    // Rapier's own ground snapping would drag a low-flying hero onto the floor.
+    const flying = motor.mode === 'flight';
+    if (flying !== flyingRef.current) {
+      flyingRef.current = flying;
+      if (flying) controller.disableSnapToGround();
+      else controller.enableSnapToGround(PLAYER.snapToGroundDistance);
+      useApp.getState().setFlying(flying);
+    }
 
     controller.computeColliderMovement(c, desired);
     const actual = controller.computedMovement();
@@ -107,7 +121,11 @@ export function Player() {
     // Keep the capsule exactly on top of the surface: no creeping into it at speed,
     // no brief falls off curbs while sprinting.
     const settled = settleOnGround(w, rapier, nx, p.y + actual.y, nz, c, motor.grounded, motor.velocity.y);
-    const ny = settled.y;
+    let ny = settled.y;
+    if (ny > FLIGHT.maxAltitude) {
+      ny = FLIGHT.maxAltitude;
+      motor.clampAltitude();
+    }
     motor.resolve(desired, { x: actual.x, y: ny - p.y, z: actual.z }, settled.onGround || (controller.computedGrounded() && motor.velocity.y <= 0), dt);
     if (ny < PLAYER.killPlaneY) {
       respawn();
@@ -118,6 +136,7 @@ export function Player() {
     runtime.playerPosition.set(nx, ny, nz);
     runtime.playerVelocity.set(motor.velocity.x, motor.velocity.y, motor.velocity.z);
     runtime.playerState = motor.state;
+    runtime.moveMode = motor.mode;
     runtime.grounded = motor.grounded;
   });
 

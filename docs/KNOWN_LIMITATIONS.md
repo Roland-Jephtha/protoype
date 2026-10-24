@@ -2,7 +2,7 @@
 
 ## Not built yet (by design — later phases)
 
-- Flight, hover, super-speed (Phase 3). Normal run is 20 km/h; Shift sprints at 90 km/h (same run, faster).
+- Super-speed beyond 90 km/h on foot and flight beyond 150 km/h (the brief's 250/500 m/s tiers) aren't built; the test district is too small for them until streaming exists (Phase 5).
 - Powers, combat, enemies (Phase 6). Left/right mouse are bound but do nothing.
 - Missions, saves, save slots, Continue/Load (Phase 7). Free roam only; nothing is saved except settings.
 - Intro cinematic / video player, story (Phase 8).
@@ -14,7 +14,7 @@
 
 - **Hero**: Hatch Superman has only walk/run/fall/idle clips — no jump-start or landing animation, so jumps use `Falling Idle`. Sprint is the same `Running` clip played up to ~5.2× so the feet keep pace at 90 km/h (legs cycle very fast). The primitive placeholder shows briefly while the model loads and if it fails.
 - **Cape**: Verlet cloth (8×12 particles) pinned to the chest bone, with capsule colliders for back, head and legs. Arms aren't colliders, so a hand can pass through the cape edge; very fast turns can briefly clip it. No wind yet (still air + speed flutter).
-- No flight animation yet; the library's swim loops are kept as a stand-in for Phase 3.
+- **Flight**: the collision capsule stays upright while the body flies horizontally, so the head/feet can poke into a wall the capsule hasn't reached. No banking into turns, no flight-specific audio/wind effects, no takeoff/landing animations (hover and fly clips blend). Hovering uses the standing idle.
 - City art is still a procedural greybox (box buildings, shader windows).
 - **Lighting**: areas in building shadow are quite dark; no environment map/reflections; one directional light with a ±45 m shadow area around the player.
 - **World boundary** is an invisible wall; there's no in-world explanation.

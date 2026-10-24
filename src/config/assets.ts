@@ -4,7 +4,7 @@
  */
 
 /** Animation roles the hero controller asks for. */
-export type HeroAnim = 'idle' | 'walk' | 'run' | 'sprint' | 'jumpStart' | 'airborne' | 'land' | 'hardLand';
+export type HeroAnim = 'idle' | 'walk' | 'run' | 'sprint' | 'jumpStart' | 'airborne' | 'land' | 'hardLand' | 'hover' | 'fly';
 
 export interface HeroModelDef {
   id: string;
@@ -41,6 +41,9 @@ const COMMON_CLIPS: HeroModelDef['clips'] = {
   airborne: [/^jump_loop$/i, /fall|jump.?loop|air/i, /jump/i],
   land: [/^jump_land$/i, /land/i],
   hardLand: [/^crouch_idle_loop$/i, /land/i],
+  // Quaternius has no flight clips: the swim loops read as flying/hovering.
+  hover: [/^swim_idle_loop$/i, /^idle_loop$/i],
+  fly: [/^swim_fwd_loop$/i, /fly/i],
 };
 
 export const HERO_MODELS = {
@@ -80,6 +83,10 @@ export const HERO_MODELS = {
       airborne: [/falling/i],
       land: [/^mixamo\.com$/i],
       hardLand: [/dynamic pose/i, /^mixamo\.com$/i],
+      // `Flying` is already a near-horizontal Superman pose (body ~78° from vertical);
+      // hovering uses the upright idle so he floats standing.
+      hover: [/^mixamo\.com$/i],
+      fly: [/^flying$/i],
     },
     // Run and sprint both use the `Running` clip, measured at ~4.8 m/s from foot travel.
     clipSpeeds: { walk: 1.5, run: 4.8, sprint: 4.8 },

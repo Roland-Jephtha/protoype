@@ -91,8 +91,8 @@ describe('GroundMotor', () => {
     expect(peakFor(3)).toBeLessThan(peakFor(60) * 0.8);
   });
 
-  it('allows a jump shortly after leaving a ledge (coyote time) but not long after', () => {
-    const jumpAfterAirFrames = (airFrames: number) => {
+  it('allows a jump shortly after leaving a ledge (coyote time); later, Jump takes off into flight', () => {
+    const pressAfterAirFrames = (airFrames: number) => {
       const m = groundedMotor();
       // Walk off a ledge: the physics reports not-grounded from now on.
       for (let i = 0; i < airFrames; i++) {
@@ -100,10 +100,12 @@ describe('GroundMotor', () => {
         m.resolve(d, d, false, DT);
       }
       m.step({ ...idle, jumpPressed: true, jumpHeld: true }, DT);
-      return m.velocity.y > 0;
+      return m;
     };
-    expect(jumpAfterAirFrames(3)).toBe(true);
-    expect(jumpAfterAirFrames(30)).toBe(false);
+    const coyote = pressAfterAirFrames(3);
+    expect(coyote.mode).toBe('ground');
+    expect(coyote.velocity.y).toBeGreaterThan(0);
+    expect(pressAfterAirFrames(30).mode).toBe('flight');
   });
 
   it('buffers a jump pressed just before landing', () => {

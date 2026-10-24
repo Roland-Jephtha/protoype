@@ -9,8 +9,11 @@ Only controls that work today are listed as active. Bindings live in
 |---|---|---|
 | W A S D / arrow keys | Move (camera-relative) | ✅ |
 | Mouse | Look (click the game to capture the mouse; Esc releases) | ✅ |
-| Space | Jump — hold for higher, tap for a short hop | ✅ |
-| Shift | Sprint (hold) | ✅ (flight boost in Phase 3) |
+| Space | Jump — hold for higher, tap for a short hop. Press again in mid-air to take off. In flight: up (hold) | ✅ |
+| Shift | Sprint (hold, 90 km/h). In flight: boost to 150 km/h | ✅ |
+| F | Take off / drop out of flight | ✅ |
+| C | In flight: down (not Ctrl — Ctrl+W closes the tab) | ✅ |
+| Mouse (in flight) | Look up/down to climb/dive; flight follows the camera | ✅ |
 | Esc / P | Pause / back out of a pause sub-page | ✅ |
 | F3 | Diagnostics overlay | ✅ |
 | Left mouse | Primary attack / heat vision | Phase 6 (bound, no effect yet) |
@@ -32,10 +35,14 @@ the phone sideways. Toggle: Settings → *Always landscape on phones*.
 |---|---|---|
 | Left analog stick (bottom-left) | 360° analog move; light push = walk, full = run | ✅ |
 | Drag anywhere on the right half | Camera look | ✅ |
-| ▲ Jump (bottom-right) | Jump (hold for higher) | ✅ |
-| » Sprint | Sprint (hold) | ✅ |
+| ▲ Jump / Up (bottom-right) | Jump (hold for higher). In flight: up (hold) | ✅ |
+| » Sprint / Boost | Sprint (hold). In flight: boost to 150 km/h | ✅ |
+| ✈ Fly / Land (above Jump) | Take off / drop out of flight | ✅ |
+| ▼ Down (flight only) | Fly down (hold) | ✅ |
 | ❚❚ (top-right) | Pause | ✅ |
-| Flight up/down, boost, attack, heat vision, interact | — | Added with their phases |
+| Attack, heat vision, interact | — | Added with their phases |
+
+Flight: 60 km/h with a full stick, 150 km/h boosting; release everything to brake into a hover; touch any surface while not climbing to land (fast impacts play the heavy landing).
 
 Details: radial dead zone (default 15%, adjustable), response curve exponent 1.4,
 knob follows the thumb within its radius, pointer-id tracking for simultaneous stick +

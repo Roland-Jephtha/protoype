@@ -17,6 +17,8 @@ interface AppState {
   pointerLocked: boolean;
   /** Incremented to ask the player to respawn at the current checkpoint. */
   respawnToken: number;
+  /** Hero is in flight mode (changes the touch buttons). Set only on transitions. */
+  flying: boolean;
 
   startGame: () => void;
   returnToTitle: () => void;
@@ -27,6 +29,7 @@ interface AppState {
   restartCheckpoint: () => void;
   setTouchDetected: () => void;
   setPointerLocked: (v: boolean) => void;
+  setFlying: (v: boolean) => void;
 }
 
 export const useApp = create<AppState>((set, get) => ({
@@ -36,6 +39,7 @@ export const useApp = create<AppState>((set, get) => ({
   touchDetected: false,
   pointerLocked: false,
   respawnToken: 0,
+  flying: false,
 
   startGame: () => {
     input.releaseAll();
@@ -64,4 +68,7 @@ export const useApp = create<AppState>((set, get) => ({
     if (!get().touchDetected) set({ touchDetected: true });
   },
   setPointerLocked: (pointerLocked) => set({ pointerLocked }),
+  setFlying: (flying) => {
+    if (get().flying !== flying) set({ flying });
+  },
 }));

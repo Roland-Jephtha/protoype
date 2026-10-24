@@ -11,7 +11,13 @@ const STATE_LABEL: Record<string, string> = {
   fall: 'Falling',
   land: 'Landing',
   hardLand: 'Impact',
+  takeoff: 'Taking off',
+  hover: 'Hovering',
+  fly: 'Flying',
+  flyBoost: 'Boosting',
 };
+
+const FLIGHT_STATES = new Set(['takeoff', 'hover', 'fly', 'flyBoost']);
 
 /**
  * In-game HUD. Phase 1: location/objective banner, compact speed readout,
@@ -25,7 +31,8 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
   useEffect(() => {
     const id = window.setInterval(() => {
       const v = runtime.playerVelocity;
-      const kmh = Math.hypot(v.x, v.z) * 3.6;
+      // In flight, show full 3D speed (a straight climb at 60 km/h reads 60).
+      const kmh = (FLIGHT_STATES.has(runtime.playerState) ? Math.hypot(v.x, v.y, v.z) : Math.hypot(v.x, v.z)) * 3.6;
       if (speedRef.current) speedRef.current.textContent = kmh.toFixed(0);
       if (stateRef.current) stateRef.current.textContent = STATE_LABEL[runtime.playerState] ?? '';
     }, 100);

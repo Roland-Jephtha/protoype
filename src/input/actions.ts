@@ -7,6 +7,10 @@ export const ACTIONS = [
   'interact',
   'power',
   'pause',
+  /** Toggle flight (take off / drop out of flight). */
+  'fly',
+  /** Fly downward (in flight, Jump is "up"). */
+  'descend',
 ] as const;
 
 export type Action = (typeof ACTIONS)[number];
