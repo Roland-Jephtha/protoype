@@ -10,13 +10,13 @@ Test categories are kept separate and reported honestly:
 |---|---|---|
 | `npm run typecheck` | tsc over src + tests | ✅ pass |
 | `npm run lint` | oxlint | ✅ 0 warnings, 0 errors |
-| `npm run test` | 48 vitest unit tests (42 + 6 hero/orientation): stick math, input manager (latching, multi-source, release), ground motor (accel/decel, jump height, variable jump, coyote, buffer, hard landing, wall bleed, facing), settings sanitization/corruption, city layout (determinism, no overlaps, spawn clear), camera math | ✅ 48/48 |
+| `npm run test` | 54 vitest tests: ground contact integration (real Rapier controller + GroundMotor + depenetration/snap: sidewalk rest height, walk/run/sprint off a curb never sinks or flickers airborne, jumping still works), stick math, input manager (latching, multi-source, release), ground motor (accel/decel, jump height, variable jump, coyote, buffer, hard landing, wall bleed, facing), settings sanitization/corruption, city layout (determinism, no overlaps, spawn clear), camera math, hero clip mapping | ✅ 54/54 (2026-10-24) |
 | `npm run build` | production build | ✅ pass (chunk-size warning for game chunk, expected) |
-| `npm run smoke` | 32 browser checks on the production build in headless Chrome (desktop + touch emulation + portrait phone via CDP) | ✅ 32/32 (2026-10-23, after hero/landscape update) |
+| `npm run smoke` | 33 browser checks on the production build in headless Chrome (desktop + touch emulation + portrait phone via CDP) | ✅ 33/33 (2026-10-24) |
 
 Smoke checks: title renders · world loads, player grounded · W moves forward · run
 speed · decelerates · jump +2.25 m · lands · pause opens · sim frozen while paused ·
-settings · Esc back · restart checkpoint · sprint >18 m/s (80 km/h target) · return to title · re-enter ·
+settings · Esc back · restart checkpoint · sprint >20 m/s (90 km/h target) · run animation stays fully applied through the sprint (no fade to rest pose) · return to title · re-enter ·
 no page errors · touch: controls shown · analog diagonal · move + look simultaneously ·
 jump during move + look (3 fingers) · touchend releases jump · stick neutral ·
 touchcancel releases stick + sprint · touch pause button · no page errors.

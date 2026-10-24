@@ -101,6 +101,7 @@ export function ThirdPersonCamera() {
 
     camera.position.set(pivot.x + o.x * s.distance, pivot.y + o.y * s.distance, pivot.z + o.z * s.distance);
     camera.lookAt(pivot);
+    runtime.cameraPosition.copy(camera.position);
   }, -30);
 
   return null;

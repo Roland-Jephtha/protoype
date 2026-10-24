@@ -1,5 +1,5 @@
 import { Sky } from '@react-three/drei';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { advance, Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
 import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { DirectionalLight, Object3D } from 'three';
@@ -75,6 +75,37 @@ function PerfProbe() {
   return null;
 }
 
+/**
+ * Drives the frame loop from requestAnimationFrame's vsync timestamp.
+ *
+ * R3F's default loop measures each frame's delta with a clock read whenever the
+ * callback happens to run, which wobbles by a few ms. Physics interpolation
+ * turned that into visible judder (±20% per-frame displacement at sprint
+ * speed). With frameloop="never", R3F derives every delta from the timestamp
+ * we pass to advance(), so physics, camera and animation all step evenly.
+ */
+function VsyncFrameLoop() {
+  const clock = useThree((s) => s.clock);
+  useEffect(() => {
+    let raf = 0;
+    let started = false;
+    const loop = (ts: number) => {
+      const t = ts / 1000;
+      if (!started) {
+        // First frame: anchor the clock so the initial delta isn't the page's whole lifetime.
+        clock.elapsedTime = t;
+        started = true;
+      } else {
+        advance(t);
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [clock]);
+  return null;
+}
+
 /** Signals when the physics WASM and world have finished their first mount. */
 function ReadySignal({ onReady }: { onReady: () => void }) {
   useEffect(() => onReady(), [onReady]);
@@ -90,6 +121,8 @@ export function GameCanvas({ onReady }: { onReady: () => void }) {
     <Canvas
       // Re-create the renderer when quality changes (antialias can't be toggled live).
       key={quality}
+      // Frames are driven by VsyncFrameLoop for even frame deltas.
+      frameloop="never"
       shadows={preset.shadows ? 'soft' : false}
       dpr={[1, preset.maxDpr]}
       // Layout (offset) size, not the visual bounding box: stays correct when the
@@ -111,6 +144,7 @@ export function GameCanvas({ onReady }: { onReady: () => void }) {
         </Physics>
       </Suspense>
       <PerfProbe />
+      <VsyncFrameLoop />
     </Canvas>
   );
 }

@@ -2,7 +2,7 @@
 
 ## Not built yet (by design — later phases)
 
-- Flight, hover, super-speed (Phase 3). Normal run is 20 km/h; Shift is an 80 km/h on-foot sprint for now.
+- Flight, hover, super-speed (Phase 3). Normal run is 20 km/h; Shift sprints at 90 km/h (same run, faster).
 - Powers, combat, enemies (Phase 6). Left/right mouse are bound but do nothing.
 - Missions, saves, save slots, Continue/Load (Phase 7). Free roam only; nothing is saved except settings.
 - Intro cinematic / video player, story (Phase 8).
@@ -12,7 +12,7 @@
 
 ## Current shortcomings
 
-- **Hero**: Hatch Superman has only walk/run/fall/idle clips — no jump-start or landing animation, so jumps use `Falling Idle`. Sprint reuses `Running` played up to ~4.6× so the feet keep pace at 80 km/h (legs cycle very fast; a dedicated super-speed pose/effects come in Phase 3). The primitive placeholder shows briefly while the model loads and if it fails.
+- **Hero**: Hatch Superman has only walk/run/fall/idle clips — no jump-start or landing animation, so jumps use `Falling Idle`. Sprint is the same `Running` clip played up to ~5.2× so the feet keep pace at 90 km/h (legs cycle very fast). The primitive placeholder shows briefly while the model loads and if it fails.
 - **Cape**: Verlet cloth (8×12 particles) pinned to the chest bone, with capsule colliders for back, head and legs. Arms aren't colliders, so a hand can pass through the cape edge; very fast turns can briefly clip it. No wind yet (still air + speed flutter).
 - No flight animation yet; the library's swim loops are kept as a stand-in for Phase 3.
 - City art is still a procedural greybox (box buildings, shader windows).

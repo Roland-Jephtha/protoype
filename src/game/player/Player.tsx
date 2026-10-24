@@ -15,6 +15,7 @@ import { input } from '../../input/InputManager';
 import { useApp } from '../../state/appStore';
 import { runtime } from '../runtime';
 import { GroundMotor } from './groundMovement';
+import { settleOnGround } from './groundSnap';
 import { HeroVisual } from './HeroVisual';
 
 const SPAWN_FACING = Math.PI; // facing -Z, toward the landmark tower
@@ -29,7 +30,7 @@ export function Player() {
   const body = useRef<RapierRigidBody>(null);
   const collider = useRef<RapierCollider>(null);
   const visual = useRef<Group>(null);
-  const { world } = useRapier();
+  const { world, rapier } = useRapier();
   const motor = useMemo(() => new GroundMotor(), []);
   const respawnToken = useApp((s) => s.respawnToken);
 
@@ -82,6 +83,7 @@ export function Player() {
     const controller = controllerRef.current;
     if (!b || !c || !controller) return;
     const dt = w.timestep;
+    runtime.physicsSteps++;
 
     const move = input.getMove();
     const desired = motor.step(
@@ -98,12 +100,15 @@ export function Player() {
 
     controller.computeColliderMovement(c, desired);
     const actual = controller.computedMovement();
-    motor.resolve(desired, actual, controller.computedGrounded(), dt);
 
     const p = b.translation();
     const nx = p.x + actual.x;
-    const ny = p.y + actual.y;
     const nz = p.z + actual.z;
+    // Keep the capsule exactly on top of the surface: no creeping into it at speed,
+    // no brief falls off curbs while sprinting.
+    const settled = settleOnGround(w, rapier, nx, p.y + actual.y, nz, c, motor.grounded, motor.velocity.y);
+    const ny = settled.y;
+    motor.resolve(desired, { x: actual.x, y: ny - p.y, z: actual.z }, settled.onGround || (controller.computedGrounded() && motor.velocity.y <= 0), dt);
     if (ny < PLAYER.killPlaneY) {
       respawn();
       return;

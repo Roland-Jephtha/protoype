@@ -115,8 +115,10 @@ export function TestDistrict() {
       </mesh>
       <RigidBody type="fixed" colliders={false}>
         <CuboidCollider args={[ext * 3, 1, ext * 3]} position={[0, -1, 0]} />
+        {/* Sidewalk blocks: top at `sh`, extended 1 m into the ground. A 15 cm-thin slab made the
+            character controller settle ~3 cm into it; a thick one is resolved precisely. */}
         {layout.blocks.map((b, i) => (
-          <CuboidCollider key={`blk${i}`} args={[b.size / 2, sh / 2, b.size / 2]} position={[b.x, sh / 2, b.z]} />
+          <CuboidCollider key={`blk${i}`} args={[b.size / 2, 0.5, b.size / 2]} position={[b.x, sh - 0.5, b.z]} />
         ))}
         {buildings.map((b, i) => (
           <CuboidCollider

@@ -173,12 +173,19 @@ async function desktopRun(browser) {
   // Sprint from spawn toward +Z (S = backwards relative to the camera): a clear street.
   await page.keyboard.down('ShiftLeft');
   await page.keyboard.down('KeyS');
-  // Short burst: at 80 km/h a longer one reaches the buildings across the street.
-  await sleep(1100);
+  // Short burst: at 90 km/h a longer one reaches the buildings across the street.
+  // Sample the animation weight through the run→sprint switch: it must never fade
+  // toward the rest pose (the old "gliding with arms out" bug).
+  let minWeight = 1;
+  for (let i = 0; i < 11; i++) {
+    await sleep(100);
+    minWeight = Math.min(minWeight, await page.evaluate(() => window.__krypton.runtime.heroAnimWeight));
+  }
   const sprint = await state(page);
   await page.keyboard.up('KeyS');
   await page.keyboard.up('ShiftLeft');
-  check('Shift sprints', hspeed(sprint) > 18, `${hspeed(sprint).toFixed(2)} m/s, state=${sprint.state}`);
+  check('Shift sprints', hspeed(sprint) > 20, `${hspeed(sprint).toFixed(2)} m/s, state=${sprint.state}`);
+  check('sprint keeps the run animation fully applied', minWeight > 0.95, `min weight ${minWeight.toFixed(2)}`);
   await page.screenshot({ path: path.join(OUT, '04b-sprint.png') });
 
   await page.keyboard.press('Escape');

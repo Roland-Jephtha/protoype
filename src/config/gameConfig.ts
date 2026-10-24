@@ -32,12 +32,12 @@ export const GROUND_MOVEMENT = {
   walkSpeed: 3.2,
   /** 20 km/h on the HUD. */
   runSpeed: 20 / 3.6,
-  /** 80 km/h on the HUD, on foot. Super-speed (Phase 3) will be a separate controller. */
-  sprintSpeed: 80 / 3.6,
+  /** 90 km/h on the HUD. Sprint is the same run, just faster (same animation, same handling). */
+  sprintSpeed: 90 / 3.6,
   /** Stick magnitude below which analog input counts as walking. */
   walkThreshold: 0.55,
   acceleration: 40,
-  sprintAcceleration: 28,
+  sprintAcceleration: 40,
   deceleration: 50,
   /** Fraction of ground control available while airborne. */
   airControl: 0.35,

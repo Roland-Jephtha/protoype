@@ -1,5 +1,6 @@
 import { useGLTF } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
+import { useRapier } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
 import {
   AnimationMixer,
@@ -23,10 +24,16 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 import type { HeroAnim, HeroModelDef } from '../../config/assets';
 import { useApp } from '../../state/appStore';
 import { canonicalBoneName, MIXAMO_FROM_UAL } from './boneNames';
+import { PLAYER } from '../../config/gameConfig';
+import { runtime } from '../runtime';
 import { ClothCape, type CapsuleCollider } from './clothCape';
+import { FootSoles, nextFootLift } from './footGrounding';
 import type { GroundMotor } from './groundMovement';
 import { LOCOMOTION, LOOPING, resolveClips, roleForState } from './heroAnimation';
 import { applySuperSuit, measureModel } from './superSuit';
+
+/** Diagnostics: `?nofootfix` disables foot grounding to compare before/after. */
+const FOOT_FIX_ENABLED = typeof window === 'undefined' || !new URLSearchParams(window.location.search).has('nofootfix');
 
 /** Finds a bone by canonical name across rigs (Mixamo or Quaternius naming). */
 function boneByCanon(root: Object3D, names: string[]): Object3D | undefined {
@@ -138,7 +145,9 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       emblem.add(outer, inner);
     }
 
-    return { model, scale, minY: m.minY, centerX: m.centerX, cape, capeAnchor, ownedMaterials, ownedGeometries };
+    const soles = new FootSoles(model);
+
+    return { model, scale, minY: m.minY, centerX: m.centerX, cape, capeAnchor, soles, ownedMaterials, ownedGeometries };
   }, [gltf, def]);
 
   useEffect(
@@ -161,6 +170,14 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     };
   }, [scene, built]);
   const stillAir = useMemo(() => new Vector3(), []);
+
+  // Foot grounding: a downward ray finds the surface under the hero (road,
+  // sidewalk, stairs, ramp); the body is lifted so the soles never sink into it.
+  const { world, rapier } = useRapier();
+  const groundRay = useRef<InstanceType<typeof rapier.Ray> | null>(null);
+  const liftGroup = useRef<Group>(null);
+  const footLift = useRef(0);
+  const tmpPos = useMemo(() => new Vector3(), []);
 
   const anim = useMemo(() => {
     const mixer = new AnimationMixer(built.model);
@@ -203,9 +220,14 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     if (!anim.actions[role]) role = role === 'hardLand' && anim.actions.land ? 'land' : role === 'jumpStart' ? 'airborne' : role;
     const next = anim.actions[role] ?? anim.actions.idle;
 
-    if (role !== currentRole.current && next) {
-      const prevRole = currentRole.current;
-      const prev = prevRole ? anim.actions[prevRole] : undefined;
+    const prevRole = currentRole.current;
+    const prev = prevRole ? anim.actions[prevRole] : undefined;
+    if (role !== prevRole && next === prev) {
+      // Different role, same clip (run ↔ sprint both use the run clip): keep playing it.
+      // Cross-fading an action into itself would fade it out and drop the hero into
+      // his rest pose — the "gliding with arms out" look.
+      currentRole.current = role;
+    } else if (role !== prevRole && next) {
       const fade = role === 'airborne' || role === 'jumpStart' || role === 'land' ? 0.1 : 0.2;
       next.reset();
       // Keep foot phase when blending between locomotion loops.
@@ -221,27 +243,53 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     const sp = def.clipSpeeds;
     const rate = (ref: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, hSpeed / ref));
     if (role === 'walk') next?.setEffectiveTimeScale(rate(sp.walk, 0.5, 2.2));
-    else if (role === 'run') next?.setEffectiveTimeScale(rate(sp.run, 0.6, 2.2));
-    // Up to ~5× so the legs keep pace at 80 km/h instead of the feet gliding.
-    else if (role === 'sprint') next?.setEffectiveTimeScale(rate(sp.sprint, 0.7, 5));
+    // Run and sprint: one rule. Playback follows ground speed (up to ~5.5× at 90 km/h)
+    // so the feet keep pace with the ground instead of sliding.
+    else if (role === 'run' || role === 'sprint') next?.setEffectiveTimeScale(rate(role === 'run' ? sp.run : sp.sprint, 0.6, 5.5));
     else next?.setEffectiveTimeScale(1);
+    // Total weight of all playing clips; below 1 means the pose is blending toward the rest pose.
+    runtime.heroAnimWeight = [...new Set(Object.values(anim.actions))].reduce((sum, a) => sum + (a?.isRunning() ? a.getEffectiveWeight() : 0), 0);
 
     anim.mixer.update(dt);
-    if (built.cape && built.capeAnchor && facing.current && !useApp.getState().paused) {
-      // Bones were just posed by the mixer; refresh world matrices before sampling them.
-      facing.current.updateWorldMatrix(true, true);
+    const f = facing.current;
+    if (!f) return;
+    // Bones were just posed by the mixer; refresh world matrices before sampling them.
+    f.updateWorldMatrix(true, true);
+
+    if (built.soles.available && liftGroup.current) {
+      f.getWorldPosition(tmpPos);
+      groundRay.current ??= new rapier.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 });
+      const ray = groundRay.current;
+      ray.origin = { x: tmpPos.x, y: tmpPos.y + 0.8, z: tmpPos.z };
+      const hit = world.castRay(ray, 2.5, true, undefined, undefined, undefined, runtime.playerBody ?? undefined);
+      const groundY = hit ? tmpPos.y + 0.8 - hit.timeOfImpact : tmpPos.y - PLAYER.controllerOffset;
+      // Sole height as if uncorrected (the measured pose includes last frame's lift).
+      const soleAboveGround = built.soles.lowestWorldY() - groundY - footLift.current;
+      if (FOOT_FIX_ENABLED) {
+        const planted = role === 'idle' || role === 'walk' || role === 'land' || role === 'hardLand';
+        footLift.current = nextFootLift(footLift.current, soleAboveGround, motor.grounded, planted, dt);
+        liftGroup.current.position.y = footLift.current;
+        f.updateWorldMatrix(false, true);
+      }
+      runtime.heroSoleAboveGround = soleAboveGround + footLift.current;
+      runtime.heroFootLift = footLift.current;
+    }
+
+    if (built.cape && built.capeAnchor && !useApp.getState().paused) {
       built.cape.update(built.capeAnchor, dt, stillAir, 2 + hSpeed * 1.4);
     }
   });
 
   return (
     <group ref={facing}>
-      <group
-        rotation-y={def.yawOffset}
-        scale={built.scale}
-        position={[-built.centerX * built.scale, -built.minY * built.scale, 0]}
-      >
-        <primitive object={built.model} />
+      <group ref={liftGroup}>
+        <group
+          rotation-y={def.yawOffset}
+          scale={built.scale}
+          position={[-built.centerX * built.scale, -built.minY * built.scale, 0]}
+        >
+          <primitive object={built.model} />
+        </group>
       </group>
     </group>
   );
