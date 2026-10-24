@@ -570,6 +570,10 @@ async function combatRun(browser) {
   await page.evaluate(() => window.__krypton.input.setButton('mouse', 'attack', false));
   await sleep(80);
   check('combat: left click throws a punch', (await rt()).punch >= 0);
+  await page.mouse.click(640, 400);
+  await sleep(300);
+  const audioState = await page.evaluate(() => window.__krypton.audio.ctx?.state ?? 'none');
+  check('audio: sound engine is running after a click', audioState === 'running', `context ${audioState}`);
 
   // Heat vision: keep the crosshair on the nearest drone.
   await page.evaluate(() => window.__krypton.input.setButton('mouse', 'aim', true));

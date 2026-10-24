@@ -8,6 +8,7 @@ import { OUTDOOR_DRAW_SCALE, REGIONS, type RegionLook } from '../config/regions'
 import { useApp } from '../state/appStore';
 import { useSettings } from '../state/settings';
 import { runtime } from './runtime';
+import { AudioDriver } from './audio/AudioDriver';
 import { RegionWorld } from './world/RegionWorld';
 
 /**
@@ -159,6 +160,7 @@ export function GameCanvas() {
         </Physics>
       </Suspense>
       <PerfProbe />
+      <AudioDriver />
       <VsyncFrameLoop />
     </Canvas>
   );

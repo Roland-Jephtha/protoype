@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { REGIONS } from '../config/regions';
 import { GameCanvas } from '../game/GameCanvas';
+import { audio } from '../game/audio/audioEngine';
 import { targets } from '../game/combat/targets';
 import { runtime } from '../game/runtime';
 import { input } from '../input/InputManager';
@@ -41,6 +42,7 @@ export function GameScreen() {
       input,
       app: useApp,
       targets,
+      audio,
       get ready() {
         return useApp.getState().regionReady;
       },

@@ -26,7 +26,7 @@ Roadmap (approved 2026-10-24, owner wants most action outside the city):
 | 5 | Missions + IndexedDB saves (3 slots, autosave, versioned) | ☐ |
 | 6 | Campaign levels (prologue → chapter 5, side missions) — mostly desert/forest | ☐ |
 | 7 | Presentation: intro cinematic (video + in-engine fallback), briefings, results | ☐ |
-| 8 | Flight polish + audio (banking, capsule orientation, wind, ambience, music) | ⏭ Next — the game has no sound yet |
+| 8 | Flight polish + audio (banking, capsule orientation, wind, ambience, music) | 🔶 Procedural audio v1 done (wind, powers, hits, explosions, ambience); music and volume settings next |
 | 9 | Release candidate: device testing, performance, deploy docs | ☐ |
 
 The level/region plan and villain roster are in docs/GAME_DESIGN.md.
