@@ -175,3 +175,34 @@ describe('GroundMotor', () => {
     expect(m.facingYaw).toBeCloseTo(Math.PI / 2, 1);
   });
 });
+
+describe('knockback and slowing', () => {
+  it('an impulse throws the hero up and back, ignoring steering until control returns', () => {
+    const m = groundedMotor();
+    const forward: MotorInput = { ...idle, moveY: 1 }; // camera yaw 0: forward is -Z
+    m.applyImpulse(0, 9, 14, 0.5);
+    let z = 0;
+    let maxZ = 0;
+    const res = simulate(
+      m,
+      (i) => {
+        z += m.velocity.z * DT;
+        maxZ = Math.max(maxZ, z);
+        return i < 20 ? forward : idle;
+      },
+      120,
+    );
+    expect(res.peak).toBeGreaterThan(9 ** 2 / (2 * PHYSICS.gravity) * 0.9); // ballistic peak of a 9 m/s throw
+    expect(maxZ).toBeGreaterThan(3); // carried backwards (+Z) despite holding forward
+    expect(m.grounded).toBe(true);
+  });
+
+  it('speedScale slows the hero (frozen)', () => {
+    const a = groundedMotor();
+    const b = groundedMotor();
+    const run: MotorInput = { ...idle, moveY: 1 };
+    simulate(a, () => run, 120);
+    simulate(b, () => ({ ...run, speedScale: 0.25 }), 120);
+    expect(Math.hypot(b.velocity.x, b.velocity.z)).toBeCloseTo(Math.hypot(a.velocity.x, a.velocity.z) * 0.25, 1);
+  });
+});

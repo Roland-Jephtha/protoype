@@ -14,6 +14,10 @@ export function CreditsPanel({ onBack }: { onBack: () => void }) {
             <li key={m.id}>{m.credit}</li>
           ))}
         </ul>
+        <h3 className="settings-group">Villains</h3>
+        <ul className="credits-list">
+          <li>Doomsday, General Zod and Darkseid models by DavidA3D (sketchfab.com/DavidA3D) — CC BY-NC 4.0</li>
+        </ul>
         <h3 className="settings-group">Wildlife</h3>
         <ul className="credits-list">
           <li>Animated animals (wolf, dog, cat, eagle, piranha) by Quaternius — CC0</li>

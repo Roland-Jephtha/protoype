@@ -4,6 +4,7 @@ import { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
 import { MissionDirector } from '../missions/MissionDirector';
 import { CombatDriver } from '../combat/CombatDriver';
 import { Drones } from '../combat/Drones';
+import { Villains } from '../villains/Villains';
 import { CityLife } from '../life/CityLife';
 import { TerrainLife } from '../life/TerrainLife';
 import { CityTraffic } from '../vehicles/CityTraffic';
@@ -61,6 +62,7 @@ function TerrainCombat({ regionId }: { regionId: RegionId }) {
     <>
       <CombatDriver />
       <Drones regionId={regionId} ground={ground} />
+      <Villains regionId={regionId} ground={ground} />
     </>
   );
 }

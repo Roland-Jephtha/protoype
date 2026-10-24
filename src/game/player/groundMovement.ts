@@ -35,6 +35,8 @@ export interface MotorInput {
   descendHeld?: boolean;
   /** Face this yaw regardless of movement (aiming heat vision, punching a target). */
   faceYaw?: number;
+  /** Multiplies move speeds (frozen by freeze breath: < 1). Default 1. */
+  speedScale?: number;
 }
 
 export interface Vec3Like {
@@ -101,6 +103,8 @@ export class GroundMotor {
   /** Visual facing yaw (rad), atan2(x, z) convention. */
   facingYaw = Math.PI;
   lastLandingSpeed = 0;
+  /** Seconds of lost control after a knockback (velocity carries the hero). */
+  knockTimer = 0;
 
   private coyoteTimer = 0;
   private jumpBufferTimer = 0;
@@ -159,18 +163,21 @@ export class GroundMotor {
     const dirLen = Math.hypot(dir.x, dir.z);
     this.sprinting = inp.sprintHeld && mag > 0.1;
 
-    let speed = targetGroundSpeed(mag, this.sprinting, t);
+    let speed = targetGroundSpeed(mag, this.sprinting, t) * (inp.speedScale ?? 1);
     if (this.state === 'hardLand') speed *= t.hardLandSpeedFactor;
+    this.knockTimer = Math.max(0, this.knockTimer - dt);
     const tx = dirLen > 0 ? (dir.x / dirLen) * speed : 0;
     const tz = dirLen > 0 ? (dir.z / dirLen) * speed : 0;
 
     const accelerating = speed > 0.01;
     let rate = accelerating ? (this.sprinting ? t.sprintAcceleration : t.acceleration) : t.deceleration;
     if (!this.grounded) rate *= t.airControl;
-    const dx = tx - v.x;
-    const dz = tz - v.z;
+    // Knocked back: no steering; the knock velocity carries the hero and slowly bleeds off.
+    const knocked = this.knockTimer > 0;
+    const dx = (knocked ? 0 : tx) - v.x;
+    const dz = (knocked ? 0 : tz) - v.z;
     const dLen = Math.hypot(dx, dz);
-    const maxDelta = rate * dt;
+    const maxDelta = (knocked ? t.knockDrag : rate) * dt;
     if (dLen <= maxDelta) {
       v.x = tx;
       v.z = tz;
@@ -186,7 +193,7 @@ export class GroundMotor {
       this.coyoteTimer = 0;
       this.jumpAscending = true;
       this.grounded = false;
-    } else if (this.grounded) {
+    } else if (this.grounded && !(knocked && v.y > 0)) {
       // Small downward bias keeps the controller in contact on slopes/steps.
       v.y = -2;
     } else {
@@ -223,7 +230,8 @@ export class GroundMotor {
     const wish = flightDirection(inp.moveX, inp.moveY, inp.cameraYaw, inp.cameraPitch ?? 0, up);
     const mag = Math.hypot(wish.x, wish.y, wish.z);
     this.boosting = inp.sprintHeld && mag > 0.1;
-    const speed = (this.boosting ? FLIGHT.boostSpeed : FLIGHT.baseSpeed) * mag;
+    this.knockTimer = Math.max(0, this.knockTimer - dt);
+    const speed = (this.boosting ? FLIGHT.boostSpeed : FLIGHT.baseSpeed) * mag * (inp.speedScale ?? 1) * (this.knockTimer > 0 ? 0 : 1);
     const tx = mag > 0 ? (wish.x / mag) * speed : 0;
     const ty = mag > 0 ? (wish.y / mag) * speed : 0;
     const tz = mag > 0 ? (wish.z / mag) * speed : 0;
@@ -255,6 +263,24 @@ export class GroundMotor {
   private turnToward(yaw: number, maxStep: number) {
     const diff = wrapAngle(yaw - this.facingYaw);
     this.facingYaw = wrapAngle(this.facingYaw + Math.max(-maxStep, Math.min(maxStep, diff)));
+  }
+
+  /**
+   * Adds a velocity impulse (a villain's punch, a shockwave, a dash). For
+   * `controlLoss` seconds the hero can't steer and the impulse carries him;
+   * an upward impulse lifts a grounded hero off his feet.
+   */
+  applyImpulse(x: number, y: number, z: number, controlLoss: number) {
+    const v = this.velocity;
+    v.x += x;
+    v.y = (this.grounded && y > 0 ? 0 : v.y) + y;
+    v.z += z;
+    this.knockTimer = Math.max(this.knockTimer, controlLoss);
+    if (y > 0 && this.mode === 'ground') {
+      this.grounded = false;
+      this.jumpAscending = false;
+      this.setState('jump');
+    }
   }
 
   /** Start already in flight (arriving in a region mid-flight). */

@@ -50,6 +50,14 @@ export const runtime = {
   aiming: false,
   /** Heat-vision beam this step: eye → end point; `surface` when it hit the world (scorch). */
   beam: { active: false, from: new Vector3(), to: new Vector3(), surface: false, normal: new Vector3(0, 1, 0), hitTarget: false },
+  /** Knockback for the hero, applied (and cleared) at the next physics step, with its loss of control (s). */
+  heroImpulse: new Vector3(),
+  heroControlLoss: 0,
+  /** Seconds the hero stays frozen (slowed) by freeze breath. */
+  heroFrozen: 0,
+  /** The engaged villain nearest the hero (boss bar), and villains beaten since load. */
+  boss: null as { name: string; health: number; max: number } | null,
+  villainsDefeated: 0,
   /** Drones alive in the region and destroyed since load (smoke test, HUD). */
   dronesAlive: 0,
   dronesDestroyed: 0,

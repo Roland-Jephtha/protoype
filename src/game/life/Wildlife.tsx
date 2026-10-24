@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber';
-import { Component, Suspense, useMemo, useRef, type ReactNode } from 'react';
+import { Component, useMemo, useRef, type ReactNode } from 'react';
 import { useApp } from '../../state/appStore';
 import { runtime } from '../runtime';
 import { mulberry32 } from '../world/cityLayout';
@@ -7,7 +7,11 @@ import { samplePath, offsetPath } from '../vehicles/traffic';
 import { Animal, type AnimalHandle, type AnimalKind } from './Animal';
 import { circlerPose, stepPathWalker, stepWanderer, walkerPose, type Circler, type PathWalker, type Wanderer } from './behaviour';
 
-/** Ambient life must never take the region down: a failed model just isn't shown. */
+/**
+ * Ambient life and villains must never take the region down: a failed model
+ * just isn't shown. No Suspense of its own, on purpose: loading models hold
+ * the region's loading screen, so the world doesn't stutter right after it.
+ */
 export class LifeBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
@@ -17,7 +21,7 @@ export class LifeBoundary extends Component<{ children: ReactNode }, { failed: b
     console.warn('[life] animal/people models failed to load:', error);
   }
   render() {
-    return this.state.failed ? null : <Suspense fallback={null}>{this.props.children}</Suspense>;
+    return this.state.failed ? null : this.props.children;
   }
 }
 

@@ -43,6 +43,8 @@ export const GROUND_MOVEMENT = {
   airControl: 0.35,
   /** Turn rate of the visual model toward travel direction (rad/s). */
   turnSpeed: 14,
+  /** How fast a knockback's horizontal velocity bleeds off while the hero has no control (m/s²). */
+  knockDrag: 12,
   jumpVelocity: 11,
   /** Holding jump extends the jump; releasing early cuts upward velocity by this factor. */
   jumpCutMultiplier: 0.5,

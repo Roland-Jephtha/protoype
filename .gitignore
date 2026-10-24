@@ -34,3 +34,8 @@ smoke-output
 
 # Rejected download (MultiVersus rip, see docs/ASSET_MANIFEST.md) — never commit
 superman/
+
+# Raw villain downloads (processed copies live in public/models/villains/).
+/doomsday_batman_v_superman_rigged/
+/general_zod_michael_shannon_-_rigged/
+/darkseid_-_rigged_ray_porter/

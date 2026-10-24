@@ -39,6 +39,10 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
   const crossRef = useRef<HTMLDivElement>(null);
   const hurtRef = useRef<HTMLDivElement>(null);
   const lastHealth = useRef<number>(HERO_COMBAT.maxHealth);
+  const bossRef = useRef<HTMLDivElement>(null);
+  const bossNameRef = useRef<HTMLSpanElement>(null);
+  const bossFillRef = useRef<HTMLDivElement>(null);
+  const frozenRef = useRef<HTMLDivElement>(null);
   const pointerLocked = useApp((s) => s.pointerLocked);
   const regionId = useApp((s) => s.regionId);
   const mode = useApp((s) => s.mode);
@@ -68,6 +72,14 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
         });
       }
       lastHealth.current = c.health;
+
+      const boss = runtime.boss;
+      if (bossRef.current) bossRef.current.style.display = boss ? '' : 'none';
+      if (boss && bossNameRef.current && bossFillRef.current) {
+        bossNameRef.current.textContent = boss.name;
+        bossFillRef.current.style.transform = `scaleX(${boss.health / boss.max})`;
+      }
+      if (frozenRef.current) frozenRef.current.style.opacity = runtime.heroFrozen > 0 ? '1' : '0';
 
       // Nearest edge: point the way to the neighbouring region, or warn it's the boundary.
       if (edgeRef.current) {
@@ -101,6 +113,13 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
       )}
       <div ref={edgeRef} className="hud-edge" style={{ display: 'none' }} />
       <div ref={hurtRef} className="hud-hurt" />
+      <div ref={frozenRef} className="hud-frozen" />
+      <div ref={bossRef} className="hud-boss" style={{ display: 'none' }}>
+        <span ref={bossNameRef} className="hud-boss-name" />
+        <div className="hud-bar hud-boss-bar">
+          <div ref={bossFillRef} className="hud-bar-fill" />
+        </div>
+      </div>
       <div ref={crossRef} className="hud-crosshair" style={{ display: 'none' }} />
       <div className={`hud-vitals ${touchUi ? 'touch' : ''}`}>
         <div className="hud-bar hud-health" aria-label="Health">

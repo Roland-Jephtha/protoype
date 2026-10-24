@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Group } from 'three';
 import { CAMERA, FLIGHT, PLAYER } from '../../config/gameConfig';
 import { crossedSide, oppositeSide, type Entry, type RegionDef } from '../../config/regions';
+import { VILLAIN_AI } from '../../config/villains';
 import { input } from '../../input/InputManager';
 import { useApp } from '../../state/appStore';
 import { runtime } from '../runtime';
@@ -122,6 +123,15 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
     const dt = w.timestep;
     runtime.physicsSteps++;
 
+    // Knockback from enemies, and freeze-breath slowing.
+    const imp = runtime.heroImpulse;
+    if (imp.lengthSq() > 0) {
+      motor.applyImpulse(imp.x, imp.y, imp.z, runtime.heroControlLoss);
+      imp.set(0, 0, 0);
+      runtime.heroControlLoss = 0;
+    }
+    runtime.heroFrozen = Math.max(0, runtime.heroFrozen - dt);
+
     const move = input.getMove();
     const desired = motor.step(
       {
@@ -136,6 +146,7 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
         flyPressed: input.consumePressed('fly'),
         descendHeld: input.isHeld('descend'),
         faceYaw: runtime.combatFaceYaw ?? undefined,
+        speedScale: runtime.heroFrozen > 0 ? VILLAIN_AI.freezeSlow : 1,
       },
       dt,
     );

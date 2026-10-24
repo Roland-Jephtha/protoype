@@ -33,6 +33,10 @@ const ANIMALS: Record<AnimalKind, AnimalSpec> = {
   piranha: { url: `${BASE}piranha.fbx`, length: 0.6, yaw: 0, move: 'Swimming', idle: 'Swimming', clipSpeed: 1.5, colors: { Brown: '#6b5a48', LightYellow: '#c9a24a', Black: '#141414', White: '#e8e8e8' } },
 };
 
+// Fetch and parse every animal model once at startup (the loader caches by URL), so
+// entering a region never waits on them.
+for (const url of new Set(Object.values(ANIMALS).map((a) => a.url))) useLoader.preload(FBXLoader, url);
+
 /**
  * Rewrites a geometry's index so each material's triangles are contiguous,
  * collapsing many small draw groups into one per material.

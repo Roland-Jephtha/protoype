@@ -6,6 +6,9 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 import { HERO_MODELS } from '../../config/assets';
 import { createOutfitMaterial, prepareOutfitSlots, randomPalette, type Palette } from './outfit';
 
+// Pedestrians and survivors share one model: fetch it once at startup.
+useGLTF.preload(HERO_MODELS.ual.url);
+
 export interface CivilianHandle {
   /** The root you move/rotate (feet at y = 0, facing +Z). */
   root: Group | null;

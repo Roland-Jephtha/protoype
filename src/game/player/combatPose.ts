@@ -1,8 +1,11 @@
 import { Object3D, Quaternion, Vector3, type Bone } from 'three';
 import { canonicalBoneName, MIXAMO_FROM_UAL } from './boneNames';
 
-function findBone(root: Object3D, mixamo: string): Object3D | undefined {
-  const names = [mixamo, MIXAMO_FROM_UAL[mixamo]];
+/** Mixamo bone name → the same bone in another rig (canonical names). */
+export type BoneAliases = Record<string, string>;
+
+function findBone(root: Object3D, mixamo: string, aliases?: BoneAliases): Object3D | undefined {
+  const names = [mixamo, MIXAMO_FROM_UAL[mixamo], aliases?.[mixamo]].filter(Boolean);
   let hit: Object3D | undefined;
   root.traverse((o) => {
     if (!hit && (o as Bone).isBone && names.includes(canonicalBoneName(o.name))) hit = o;
@@ -38,12 +41,13 @@ export class CombatPose {
   private v = { a: new Vector3(), b: new Vector3(), c: new Vector3(), target: new Vector3(), dir: new Vector3(), up: new Vector3(0, 1, 0) };
   private q = { full: new Quaternion(), delta: new Quaternion(), parent: new Quaternion(), inv: new Quaternion(), id: new Quaternion() };
 
-  constructor(model: Object3D) {
-    this.head = findBone(model, 'Head');
-    this.spine = findBone(model, 'Spine1');
+  constructor(model: Object3D, aliases?: BoneAliases) {
+    const find = (name: string) => findBone(model, name, aliases);
+    this.head = find('Head');
+    this.spine = find('Spine1');
     this.arms = {
-      left: { upper: findBone(model, 'LeftArm'), fore: findBone(model, 'LeftForeArm'), hand: findBone(model, 'LeftHand') },
-      right: { upper: findBone(model, 'RightArm'), fore: findBone(model, 'RightForeArm'), hand: findBone(model, 'RightHand') },
+      left: { upper: find('LeftArm'), fore: find('LeftForeArm'), hand: find('LeftHand') },
+      right: { upper: find('RightArm'), fore: find('RightForeArm'), hand: find('RightHand') },
     };
   }
 

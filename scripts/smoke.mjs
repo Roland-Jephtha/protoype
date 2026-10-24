@@ -577,6 +577,61 @@ async function combatRun(browser) {
   await context.close();
 }
 
+/** Villains: Doomsday engages at the salt pan, hurts the hero, and takes heat-vision damage. */
+async function villainRun(browser) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Free roam' }).click();
+  await waitForReady(page);
+  await page.evaluate(() => window.__krypton.app.getState().travelTo('desert', { at: { x: -520, z: 770, facing: 0 } }));
+  for (let i = 0; i < 240; i++) {
+    if (await page.evaluate(() => window.__krypton.runtime.regionId === 'desert' && window.__krypton.ready)) break;
+    await sleep(250);
+  }
+  const rt = () => page.evaluate(() => {
+    const r = window.__krypton.runtime;
+    return { health: r.combat.health, boss: r.boss ? { ...r.boss } : null };
+  });
+  let minHealth = 100;
+  let boss = null;
+  for (let i = 0; i < 24; i++) {
+    await sleep(250);
+    const s = await rt();
+    minHealth = Math.min(minHealth, s.health);
+    boss ??= s.boss;
+  }
+  check('villains: Doomsday engages the hero (boss bar) and hurts him', boss?.name === 'Doomsday' && minHealth < 100, `boss=${boss?.name}, lowest health ${minHealth.toFixed(0)}`);
+  await page.evaluate(() => window.__krypton.input.setButton('mouse', 'aim', true));
+  for (let i = 0; i < 25; i++) {
+    await page.evaluate(() => {
+      const k = window.__krypton;
+      const cam = k.runtime.cameraPosition;
+      let best = null;
+      for (const t of k.targets) {
+        if (!t.alive || t.radius < 0.5) continue;
+        const d = Math.hypot(t.position.x - cam.x, t.position.y - cam.y, t.position.z - cam.z);
+        if (!best || d < best.d) best = { t, d };
+      }
+      if (!best) return;
+      const p = best.t.position;
+      const dx = p.x - cam.x, dy = p.y - cam.y, dz = p.z - cam.z;
+      const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+      k.input.addLook(-wrap(Math.atan2(dx, dz) - Math.PI - k.runtime.cameraYaw), Math.atan2(dy, Math.hypot(dx, dz)) - k.runtime.cameraPitch);
+    });
+    await sleep(100);
+  }
+  await page.evaluate(() => window.__krypton.input.setButton('mouse', 'aim', false));
+  await page.screenshot({ path: path.join(OUT, '14-villain.png') });
+  const after = await rt();
+  check('villains: heat vision damages Doomsday', !!after.boss && after.boss.health < after.boss.max - 20, after.boss ? `${after.boss.health.toFixed(0)}/${after.boss.max}` : 'no boss');
+  check('no page errors (villains)', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await context.close();
+}
+
 /** Story mode: plays the whole prologue (briefing → forest → crash site → survivors → wreck → complete). */
 async function storyRun(browser) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
@@ -771,6 +826,7 @@ try {
   await regionRun(browser);
   await lifeRun(browser);
   await combatRun(browser);
+  await villainRun(browser);
   await storyRun(browser);
 } catch (e) {
   check('smoke run completed without exceptions', false, e.message);
