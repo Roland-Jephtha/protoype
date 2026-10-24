@@ -55,7 +55,8 @@ export const PROLOGUE: MissionDef = {
       radius: 6,
       prompt: 'Investigate',
       doneMessage: 'A glowing residue clings to the engine… it isn’t jet fuel.',
-      targets: [{ region: 'forest', x: crash.x - 6, z: crash.z - 3, label: 'Wreckage' }],
+      // The torn-off engine beyond the wing tip — reachable from open ground.
+      targets: [{ region: 'forest', x: crash.x + 20, z: crash.z - 14, label: 'Engine' }],
     },
   ],
   outro:

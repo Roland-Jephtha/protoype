@@ -548,9 +548,27 @@ async function storyRun(browser) {
     { x: site.x + 4, z: site.z + 32 },
     { x: site.x + 30, z: site.z - 22 },
   ];
+  // Walk like a player: around the edge of the clearing (radius 44 m, well
+  // outside the wreckage), then straight in to the target.
+  const aroundTo = async (tx, tz, within) => {
+    const s0 = await state(page);
+    let a = Math.atan2(s0.pos.z - site.z, s0.pos.x - site.x);
+    const target = Math.atan2(tz - site.z, tx - site.x);
+    let d = target - a;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    const steps = Math.max(1, Math.ceil(Math.abs(d) / (Math.PI / 3)));
+    for (let i = 0; i <= steps; i++) {
+      const ang = a + (d * i) / steps;
+      await goTo(site.x + Math.cos(ang) * 44, site.z + Math.sin(ang) * 44, 3);
+    }
+    a = target;
+    return goTo(tx, tz, within);
+  };
+
   let promptSeen = false;
   for (const s of rescueTargets) {
-    await goTo(s.x, s.z, 2.2);
+    await aroundTo(s.x, s.z, 2.2);
     promptSeen ||= (await page.locator('.hud-interact').count()) > 0;
     await page.keyboard.press('KeyE');
     await sleep(400);
@@ -559,7 +577,7 @@ async function storyRun(browser) {
   check('story: all three survivors rescued', (await mission()).objectiveIndex === 3, await objective());
   await page.screenshot({ path: path.join(OUT, '12-rescued.png') });
 
-  await goTo(site.x - 6, site.z - 3, 3);
+  await aroundTo(site.x + 20, site.z - 14, 3);
   await page.keyboard.press('KeyE');
   await sleep(800);
   const done = page.getByRole('dialog', { name: 'Mission complete' });
