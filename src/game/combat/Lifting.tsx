@@ -10,7 +10,7 @@ import { runtime } from '../runtime';
 import { VEHICLES, type VehicleType } from '../vehicles/vehicleGeometry';
 import { heroFeetY } from './heroActions';
 import { addImpact } from './impacts';
-import { nearestLiftable } from './liftables';
+import { nearestLiftable, wreckRequests, type WreckRequest } from './liftables';
 import { targets, type Target } from './targets';
 
 const LABEL: Record<VehicleType, string> = { sedan: 'car', taxi: 'taxi', van: 'van', pickup: 'pickup', bus: 'bus', semi: 'truck' };
@@ -96,6 +96,22 @@ class ThrownSet {
   }
 }
 
+/** Creates a tumbling physics wreck for a vehicle that was knocked flying or blew up. */
+function spawnWreck(world: RAPIER.World, rapier: typeof RAPIER, thrown: ThrownSet, r: WreckRequest) {
+  const spec = VEHICLES[r.type];
+  const q = new Quaternion().setFromEuler(new Euler(0, r.yaw, 0));
+  const body = world.createRigidBody(
+    rapier.RigidBodyDesc.dynamic()
+      .setTranslation(r.x, r.y, r.z)
+      .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w })
+      .setLinvel(r.vx, r.vy, r.vz)
+      .setAngvel({ x: (Math.random() - 0.5) * 4, y: (Math.random() - 0.5) * 3, z: (Math.random() - 0.5) * 4 })
+      .setCcdEnabled(true),
+  );
+  world.createCollider(rapier.ColliderDesc.cuboid(spec.width / 2, spec.height / 2, spec.length / 2).setTranslation(0, spec.height / 2, 0).setDensity(LIFT.density).setFriction(0.7).setRestitution(0.15), body);
+  thrown.add(world, { body, type: r.type, paint: r.paint, age: 0, hit: new Set() });
+}
+
 /**
  * Lifting: walk up to a vehicle and press Interact to hold it overhead; punch
  * (click / ✊) throws it along the crosshair, Interact again sets it down.
@@ -138,6 +154,8 @@ export function Lifting() {
   };
 
   useBeforePhysicsStep((w) => {
+    // Vehicles knocked flying or blown up become physics wrecks.
+    while (wreckRequests.length) spawnWreck(world, rapier, thrown, wreckRequests.shift()!);
     const app = useApp.getState();
     const p = runtime.playerPosition;
     if (!runtime.carrying) {

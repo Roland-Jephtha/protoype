@@ -48,8 +48,8 @@ export function TerrainLife() {
             [-450, 380, 110, 70],
             [400, -300, 140, 80],
           ]
-      ).map(([cx, cz, radius, altitude], i) => ({ cx, cz, radius, altitude, rate: (i % 2 ? -1 : 1) * (LIFE.birdSpeed / radius), phase: i * 2.1 })),
-    [terrain],
+      ).slice(0, LIFE.birds[quality]).map(([cx, cz, radius, altitude], i) => ({ cx, cz, radius, altitude, rate: (i % 2 ? -1 : 1) * (LIFE.birdSpeed / radius), phase: i * 2.1 })),
+    [terrain, quality],
   );
 
   const waterY = useCallback((x: number, z: number) => t.ground(x, z) + 2.2, [t]);

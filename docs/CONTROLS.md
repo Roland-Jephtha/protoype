@@ -19,7 +19,6 @@ Only controls that work today are listed as active. Bindings live in
 | Left mouse | Punch; quick taps chain a 3-hit combo, the third knocks enemies flying | ✅ |
 | Right mouse (hold) | Heat vision through the crosshair (closer camera, meter overheats) | ✅ |
 | Hold left mouse, release | Power punch (sends enemies flying) | ✅ |
-| V | Speed dash | ✅ |
 | R (hold) | Super breath (wind) | ✅ |
 | Q (hold) | Freeze breath | ✅ |
 | X (hold, release when charged) | Super Nova | ✅ |
@@ -50,7 +49,6 @@ the phone sideways. Toggle: Settings → *Always landscape on phones*.
 | ✊ Punch | Punch / combo | ✅ |
 | ◉ Heat (hold) | Heat vision; slide the thumb on the button to aim, strong aim assist | ✅ |
 | ✋ (contextual) | Interact when a prompt shows (story mode) | ✅ |
-| ⇥ Dash | Speed dash | ✅ |
 | Power (≋ / ❄ / ✺) + ⟳ | Hold for Breath / Freeze / Nova; ⟳ cycles the power | ✅ |
 
 Flight: 60 km/h with a full stick, 150 km/h boosting; release everything to brake into a hover; touch any surface while not climbing to land (fast impacts play the heavy landing).

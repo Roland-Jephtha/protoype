@@ -190,7 +190,8 @@ async function desktopRun(browser) {
   const sprint = await state(page);
   await page.keyboard.up('KeyS');
   await page.keyboard.up('ShiftLeft');
-  check('Shift sprints', hspeed(sprint) > 20, `${hspeed(sprint).toFixed(2)} m/s, state=${sprint.state}`);
+  // Full 120 km/h is checked on open terrain (regions run); the plaza only allows a short burst.
+  check('Shift sprints (accelerating past 85 km/h in a short burst)', hspeed(sprint) > 23.6, `${hspeed(sprint).toFixed(2)} m/s, state=${sprint.state}`);
   check('sprint keeps the run animation fully applied', minWeight > 0.95, `min weight ${minWeight.toFixed(2)}`);
   await page.screenshot({ path: path.join(OUT, '04b-sprint.png') });
 
@@ -214,7 +215,8 @@ async function desktopRun(browser) {
   await page.keyboard.down('ShiftLeft');
   await sleep(1350);
   const boost = await state(page);
-  check('boost reaches 150 km/h', speed3(boost) > 145 && boost.state === 'flyBoost', `${speed3(boost).toFixed(1)} km/h, state=${boost.state}, x=${boost.pos.x.toFixed(0)}`);
+  // Full 250 km/h is checked over the open forest (regions run).
+  check('boost accelerates past 170 km/h', speed3(boost) > 170 && boost.state === 'flyBoost', `${speed3(boost).toFixed(1)} km/h, state=${boost.state}, x=${boost.pos.x.toFixed(0)}`);
   await page.screenshot({ path: path.join(OUT, '04d-boost.png') });
   await page.keyboard.up('ShiftLeft');
   await page.keyboard.up('KeyA');
@@ -339,13 +341,16 @@ async function touchRun(browser) {
 
   // Fly button: takes off and swaps the buttons to their flight versions.
   const flyBtn = await page.getByRole('button', { name: 'Fly' }).boundingBox();
+  const beforeFly = await state(page);
+  // Hold briefly (crouch + launch) like a player would, then let go.
   await touch('touchStart', [{ x: flyBtn.x + flyBtn.width / 2, y: flyBtn.y + flyBtn.height / 2, id: 7 }]);
+  await sleep(300);
   await touch('touchEnd', []);
-  await sleep(600);
+  await sleep(700);
   const flyingTouch = await state(page);
   const upVisible = await page.getByRole('button', { name: 'Up' }).isVisible();
   const downVisible = await page.getByRole('button', { name: 'Down' }).isVisible();
-  check('touch: Fly button takes off and shows Up/Down/Boost', flyingTouch.mode === 'flight' && upVisible && downVisible, `mode=${flyingTouch.mode}`);
+  check('touch: Fly button takes off and shows Up/Down/Boost', flyingTouch.mode === 'flight' && upVisible && downVisible, `mode=${flyingTouch.mode} (was ${beforeFly.mode}, ${beforeFly.state})`);
   await page.screenshot({ path: path.join(OUT, '05b-touch-flying.png') });
 
   // Pause button.
@@ -415,12 +420,28 @@ async function regionRun(browser) {
     const run = await moveAndSample(['KeyW'], 2000);
     const sprint = await moveAndSample(['ShiftLeft', 'KeyW'], 2000);
     check(`${id}: running and sprinting keep the feet on top of the terrain`, Math.min(run.minSole, sprint.minSole) > -0.01, `min sole ${(Math.min(run.minSole, sprint.minSole) * 100).toFixed(1)} cm, top speed ${(sprint.maxSpeed * 3.6).toFixed(0)} km/h`);
+    check(`${id}: sprint reaches 120 km/h`, sprint.maxSpeed * 3.6 > 115, `${(sprint.maxSpeed * 3.6).toFixed(0)} km/h`);
 
     await page.keyboard.press('KeyF');
     await page.keyboard.down('Space');
     await sleep(1500);
     await page.keyboard.up('Space');
     await page.screenshot({ path: path.join(OUT, `${shot}-aerial.png`) });
+    if (id === 'forest') {
+      // Full boost over open forest.
+      await page.keyboard.down('KeyW');
+      await page.keyboard.down('ShiftLeft');
+      let top = 0;
+      for (let i = 0; i < 40; i++) {
+        await sleep(100);
+        const s = await state(page);
+        top = Math.max(top, Math.hypot(s.vel.x, s.vel.y, s.vel.z) * 3.6);
+      }
+      await page.keyboard.up('ShiftLeft');
+      await page.keyboard.up('KeyW');
+      check('forest: flight boost reaches 250 km/h', top > 240, `${top.toFixed(0)} km/h`);
+      await sleep(1500);
+    }
     await page.keyboard.down('KeyC');
     await sleep(3500);
     await page.keyboard.up('KeyC');
@@ -569,7 +590,7 @@ async function combatRun(browser) {
   await page.evaluate(() => window.__krypton.input.setButton('mouse', 'attack', true));
   await page.evaluate(() => window.__krypton.input.setButton('mouse', 'attack', false));
   await sleep(80);
-  check('combat: left click throws a punch', (await rt()).punch >= 0);
+  check('combat: left click throws a punch', (await page.evaluate(() => window.__krypton.runtime.combat.combo)) >= 1);
   await page.mouse.click(640, 400);
   await sleep(300);
   const audioState = await page.evaluate(() => window.__krypton.audio.ctx?.state ?? 'none');
@@ -680,10 +701,6 @@ async function villainRun(browser) {
   await sleep(300);
   const novaCount = await page.evaluate(() => window.__krypton.runtime.novaFlash);
   check('skills: a charged Super Nova goes off', novaCount > 0, `novas=${novaCount}, boss before ${before.boss?.health.toFixed(0)}`);
-  await page.evaluate(() => window.__krypton.input.setButton('keyboard', 'dash', true));
-  await page.evaluate(() => window.__krypton.input.setButton('keyboard', 'dash', false));
-  await sleep(100);
-  check('skills: V dashes', await page.evaluate(() => window.__krypton.runtime.heroDashing || Math.hypot(window.__krypton.runtime.playerVelocity.x, window.__krypton.runtime.playerVelocity.z) > 20));
   check('no page errors (villains)', errors.length === 0, errors.slice(0, 3).join(' | '));
   await context.close();
 }
@@ -773,12 +790,14 @@ async function storyRun(browser) {
   await page.keyboard.down('Space');
   await sleep(1500);
   await page.keyboard.up('Space');
+  // Boost (250 km/h) for the long stretch, then cruise in so the hero can brake over the site.
   await page.keyboard.down('ShiftLeft');
-  await goTo(site.x, site.z, 40, 45000);
+  await goTo(site.x, site.z, 160, 45000);
   await page.keyboard.up('ShiftLeft');
+  await goTo(site.x, site.z, 40, 30000);
   await sleep(2500); // brake to a hover
   await page.keyboard.down('KeyC');
-  await sleep(3000);
+  for (let i = 0; i < 30 && (await state(page)).mode === 'flight'; i++) await sleep(250);
   await page.keyboard.up('KeyC');
   check('story: arriving at the crash site completes objective 2', (await mission()).objectiveIndex === 2, await objective());
   await page.screenshot({ path: path.join(OUT, '11-crash-site.png') });

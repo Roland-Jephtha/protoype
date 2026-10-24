@@ -21,6 +21,21 @@ export interface LiftSource {
   take: (key: number) => void;
 }
 
+/** A vehicle knocked flying or blown up: Lifting turns it into a physics wreck. */
+export interface WreckRequest {
+  type: VehicleType;
+  paint: string;
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  vx: number;
+  vy: number;
+  vz: number;
+}
+
+export const wreckRequests: WreckRequest[] = [];
+
 /** Lift sources in the mounted region. */
 export const liftSources = new Set<LiftSource>();
 

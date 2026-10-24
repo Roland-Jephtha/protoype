@@ -33,7 +33,7 @@ export const GROUND_MOVEMENT = {
   /** 20 km/h on the HUD. */
   runSpeed: 20 / 3.6,
   /** 90 km/h on the HUD. Sprint is the same run, just faster (same animation, same handling). */
-  sprintSpeed: 90 / 3.6,
+  sprintSpeed: 120 / 3.6,
   /** Stick magnitude below which analog input counts as walking. */
   walkThreshold: 0.55,
   acceleration: 40,
@@ -63,14 +63,20 @@ export const GROUND_MOVEMENT = {
 export const FLIGHT = {
   /** 60 km/h on the HUD: normal flight with full stick. */
   baseSpeed: 60 / 3.6,
-  /** 150 km/h on the HUD: holding boost. */
-  boostSpeed: 150 / 3.6,
+  /** 250 km/h on the HUD: holding boost. */
+  boostSpeed: 250 / 3.6,
   acceleration: 18,
   boostAcceleration: 24,
   /** Braking toward a hover when there is no input (m/s²). */
   deceleration: 22,
   /** Upward speed given on takeoff from the ground (m/s). */
   takeoffVelocity: 9,
+  /**
+   * Man of Steel launch: hold Fly on the ground to crouch, then burst upward.
+   * A press shorter than `tapTime` is a normal takeoff; holding charges up to
+   * `maxCharge` (s), launching at up to `launchVelocity` (m/s).
+   */
+  launch: { tapTime: 0.18, maxCharge: 0.55, launchVelocity: 46 },
   takeoffStateDuration: 0.35,
   /** Below this speed (m/s) the hero is hovering rather than flying. */
   hoverSpeed: 1.5,

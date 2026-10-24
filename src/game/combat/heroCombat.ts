@@ -6,7 +6,6 @@ export interface CombatInput {
   attackHeld?: boolean;
   /** Heat vision held. */
   aimHeld: boolean;
-  dashPressed?: boolean;
   /** Super breath (wind) held. */
   breathHeld?: boolean;
   freezeHeld?: boolean;
@@ -20,7 +19,6 @@ export type CombatEvent =
   | { type: 'punchHit'; combo: number }
   /** A charged power punch was released (0..1 extra charge beyond the hold threshold). */
   | { type: 'powerPunch'; side: 'left' | 'right'; charge: number }
-  | { type: 'dash' }
   | { type: 'nova' }
   | { type: 'overheat' };
 
@@ -29,7 +27,7 @@ export type Breath = 'none' | 'wind' | 'freeze';
 /**
  * The hero's combat state: health with delayed regeneration, the heat-vision
  * meter, punches (three-hit combo; hold and release for a power punch), and
- * the solar-powered skills — dash, super breath, freeze breath, Super Nova.
+ * the solar-powered skills — super breath, freeze breath, Super Nova.
  * Pure and fixed-step, so it runs in tests without Rapier or three.js.
  */
 export class HeroCombat {
@@ -54,7 +52,6 @@ export class HeroCombat {
   private sinceDamage = Infinity;
   private sinceFire = Infinity;
   private sincePunch = Infinity;
-  private dashCooldown = 0;
   private hitResolved = false;
   private grace = 0;
   private powerCharge = 0;
@@ -119,13 +116,6 @@ export class HeroCombat {
       }
     }
 
-    // --- dash -----------------------------------------------------------------
-    this.dashCooldown = Math.max(0, this.dashCooldown - dt);
-    if (inp.dashPressed && this.dashCooldown <= 0 && this.solar >= HERO_COMBAT.dash.cost) {
-      this.solar -= HERO_COMBAT.dash.cost;
-      this.dashCooldown = HERO_COMBAT.dash.cooldown;
-      events.push({ type: 'dash' });
-    }
 
     // --- Super Nova: hold to charge, release when full --------------------------
     const nova = HERO_COMBAT.nova;
@@ -148,7 +138,7 @@ export class HeroCombat {
         // A power punch lands when its homing lunge arrives (resolved by the combat driver).
         if (!this.powerPunching) events.push({ type: 'punchHit', combo: this.combo });
       }
-      if (this.punchTime >= p.duration) {
+      if (this.punchTime >= p.duration + (this.powerPunching ? pp.secondFistAt : 0)) {
         this.punchTime = -1;
         this.powerPunching = false;
       }

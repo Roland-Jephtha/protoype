@@ -31,6 +31,12 @@ export interface MotorInput {
   cameraPitch?: number;
   /** Toggle flight (edge). */
   flyPressed?: boolean;
+  /**
+   * Fly held. When provided, a press on the ground starts a launch charge
+   * (crouch) that fires on release or at full charge; when omitted, a press
+   * takes off immediately (tests, simple callers).
+   */
+  flyHeld?: boolean;
   /** Fly down (held). */
   descendHeld?: boolean;
   /** Face this yaw regardless of movement (aiming heat vision, punching a target). */
@@ -105,6 +111,17 @@ export class GroundMotor {
   lastLandingSpeed = 0;
   /** Seconds of lost control after a knockback (velocity carries the hero). */
   knockTimer = 0;
+  /** Seconds the Fly button has been held while crouching to launch (0 = not charging). */
+  launchCharge = 0;
+  /** Strength (0..1) of the last launch, until read with consumeLaunch(). */
+  private lastLaunch = 0;
+
+  /** Returns the strength of a launch that just happened (0 if none) and clears it. */
+  consumeLaunch() {
+    const k = this.lastLaunch;
+    this.lastLaunch = 0;
+    return k;
+  }
   /** Speed dash: velocity held for `dashTimer` seconds, then normal control resumes. */
   private dashTimer = 0;
   private dashVelocity = { x: 0, y: 0, z: 0 };
@@ -147,8 +164,29 @@ export class GroundMotor {
       } else {
         return this.stepFlight(inp, dt);
       }
+    } else if (this.launchCharge > 0 || (inp.flyPressed && inp.flyHeld !== undefined && this.grounded)) {
+      // Hold Fly on the ground: crouch and charge, then burst into the sky.
+      const L = FLIGHT.launch;
+      this.launchCharge += dt;
+      if (inp.flyHeld && this.launchCharge < L.maxCharge) {
+        const v = this.velocity;
+        v.x *= 0.8;
+        v.z *= 0.8;
+        v.y = -2;
+        this.setState('hardLand');
+        this.landTimer = 0.1;
+        return { x: v.x * dt, y: v.y * dt, z: v.z * dt };
+      }
+      const k = Math.max(0, Math.min(1, (this.launchCharge - L.tapTime) / (L.maxCharge - L.tapTime)));
+      this.launchCharge = 0;
+      this.takeOff();
+      if (k > 0) {
+        this.velocity.y = FLIGHT.takeoffVelocity + (L.launchVelocity - FLIGHT.takeoffVelocity) * k;
+        this.lastLaunch = k;
+      }
+      return this.stepFlight(inp, dt);
     } else if (inp.flyPressed || (inp.jumpPressed && !this.grounded && this.coyoteTimer - dt <= 0 && this.state !== 'hardLand')) {
-      // F anywhere, or Jump again while airborne: take off.
+      // F in the air (or without hold info), or Jump again while airborne: take off.
       this.takeOff();
       return this.stepFlight(inp, dt);
     }

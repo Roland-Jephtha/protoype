@@ -3,9 +3,11 @@ import { useFrame } from '@react-three/fiber';
 import { useRapier } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
 import { Color, Euler, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type BufferGeometry } from 'three';
-import { LIFT } from '../../config/combat';
+import { LIFT, VEHICLE_DAMAGE } from '../../config/combat';
 import { useApp } from '../../state/appStore';
-import { liftSources, type LiftCandidate, type LiftSource } from '../combat/liftables';
+import { liftSources, wreckRequests, type LiftCandidate, type LiftSource } from '../combat/liftables';
+import { addImpact } from '../combat/impacts';
+import { targets, type Target } from '../combat/targets';
 import { runtime } from '../runtime';
 import { lightState, stepTraffic, type Lane, type Vehicle } from './traffic';
 import { VEHICLES, type VehicleType } from './vehicleGeometry';
@@ -71,6 +73,45 @@ export function TrafficLayer({ lanes, setup, groundY, roadLift = 0 }: { lanes: L
     };
   }, [world, rapier, setup]);
 
+  // Vehicles are targets: heat vision burns them, freeze breath ices them, big hits knock them flying.
+  const hitTargets = useMemo(
+    () =>
+      sim.vehicles.map((v, i): Target => {
+        const spec = VEHICLES[setup[i].type];
+        let health: number = VEHICLE_DAMAGE.health;
+        const wreck = (knock: { x: number; y: number; z: number }, burnt: boolean) => {
+          const p = lanes[v.lane].path.at(v.s);
+          wreckRequests.push({ type: setup[i].type, paint: burnt ? VEHICLE_DAMAGE.burntPaint : setup[i].paint, x: p.x, y: groundY(p.x, p.z) + roadLift + 0.2, z: p.z, yaw: p.angle, vx: knock.x, vy: Math.max(4, knock.y), vz: knock.z });
+          addImpact(t.position, 'power');
+          if (burnt) runtime.carsDestroyed++;
+          takeVehicle(v, LIFT.respawnDelay);
+          health = VEHICLE_DAMAGE.health;
+        };
+        const t: Target = {
+          position: { x: 0, y: -100, z: 0 },
+          radius: Math.max(spec.length, spec.width) * 0.45,
+          alive: false,
+          damage: (amount, knock) => {
+            if (v.out) return;
+            health -= amount;
+            if (Math.hypot(knock.x, knock.y, knock.z) >= VEHICLE_DAMAGE.launchKnock) wreck(knock, health <= 0);
+            else if (health <= 0) wreck({ x: 0, y: 6, z: 0 }, true);
+          },
+          freeze: (seconds) => {
+            if (!v.out) v.frozen = Math.min(VEHICLE_DAMAGE.maxFreeze, (v.frozen ?? 0) + seconds);
+          },
+        };
+        return t;
+      }),
+    [sim, setup, lanes, groundY, roadLift],
+  );
+  useEffect(() => {
+    for (const t of hitTargets) targets.add(t);
+    return () => {
+      for (const t of hitTargets) targets.delete(t);
+    };
+  }, [hitTargets]);
+
   // The hero can pick these vehicles up.
   useEffect(() => {
     const source: LiftSource = {
@@ -94,6 +135,8 @@ export function TrafficLayer({ lanes, setup, groundY, roadLift = 0 }: { lanes: L
   }, [sim, lanes, setup, groundY, roadLift]);
 
   const meshes = useRef<Partial<Record<VehicleType, InstancedMesh>>>({});
+  const frozenShown = useRef<boolean[]>([]);
+  const colorsDirty = useRef(false);
   const scratch = useMemo(() => ({ m: new Matrix4(), q: new Quaternion(), e: new Euler(), p: new Vector3(), s: new Vector3(1, 1, 1), c: new Color() }), []);
 
   // Paint each instance once.
@@ -114,8 +157,11 @@ export function TrafficLayer({ lanes, setup, groundY, roadLift = 0 }: { lanes: L
     sim.vehicles.forEach((v, i) => {
       const type = setup[i].type;
       const spec = VEHICLES[type];
+      const target = hitTargets[i];
+      target.alive = !v.out;
       // Lifted or thrown by the hero: hidden here until it comes back.
       if (v.out) {
+        target.position.y = -100;
         meshes.current[type]?.setMatrixAt(sim.indexInType[i], HIDDEN);
         bodies.current[i]?.setNextKinematicTranslation({ x: 0, y: -100 - i, z: 0 });
         return;
@@ -127,6 +173,16 @@ export function TrafficLayer({ lanes, setup, groundY, roadLift = 0 }: { lanes: L
       p.set(pos.x, y, pos.z);
       m.compose(p, q, s);
       meshes.current[type]?.setMatrixAt(sim.indexInType[i], m);
+      target.position.x = pos.x;
+      target.position.y = y + spec.height / 2;
+      target.position.z = pos.z;
+      // Ice tint while frozen (only touched when it changes).
+      const frozen = (v.frozen ?? 0) > 0;
+      if (frozen !== frozenShown.current[i]) {
+        frozenShown.current[i] = frozen;
+        meshes.current[type]?.setColorAt(sim.indexInType[i], scratch.c.set(frozen ? '#bfe6ff' : setup[i].paint));
+        colorsDirty.current = true;
+      }
       const body = bodies.current[i];
       if (body) {
         body.setNextKinematicTranslation({ x: pos.x, y: y + spec.height / 2, z: pos.z });
@@ -135,9 +191,10 @@ export function TrafficLayer({ lanes, setup, groundY, roadLift = 0 }: { lanes: L
     });
     for (const mesh of Object.values(meshes.current)) {
       if (!mesh) continue;
+      if (colorsDirty.current && mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
       mesh.instanceMatrix.needsUpdate = true;
-      mesh.computeBoundingSphere();
     }
+    colorsDirty.current = false;
   });
 
   return (
@@ -151,6 +208,8 @@ export function TrafficLayer({ lanes, setup, groundY, roadLift = 0 }: { lanes: L
           args={[assets.geometries[t], assets.material, setup.filter((v) => v.type === t).length]}
           castShadow
           receiveShadow
+          // Vehicles move every frame: skip culling rather than recomputing bounds per frame.
+          frustumCulled={false}
         />
       ))}
     </>

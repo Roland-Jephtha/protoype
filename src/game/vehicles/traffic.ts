@@ -52,6 +52,8 @@ export interface Vehicle {
   length: number;
   /** Seconds until a vehicle taken by the hero (lifted, thrown) reappears; 0 = on the road. */
   out?: number;
+  /** Seconds left frozen in ice (stopped where it is; traffic queues behind it). */
+  frozen?: number;
 }
 
 export interface TrafficContext {
@@ -97,6 +99,11 @@ export function stepTraffic(vehicles: Vehicle[], lanes: Lane[], dt: number, ctx:
     const lane = lanes[laneIndex];
     list.sort((a, b) => a.s - b.s);
     list.forEach((v, i) => {
+      if (v.frozen && v.frozen > 0) {
+        v.frozen = Math.max(0, v.frozen - dt);
+        v.speed = 0;
+        return;
+      }
       let target = lane.speedLimit * v.temper;
 
       // Follow the vehicle ahead (the first vehicle follows the last one, wrapped).

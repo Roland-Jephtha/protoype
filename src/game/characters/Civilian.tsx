@@ -32,8 +32,11 @@ export const Civilian = forwardRef<
     height?: number;
     /** Stop animating when farther than this from the camera (cheap crowds). */
     animateWithin?: number;
+    /** Hide entirely beyond this distance. */
+    visibleWithin?: number;
+    castShadow?: boolean;
   }
->(function Civilian({ seed, palette, clip = 'Idle_Loop', clipSpeed = 1, position = [0, 0, 0], rotationY = 0, height = 1.75, animateWithin = 120 }, ref) {
+>(function Civilian({ seed, palette, clip = 'Idle_Loop', clipSpeed = 1, position = [0, 0, 0], rotationY = 0, height = 1.75, animateWithin = 120, visibleWithin = Infinity, castShadow = true }, ref) {
   const gltf = useGLTF(HERO_MODELS.ual.url);
   const root = useRef<Group>(null);
 
@@ -45,7 +48,8 @@ export const Civilian = forwardRef<
       const mesh = o as Mesh;
       if (mesh.isMesh) {
         mesh.material = material;
-        mesh.castShadow = true;
+        // Crowds: no shadows (a big saving with many skinned meshes).
+        mesh.castShadow = castShadow;
         mesh.frustumCulled = false;
       }
     });
@@ -53,7 +57,7 @@ export const Civilian = forwardRef<
     const size = box.getSize(new Vector3());
     const scale = height / (size.y || 1);
     return { model, material, scale, offsetY: -box.min.y * scale };
-  }, [gltf, palette, seed, height]);
+  }, [gltf, palette, seed, height, castShadow]);
   useEffect(() => () => built.material.dispose(), [built]);
 
   const anim = useMemo(() => {
@@ -98,7 +102,11 @@ export const Civilian = forwardRef<
   useFrame(({ camera }, dt) => {
     if (!root.current) return;
     root.current.getWorldPosition(tmp);
-    if (tmp.distanceTo(camera.position) < animateWithin) animRef.current.mixer.update(Math.min(dt, 0.05));
+    const d = tmp.distanceTo(camera.position);
+    root.current.visible = d < visibleWithin;
+    // Hidden: skip its whole skeleton in the per-frame matrix update.
+    root.current.matrixWorldAutoUpdate = root.current.visible;
+    if (d < animateWithin) animRef.current.mixer.update(Math.min(dt, 0.05));
   });
 
   return (

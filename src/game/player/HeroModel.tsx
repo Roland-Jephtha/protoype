@@ -254,7 +254,7 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     if (role === 'walk') next?.setEffectiveTimeScale(rate(sp.walk, 0.5, 2.2));
     // Run and sprint: one rule. Playback follows ground speed (up to ~5.5× at 90 km/h)
     // so the feet keep pace with the ground instead of sliding.
-    else if (role === 'run' || role === 'sprint') next?.setEffectiveTimeScale(rate(role === 'run' ? sp.run : sp.sprint, 0.6, 5.5));
+    else if (role === 'run' || role === 'sprint') next?.setEffectiveTimeScale(rate(role === 'run' ? sp.run : sp.sprint, 0.6, 7.5));
     else next?.setEffectiveTimeScale(1);
     // Total weight of all playing clips; below 1 means the pose is blending toward the rest pose.
     runtime.heroAnimWeight = [...new Set(Object.values(anim.actions))].reduce((sum, a) => sum + (a?.isRunning() ? a.getEffectiveWeight() : 0), 0);
@@ -304,7 +304,13 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       ct.up.set(0, 1, 0).applyQuaternion(ct.q);
       const c = runtime.combat;
       if (runtime.carrying) built.pose.applyLift(ct.forward, def.heightMeters, 1);
-      else if (c.punching) built.pose.applyPunch(c.side, c.punchTime / HERO_COMBAT.punch.duration, ct.forward, def.heightMeters);
+      else if (c.powerPunching) {
+        // Super punch: a left jab, then the right cross, leaning deep into it.
+        const pp = HERO_COMBAT.powerPunch;
+        const d = HERO_COMBAT.punch.duration;
+        built.pose.applyPunch('left', c.punchTime / d, ct.forward, def.heightMeters, pp.lean * 0.6);
+        built.pose.applyPunch('right', (c.punchTime - pp.secondFistAt) / d, ct.forward, def.heightMeters, pp.lean);
+      } else if (c.punching) built.pose.applyPunch(c.side, c.punchTime / HERO_COMBAT.punch.duration, ct.forward, def.heightMeters);
       runtime.heroEyesValid = built.pose.eyes(runtime.heroEyes, ct.forward, ct.up, def.heightMeters);
     }
 

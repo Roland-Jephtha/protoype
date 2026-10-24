@@ -23,7 +23,7 @@ export function AudioDriver() {
     };
   }, []);
 
-  const last = useRef({ impact: 0, drones: runtime.dronesDestroyed, villains: runtime.villainsDefeated, nova: runtime.novaFlash, health: runtime.combat.health, carrying: false, frozen: 0 });
+  const last = useRef({ launches: runtime.launches, impact: 0, drones: runtime.dronesDestroyed, villains: runtime.villainsDefeated, nova: runtime.novaFlash, health: runtime.combat.health, carrying: false, frozen: 0 });
 
   useFrame(() => {
     const paused = useApp.getState().paused;
@@ -49,12 +49,14 @@ export function AudioDriver() {
     for (const imp of impacts) {
       if (imp.born <= l.impact) continue;
       l.impact = imp.born;
-      if (imp.kind !== 'nova') audio.play(imp.kind === 'power' ? 'power' : 'punch');
+      if (imp.kind === 'punch' || imp.kind === 'power') audio.play(imp.kind);
     }
     if (runtime.dronesDestroyed > l.drones || runtime.villainsDefeated > l.villains) audio.play('explosion');
     l.drones = runtime.dronesDestroyed;
     l.villains = runtime.villainsDefeated;
     if (runtime.novaFlash !== l.nova) audio.play('boom');
+    if (runtime.launches !== l.launches) audio.play('boom', 0.35 + runtime.launchPower * 0.5);
+    l.launches = runtime.launches;
     l.nova = runtime.novaFlash;
     const hp = runtime.combat.health;
     if (hp < l.health - 3) audio.play('hurt', (l.health - hp) / 25);

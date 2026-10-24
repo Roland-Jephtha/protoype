@@ -14,6 +14,7 @@ import { CAMERA, FLIGHT, PLAYER } from '../../config/gameConfig';
 import { crossedSide, oppositeSide, type Entry, type RegionDef } from '../../config/regions';
 import { HERO_COMBAT } from '../../config/combat';
 import { VILLAIN_AI } from '../../config/villains';
+import { addImpact } from '../combat/impacts';
 import { input } from '../../input/InputManager';
 import { useApp } from '../../state/appStore';
 import { runtime } from '../runtime';
@@ -134,7 +135,7 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
     runtime.heroFrozen = Math.max(0, runtime.heroFrozen - dt);
     if (runtime.heroDash) {
       const d = runtime.heroDash;
-      motor.dash(d.x, d.y, d.z, HERO_COMBAT.dash.duration);
+      motor.dash(d.x, d.y, d.z, HERO_COMBAT.powerPunch.lungeTime);
       runtime.heroDash = null;
     }
 
@@ -150,6 +151,7 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
         jumpPressed: input.consumePressed('jump'),
         jumpHeld: input.isHeld('jump'),
         flyPressed: input.consumePressed('fly'),
+        flyHeld: input.isHeld('fly'),
         descendHeld: input.isHeld('descend'),
         faceYaw: runtime.combatFaceYaw ?? undefined,
         speedScale: runtime.heroFrozen > 0 ? VILLAIN_AI.freezeSlow : 1,
@@ -211,6 +213,13 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
     runtime.playerVelocity.set(motor.velocity.x, motor.velocity.y, motor.velocity.z);
     runtime.heroFacingYaw = motor.facingYaw;
     runtime.heroDashing = motor.dashing;
+    const launch = motor.consumeLaunch();
+    if (launch > 0) {
+      runtime.launchPower = launch;
+      runtime.launches++;
+      runtime.cameraShake = Math.max(runtime.cameraShake, 0.3 + launch * 0.6);
+      addImpact({ x: nx, y: ny - CAPSULE_REST_HEIGHT, z: nz }, 'launch');
+    }
     runtime.playerState = motor.state;
     runtime.moveMode = motor.mode;
     runtime.grounded = motor.grounded;

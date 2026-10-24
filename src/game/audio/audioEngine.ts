@@ -10,7 +10,7 @@ class AudioEngine {
   ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private noise: AudioBuffer | null = null;
-  private loops = new Map<string, { gain: GainNode; filter?: BiquadFilterNode; osc?: OscillatorNode }>();
+  private loops = new Map<string, { gain: GainNode; filter?: BiquadFilterNode; osc?: OscillatorNode; level: number; freq: number; pitch: number }>();
 
   /** Creates or resumes the context (call from a user gesture). */
   unlock() {
@@ -72,7 +72,7 @@ class AudioEngine {
         n.connect(filter);
         n.start();
       }
-      this.loops.set(name, { gain, filter, osc: o });
+      this.loops.set(name, { gain, filter, osc: o, level: 0, freq: freq, pitch: osc?.freq ?? 0 });
     };
     add('wind', 'bandpass', 400, 0.6);
     add('heat', 'lowpass', 1800, 2, { type: 'sawtooth', freq: 92 });
@@ -87,10 +87,26 @@ class AudioEngine {
   setLoop(name: keyof typeof AUDIO.loops, level: number, opts: { freq?: number; pitch?: number } = {}) {
     const l = this.loops.get(name);
     if (!l || !this.ctx) return;
+    // Only schedule a change when the value really moves: every scheduled change is kept on the
+    // parameter's timeline, and doing it every frame made audio (and the game) slower over time.
     const t = this.ctx.currentTime;
-    l.gain.gain.setTargetAtTime(Math.max(0, Math.min(1, level)) * AUDIO.loops[name], t, 0.08);
-    if (opts.freq !== undefined && l.filter) l.filter.frequency.setTargetAtTime(opts.freq, t, 0.1);
-    if (opts.pitch !== undefined && l.osc) l.osc.frequency.setTargetAtTime(opts.pitch, t, 0.05);
+    const target = Math.max(0, Math.min(1, level)) * AUDIO.loops[name];
+    const glide = (param: AudioParam, value: number, tau: number) => {
+      param.cancelScheduledValues(t);
+      param.setTargetAtTime(value, t, tau);
+    };
+    if (Math.abs(target - l.level) > 0.004) {
+      glide(l.gain.gain, target, 0.08);
+      l.level = target;
+    }
+    if (opts.freq !== undefined && l.filter && Math.abs(opts.freq - l.freq) > l.freq * 0.03) {
+      glide(l.filter.frequency, opts.freq, 0.1);
+      l.freq = opts.freq;
+    }
+    if (opts.pitch !== undefined && l.osc && Math.abs(opts.pitch - l.pitch) > l.pitch * 0.01) {
+      glide(l.osc.frequency, opts.pitch, 0.05);
+      l.pitch = opts.pitch;
+    }
   }
 
   /** One-shot effects. `strength` 0..1 scales loudness. */

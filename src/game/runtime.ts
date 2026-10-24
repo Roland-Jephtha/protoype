@@ -64,6 +64,11 @@ export const runtime = {
   breath: { kind: 'none' as 'none' | 'wind' | 'freeze', from: new Vector3(), dir: new Vector3(0, 0, -1) },
   /** Incremented on each Super Nova (the HUD flashes). */
   novaFlash: 0,
+  /** Vehicles blown up (heat vision, big hits) since load. */
+  carsDestroyed: 0,
+  /** Man of Steel launches so far and the last one's strength (0..1), for effects and sound. */
+  launches: 0,
+  launchPower: 0,
   /** Camera shake intensity (decays). */
   cameraShake: 0,
   /** Seconds the hero stays frozen (slowed) by freeze breath. */
@@ -89,6 +94,8 @@ export const runtime = {
   physicsSteps: 0,
   fps: 0,
   frameMs: 0,
+  /** CPU time per frame spent in simulation + render submission (ms, smoothed). */
+  cpuMs: 0,
   drawCalls: 0,
   triangles: 0,
 };

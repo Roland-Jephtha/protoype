@@ -164,14 +164,6 @@ describe('hero skills', () => {
     expect(events.some((e) => e.type === 'powerPunch')).toBe(false);
   });
 
-  it('dash costs solar energy and has a cooldown', () => {
-    const c = new HeroCombat();
-    const start = c.solar;
-    expect(c.step({ ...idle, dashPressed: true }, DT).some((e) => e.type === 'dash')).toBe(true);
-    expect(c.solar).toBeLessThan(start - HERO_COMBAT.dash.cost + 1);
-    expect(c.step({ ...idle, dashPressed: true }, DT).some((e) => e.type === 'dash')).toBe(false);
-  });
-
   it('breaths drain solar energy; freeze wins over wind; none while firing heat vision', () => {
     const c = new HeroCombat();
     c.step({ ...idle, breathHeld: true, freezeHeld: true }, DT);

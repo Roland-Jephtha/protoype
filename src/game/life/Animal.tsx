@@ -104,7 +104,7 @@ export interface AnimalHandle {
 
 /** One animated animal from the CC0 pack, recoloured, facing +Z with its feet at the origin. */
 export const Animal = forwardRef<AnimalHandle, { kind: AnimalKind; seed: number; tint?: string; animateWithin?: number; visibleWithin?: number }>(function Animal(
-  { kind, seed, tint, animateWithin = 110, visibleWithin = 500 },
+  { kind, seed, tint, animateWithin = 80, visibleWithin = 260 },
   ref,
 ) {
   const spec = ANIMALS[kind];
@@ -124,12 +124,12 @@ export const Animal = forwardRef<AnimalHandle, { kind: AnimalKind; seed: number;
       const mesh = o as SkinnedMesh;
       if (!mesh.isMesh) return;
       mesh.material = Array.isArray(mesh.material) ? mesh.material.map(recolour) : recolour(mesh.material);
-      // Birds fly high; their 25k-triangle mesh isn't worth a shadow pass.
-      mesh.castShadow = kind !== 'eagle';
+      // Small and many: not worth a shadow pass.
+      mesh.castShadow = false;
       mesh.frustumCulled = false;
     });
     return { model, materials, ...fit };
-  }, [source, spec, tint, kind]);
+  }, [source, spec, tint]);
   useEffect(() => () => built.materials.forEach((m) => m.dispose()), [built]);
 
   const anim = useMemo(() => {
@@ -181,6 +181,8 @@ export const Animal = forwardRef<AnimalHandle, { kind: AnimalKind; seed: number;
     r.getWorldPosition(tmp);
     const d = tmp.distanceTo(camera.position);
     r.visible = d < visibleWithin;
+    // Hidden: skip its whole skeleton in the per-frame matrix update.
+    r.matrixWorldAutoUpdate = r.visible;
     if (d < animateWithin) anim.mixer.update(Math.min(dt, 0.05));
   });
 

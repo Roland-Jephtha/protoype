@@ -67,10 +67,10 @@ describe('flight', () => {
     expect(m.state).toBe('fly');
   });
 
-  it('boosts to 150 km/h', () => {
+  it('boosts to 250 km/h', () => {
     const { m } = airborneFlyer();
-    simulate(m, () => ({ moveY: 1, sprintHeld: true }), 180, 30);
-    expect(speed(m) * 3.6).toBeCloseTo(150, 0);
+    simulate(m, () => ({ moveY: 1, sprintHeld: true }), 300, 30);
+    expect(speed(m) * 3.6).toBeCloseTo(250, 0);
     expect(m.state).toBe('flyBoost');
   });
 
@@ -112,5 +112,30 @@ describe('flight', () => {
     simulate(m, (i) => ({ flyPressed: i === 0 }), 30, hoverY);
     expect(m.mode).toBe('ground');
     expect(m.velocity.y).toBeLessThan(-3);
+  });
+});
+
+describe('Man of Steel launch', () => {
+  it('holding Fly crouches, then launches far higher than a tap', () => {
+    const tap = new GroundMotor();
+    const held = new GroundMotor();
+    // Settle both on the floor.
+    for (const m of [tap, held]) for (let i = 0; i < 10; i++) {
+      const d = m.step({ moveX: 0, moveY: 0, cameraYaw: 0, sprintHeld: false, jumpPressed: false, jumpHeld: false }, 1 / 60);
+      m.resolve(d, { ...d, y: 0 }, true, 1 / 60);
+    }
+    const base = { moveX: 0, moveY: 0, cameraYaw: 0, sprintHeld: false, jumpPressed: false, jumpHeld: false };
+    tap.step({ ...base, flyPressed: true, flyHeld: true }, 1 / 60);
+    tap.step({ ...base, flyHeld: false }, 1 / 60);
+    held.step({ ...base, flyPressed: true, flyHeld: true }, 1 / 60);
+    let crouched = false;
+    for (let i = 0; i < 40; i++) {
+      held.step({ ...base, flyHeld: true }, 1 / 60);
+      crouched ||= held.state === 'hardLand';
+    }
+    expect(crouched).toBe(true);
+    expect(held.mode).toBe('flight');
+    expect(held.velocity.y).toBeGreaterThan(tap.velocity.y * 3);
+    expect(held.consumeLaunch()).toBeGreaterThan(0.9);
   });
 });

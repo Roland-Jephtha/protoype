@@ -1,14 +1,14 @@
 import { useFrame } from '@react-three/fiber';
 import { useBeforePhysicsStep, useRapier } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
-import { AdditiveBlending, CircleGeometry, CylinderGeometry, DoubleSide, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Quaternion, Vector3, type PointLight } from 'three';
+import { AdditiveBlending, CircleGeometry, CylinderGeometry, DoubleSide, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Quaternion, Vector3 } from 'three';
 import { HERO_COMBAT } from '../../config/combat';
 import { input } from '../../input/InputManager';
 import { useApp } from '../../state/appStore';
 import { runtime } from '../runtime';
 import { heroFeetY } from './heroActions';
 import { SkillFx } from './SkillFx';
-import { inCone, pickAlongRay, targets, type Target, type Vec3 } from './targets';
+import { inCone, targets, type Target, type Vec3 } from './targets';
 import { addImpact } from './impacts';
 
 const CHEST_HEIGHT = 1.25;
@@ -23,11 +23,8 @@ export function CombatDriver() {
   const { world, rapier } = useRapier();
   const rayRef = useRef<InstanceType<typeof rapier.Ray> | null>(null);
   const faceTimer = useRef(0);
-  const dashHits = useRef(new Set<Target>());
-  const dashDir = useRef(new Vector3());
-  const dashTime = useRef(0);
   const power = useRef<{ target: Target | null; charge: number; timer: number } | null>(null);
-  const tmp = useMemo(() => ({ aim: new Vector3(), dir: new Vector3(), chest: new Vector3(), eye: new Vector3() }), []);
+  const tmp = useMemo(() => ({ aim: new Vector3(), dir: new Vector3(), chest: new Vector3(), eye: new Vector3(), look: new Vector3() }), []);
 
   useEffect(() => {
     runtime.combat.reset();
@@ -49,7 +46,6 @@ export function CombatDriver() {
         attackPressed: !runtime.carrying && input.consumePressed('attack'),
         attackHeld: !runtime.carrying && input.isHeld('attack'),
         aimHeld,
-        dashPressed: input.consumePressed('dash'),
         breathHeld: input.isHeld('breath'),
         freezeHeld: input.isHeld('freeze'),
         novaHeld: input.isHeld('nova'),
@@ -133,20 +129,10 @@ export function CombatDriver() {
           if (dist > 0.5) {
             dir.normalize();
             if (runtime.moveMode !== 'flight') dir.y = 0;
-            const speed = Math.min(HERO_COMBAT.dash.speed, dist / HERO_COMBAT.dash.duration);
+            const speed = Math.min(pp.lungeSpeed, dist / pp.lungeTime);
             runtime.heroDash = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
           }
         }
-      } else if (e.type === 'dash') {
-        const d = HERO_COMBAT.dash;
-        // In flight: straight where the camera looks; on foot: along the ground.
-        const dir = tmp.dir.copy(fwd);
-        if (runtime.moveMode !== 'flight') dir.y = 0;
-        dir.normalize();
-        runtime.heroDash = { x: dir.x * d.speed, y: dir.y * d.speed, z: dir.z * d.speed };
-        dashDir.current.copy(dir);
-        dashHits.current.clear();
-        dashTime.current = d.duration + 0.05;
       } else if (e.type === 'nova') {
         const n = HERO_COMBAT.nova;
         for (const t of targets) {
@@ -169,7 +155,9 @@ export function CombatDriver() {
       const pp = HERO_COMBAT.powerPunch;
       const t = pw.target;
       const reached = t && t.alive && Math.hypot(t.position.x - chest.x, t.position.y - chest.y, t.position.z - chest.z) - t.radius <= pp.range;
-      if (reached || pw.timer <= 0) {
+      // The knockout blow is the second fist of the one-two.
+      const secondFist = c.punchTime >= pp.secondFistAt || !c.powerPunching;
+      if ((reached && secondFist) || pw.timer <= 0) {
         power.current = null;
         const k = 0.6 + 0.4 * pw.charge;
         const struck = reached && t ? [t] : inCone(chest, facing(), pp.range, punch.coneHalfAngle + 0.2, targets);
@@ -181,29 +169,47 @@ export function CombatDriver() {
       }
     }
 
-    // Dash: everything the hero ploughs through is hit once.
-    if (dashTime.current > 0) {
-      dashTime.current -= dt;
-      const d = HERO_COMBAT.dash;
+    // Where the hero looks: his facing, with the camera's pitch (so up/down follows the camera).
+    const pitch = Math.asin(Math.max(-1, Math.min(1, fwd.y)));
+    const yaw = runtime.heroFacingYaw;
+    const look = tmp.look.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+    const eye = runtime.heroEyesValid ? runtime.heroEyes : tmp.eye.set(chest.x, heroFeetY() + HERO_COMBAT.heat.eyeHeightFallback, chest.z);
+    const lockAngle = app.touchDetected ? HERO_COMBAT.heat.touchLockAngle : HERO_COMBAT.heat.lockAngle;
+    /** Nearest live target within the lock cone of where he looks (and the camera's view). */
+    const lockOn = (range: number) => {
+      let best: Target | null = null;
+      let bestScore = Infinity;
       for (const t of targets) {
-        if (!t.alive || dashHits.current.has(t)) continue;
-        if (Math.hypot(t.position.x - chest.x, t.position.y - chest.y, t.position.z - chest.z) > d.hitRadius + t.radius) continue;
-        dashHits.current.add(t);
-        const dd = dashDir.current;
-        hit(t, d.damage, { x: dd.x * d.knockback, y: d.knockback * 0.3, z: dd.z * d.knockback });
-        addImpact(t.position, 'power');
-        runtime.cameraShake = Math.max(runtime.cameraShake, 0.3);
+        if (!t.alive) continue;
+        const dx = t.position.x - eye.x;
+        const dy = t.position.y - eye.y;
+        const dz = t.position.z - eye.z;
+        const d = Math.hypot(dx, dy, dz);
+        if (d > range + t.radius || d < 0.5) continue;
+        // Within the cone around his look direction or the camera direction.
+        const aLook = Math.acos(Math.min(1, (dx * look.x + dy * look.y + dz * look.z) / d));
+        const aCam = Math.acos(Math.min(1, (dx * fwd.x + dy * fwd.y + dz * fwd.z) / d));
+        const a = Math.min(aLook, aCam);
+        if (a > lockAngle) continue;
+        const score = a * 20 + d * 0.05;
+        if (score < bestScore) {
+          bestScore = score;
+          best = t;
+        }
       }
-    }
+      return best;
+    };
 
-    // Super breath / freeze breath: a cone from the mouth along the crosshair.
+    // Super breath / freeze breath: a cone from the mouth where he looks (bent toward a locked target).
     const br = runtime.breath;
     br.kind = c.breath;
+    let breathLock: Target | null = null;
     if (c.breath !== 'none') {
-      const eye = runtime.heroEyesValid ? runtime.heroEyes : tmp.eye.set(chest.x, heroFeetY() + HERO_COMBAT.heat.eyeHeightFallback, chest.z);
-      br.from.copy(eye).y -= 0.12;
-      br.dir.copy(fwd);
       const cfg = c.breath === 'wind' ? HERO_COMBAT.superBreath : HERO_COMBAT.freezeBreath;
+      br.from.copy(eye).y -= 0.12;
+      breathLock = lockOn(cfg.range);
+      if (breathLock) br.dir.set(breathLock.position.x - br.from.x, breathLock.position.y - br.from.y, breathLock.position.z - br.from.z).normalize();
+      else br.dir.copy(look);
       for (const t of inCone(br.from, br.dir, cfg.range, cfg.coneHalfAngle, targets)) {
         if (c.breath === 'wind') {
           const push = HERO_COMBAT.superBreath.push * dt;
@@ -215,57 +221,45 @@ export function CombatDriver() {
       }
     }
 
-    // Facing: aiming (heat vision, breath) faces the crosshair; a punch briefly faces its target.
-    if (runtime.aiming) runtime.combatFaceYaw = Math.atan2(fwd.x, fwd.z);
-    else if (faceTimer.current > 0) faceTimer.current -= dt;
-    else runtime.combatFaceYaw = null;
-
-    // --- heat vision ----------------------------------------------------------
+    // --- heat vision: from the eyes where he looks, locked onto the nearest target in view ---------
     const beam = runtime.beam;
     beam.active = c.firing;
-    if (!beam.active) return;
-    const heat = HERO_COMBAT.heat;
-    const cam = runtime.cameraPosition;
-    const exclude = runtime.playerBody ?? undefined;
-    rayRef.current ??= new rapier.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
-    const ray = rayRef.current;
-    // Where the crosshair points: first world surface, or an enemy before it.
-    ray.origin = { x: cam.x, y: cam.y, z: cam.z };
-    ray.dir = { x: fwd.x, y: fwd.y, z: fwd.z };
-    const maxDist = heat.range + runtime.cameraDistance;
-    const worldHit = world.castRayAndGetNormal(ray, maxDist, true, undefined, undefined, undefined, exclude);
-    const aimDist = worldHit ? worldHit.timeOfImpact : maxDist;
-    const picked = pickAlongRay(cam, fwd, aimDist, app.touchDetected ? heat.touchAssistAngle : heat.assistAngle, targets);
-    const aim = picked ? tmp.aim.copy(picked.target.position as Vector3) : tmp.aim.copy(cam).addScaledVector(fwd, aimDist);
-    // Exact ray hits land on the sphere surface, assisted ones at the centre.
-    if (picked && picked.distance < Math.hypot(aim.x - cam.x, aim.y - cam.y, aim.z - cam.z)) aim.copy(cam).addScaledVector(fwd, picked.distance);
-
-    // From the eyes to the aim point; anything in between stops the beam.
-    const eye = runtime.heroEyesValid ? runtime.heroEyes : tmp.eye.set(runtime.playerPosition.x, heroFeetY() + heat.eyeHeightFallback, runtime.playerPosition.z);
-    const dir = tmp.dir.copy(aim).sub(eye);
-    const len = dir.length();
-    if (len < 0.01) {
-      beam.active = false;
-      return;
-    }
-    dir.divideScalar(len);
-    ray.origin = { x: eye.x, y: eye.y, z: eye.z };
-    ray.dir = { x: dir.x, y: dir.y, z: dir.z };
-    const block = world.castRayAndGetNormal(ray, len, true, undefined, undefined, undefined, exclude);
-    beam.from.copy(eye);
-    beam.hitTarget = false;
-    beam.surface = false;
-    if (block && (picked ? block.timeOfImpact < len - 0.3 : true)) {
-      beam.to.copy(eye).addScaledVector(dir, block.timeOfImpact);
-      beam.surface = true;
-      beam.normal.set(block.normal.x, block.normal.y, block.normal.z);
-    } else {
-      beam.to.copy(aim);
-      if (picked) {
-        beam.hitTarget = true;
-        picked.target.damage(heat.damagePerSecond * dt, { x: dir.x * heat.pushPerSecond * dt, y: 0, z: dir.z * heat.pushPerSecond * dt });
+    let beamLock: Target | null = null;
+    if (beam.active) {
+      const heat = HERO_COMBAT.heat;
+      const exclude = runtime.playerBody ?? undefined;
+      rayRef.current ??= new rapier.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
+      const ray = rayRef.current;
+      beamLock = lockOn(heat.range);
+      const aim = beamLock ? tmp.aim.set(beamLock.position.x, beamLock.position.y, beamLock.position.z) : tmp.aim.copy(eye).addScaledVector(look, heat.range);
+      const dir = tmp.dir.copy(aim).sub(eye);
+      const len = Math.max(0.01, dir.length());
+      dir.divideScalar(len);
+      ray.origin = { x: eye.x, y: eye.y, z: eye.z };
+      ray.dir = { x: dir.x, y: dir.y, z: dir.z };
+      const block = world.castRayAndGetNormal(ray, len, true, undefined, undefined, undefined, exclude);
+      beam.from.copy(eye);
+      beam.hitTarget = false;
+      beam.surface = false;
+      if (block && (beamLock ? block.timeOfImpact < len - beamLock.radius - 0.3 : true)) {
+        beam.to.copy(eye).addScaledVector(dir, block.timeOfImpact);
+        beam.surface = true;
+        beam.normal.set(block.normal.x, block.normal.y, block.normal.z);
+      } else {
+        beam.to.copy(aim);
+        if (beamLock) {
+          beam.hitTarget = true;
+          hit(beamLock, heat.damagePerSecond * dt, { x: dir.x * heat.pushPerSecond * dt, y: 0, z: dir.z * heat.pushPerSecond * dt });
+        }
       }
     }
+
+    // Facing: a lock turns him to it; otherwise aiming turns him with the camera; a punch briefly faces its target.
+    const locked = beamLock ?? breathLock;
+    if (locked) runtime.combatFaceYaw = Math.atan2(locked.position.x - chest.x, locked.position.z - chest.z);
+    else if (runtime.aiming) runtime.combatFaceYaw = Math.atan2(fwd.x, fwd.z);
+    else if (faceTimer.current > 0) faceTimer.current -= dt;
+    else runtime.combatFaceYaw = null;
   });
 
   return (
@@ -300,7 +294,6 @@ function HeatBeamFx() {
 
   const beams = useRef<(Mesh | null)[]>([]);
   const impact = useRef<Mesh>(null);
-  const light = useRef<PointLight>(null);
   const scorches = useRef<InstancedMesh>(null);
   const stateRef = useRef(
     ({ next: 0, last: new Vector3(1e9, 0, 0), flicker: 0, q: new Quaternion(), up: new Vector3(0, 1, 0), z: new Vector3(0, 0, 1), side: new Vector3(), dir: new Vector3(), m: new Matrix4(), s: new Vector3(), p: new Vector3(), hidden: new Matrix4().makeScale(0, 0, 0) }),
@@ -320,7 +313,6 @@ function HeatBeamFx() {
     const on = b.active;
     for (const m of beams.current) if (m) m.visible = on;
     if (impact.current) impact.current.visible = on;
-    if (light.current) light.current.intensity = on ? 30 + Math.sin(st.flicker * 40) * 8 : 0;
     if (!on) return;
 
     const dir = st.dir.copy(b.to).sub(b.from);
@@ -343,7 +335,6 @@ function HeatBeamFx() {
       const s = 0.45 + Math.sin(st.flicker * 37) * 0.12;
       impact.current.scale.setScalar(b.hitTarget ? s * 1.6 : s);
     }
-    light.current?.position.copy(b.to).addScaledVector(dir, -0.5);
 
     // Scorch marks where the beam sweeps across surfaces.
     if (b.surface && scorches.current && st.last.distanceTo(b.to) > 0.5) {
@@ -365,7 +356,6 @@ function HeatBeamFx() {
         <mesh key={i} ref={(m) => void (beams.current[i] = m)} geometry={assets.beamGeo} material={i < 2 ? assets.core : assets.glow} visible={false} frustumCulled={false} renderOrder={10} />
       ))}
       <mesh ref={impact} geometry={assets.impactGeo} material={assets.impact} visible={false} renderOrder={11} />
-      <pointLight ref={light} color="#ff6a2a" intensity={0} distance={14} decay={2} />
       <instancedMesh ref={scorches} args={[assets.scorchGeo, assets.scorch, SCORCH_COUNT]} frustumCulled={false} />
     </group>
   );

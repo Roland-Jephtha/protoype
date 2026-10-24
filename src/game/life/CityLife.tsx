@@ -105,7 +105,7 @@ export function CityLife() {
   return (
     <LifeBoundary>
       {sim.people.map((_, i) => (
-        <Civilian key={i} seed={300 + i * 11} height={1.6 + ((i * 37) % 30) / 100} animateWithin={90} ref={(h) => void (people.current[i] = h)} />
+        <Civilian key={i} seed={300 + i * 11} height={1.6 + ((i * 37) % 30) / 100} animateWithin={45} visibleWithin={140} castShadow={false} ref={(h) => void (people.current[i] = h)} />
       ))}
       {sim.pets.map((p, i) => (
         <Animal key={i} kind={p.kind} tint={p.tint} seed={i * 17} animateWithin={70} visibleWithin={250} ref={(h) => void (pets.current[i] = h)} />

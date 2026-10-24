@@ -53,13 +53,14 @@ export const TRAIN = {
 
 /** Ambient life counts per quality preset, and animal behaviour. */
 export const LIFE = {
-  pedestrians: { low: 16, medium: 32, high: 48 } as Record<GraphicsQuality, number>,
+  pedestrians: { low: 8, medium: 14, high: 24 } as Record<GraphicsQuality, number>,
   /** Dogs and, separately, cats in the city. */
-  pets: { low: 3, medium: 5, high: 7 } as Record<GraphicsQuality, number>,
+  pets: { low: 2, medium: 3, high: 5 } as Record<GraphicsQuality, number>,
   packSize: { low: 2, medium: 3, high: 3 } as Record<GraphicsQuality, number>,
-  riverFish: { low: 5, medium: 8, high: 12 } as Record<GraphicsQuality, number>,
+  riverFish: { low: 3, medium: 6, high: 10 } as Record<GraphicsQuality, number>,
   wolf: { walkSpeed: 1.6, runSpeed: 10, fleeRadius: 16 },
   coyote: { walkSpeed: 1.3, runSpeed: 9, fleeRadius: 18 },
-  /** Circling birds: ground speed along the circle (m/s). */
+  /** Circling birds per region (each eagle is a 25k-triangle mesh) and their speed (m/s). */
+  birds: { low: 1, medium: 1, high: 2 } as Record<GraphicsQuality, number>,
   birdSpeed: 12,
 };

@@ -1,6 +1,6 @@
 import type { Vec3 } from './targets';
 
-export type ImpactKind = 'punch' | 'power' | 'nova';
+export type ImpactKind = 'punch' | 'power' | 'nova' | 'launch';
 
 export interface Impact {
   x: number;

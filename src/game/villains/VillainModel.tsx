@@ -29,6 +29,11 @@ const DAVIDA3D_ALIASES: BoneAliases = { ...Object.fromEntries(MIXAMO_TO_DAVIDA3D
 useGLTF.preload(HERO_MODELS.hatch.url);
 for (const v of Object.values(VILLAINS)) if (v.model.kind === 'villain') useGLTF.preload(v.model.url);
 
+/** Villains farther than this from the camera aren't animated (m). */
+const VILLAIN_ANIMATE_WITHIN = 150;
+/** Retargeted clips are sampled at this rate (the mixer interpolates between keys). */
+const BAKE_FPS = 20;
+
 /** Baked clips per villain model (retargeting runs once per model, not per instance). */
 const bakedCache = new WeakMap<Object3D, Partial<Record<VillainAnim, AnimationClip>>>();
 
@@ -41,7 +46,7 @@ function bakeClips(villainScene: Object3D, heroScene: Object3D, heroClips: Anima
   const tgt = new Group().add(cloneSkinned(villainScene));
   tgt.rotation.y = yawOffset;
   const roles = resolveClips(heroClips, ROLE_PATTERNS as never) as Partial<Record<VillainAnim, AnimationClip>>;
-  for (const [role, clip] of Object.entries(roles) as [VillainAnim, AnimationClip][]) baked[role] = retargetClip(src, tgt, clip, MIXAMO_TO_DAVIDA3D);
+  for (const [role, clip] of Object.entries(roles) as [VillainAnim, AnimationClip][]) baked[role] = retargetClip(src, tgt, clip, MIXAMO_TO_DAVIDA3D, BAKE_FPS);
   bakedCache.set(villainScene, baked);
   return baked;
 }
@@ -149,7 +154,7 @@ export const VillainModel = forwardRef<VillainModelHandle, { def: VillainDef }>(
   useFrame(({ camera }, dt) => {
     const r = root.current;
     if (!r) return;
-    if (r.position.distanceTo(camera.position) > 400) return;
+    if (!r.visible || r.position.distanceTo(camera.position) > VILLAIN_ANIMATE_WITHIN) return;
     anim.mixer.update(Math.min(dt, 0.05));
     const p = overlay.current.punch;
     if (p) {

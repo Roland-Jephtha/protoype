@@ -15,7 +15,7 @@ import { VirtualStick } from './VirtualStick';
  * Only actions that actually do something are shown. In flight, Jump becomes
  * Up, Sprint becomes Boost, and a Down button appears.
  * Punch and Heat (hold; slide the thumb to aim) sit left of the movement cluster,
- * then Dash and one Power button (Breath / Freeze / Nova; the small button cycles).
+ * then one Power button (Breath / Freeze / Nova; the small button cycles).
  */
 const POWERS: { action: Action; label: string; icon: string }[] = [
   { action: 'breath', label: 'Breath', icon: '≋' },
@@ -68,7 +68,6 @@ export function TouchControls() {
               ⟳
             </button>
           </div>
-          <TouchButton action="dash" label="Dash" icon="⇥" size={60 * scale} className="btn-dash" />
         </div>
         {flying && <TouchButton action="descend" label="Down" icon="▼" size={60 * scale} className="btn-down" />}
         <TouchButton action="sprint" label={flying ? 'Boost' : 'Sprint'} icon="»" size={64 * scale} className="btn-sprint" />

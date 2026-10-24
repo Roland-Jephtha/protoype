@@ -43,14 +43,14 @@ export const HERO_COMBAT = {
     /** The beam slowly shoves what it hits (m/s²). */
     pushPerSecond: 4,
     range: 160,
-    /** Aim assist: the beam locks onto an enemy within this angle of the aim ray (rad). */
-    assistAngle: 0.07,
-    touchAssistAngle: 0.2,
+    /** Lock-on: the nearest target within this angle of where the hero looks (rad) and range (m). */
+    lockAngle: 0.45,
+    touchLockAngle: 0.6,
     /** Eyes above the hero's feet when the head bone isn't available (m). */
     eyeHeightFallback: 1.75,
   },
 
-  /** Solar energy: powers dash, breath and the Super Nova. Recharges in the sun. */
+  /** Solar energy: powers the breaths and the Super Nova. Recharges in the sun. */
   solar: {
     capacity: 100,
     rechargePerSecond: 6,
@@ -68,19 +68,16 @@ export const HERO_COMBAT = {
     /** Homes onto the nearest enemy within this range (m), dashing to it; the blow lands on arrival. */
     homingRange: 12,
     /** The blow lands anyway after this long if the target wasn't reached (s). */
-    homingTimeout: 0.45,
+    homingTimeout: 0.5,
+    /** Homing lunge: top speed (m/s) and how long it lasts (s). */
+    lungeSpeed: 62,
+    lungeTime: 0.3,
+    /** One-two: the second (knockout) fist lands this long after the first (s). */
+    secondFistAt: 0.18,
+    /** Forward lean at full extension (rad) — much deeper than a normal punch. */
+    lean: 0.62,
   },
 
-  dash: {
-    speed: 62,
-    duration: 0.3,
-    cost: 18,
-    cooldown: 0.6,
-    damage: 40,
-    knockback: 36,
-    /** Enemies within this distance of the hero during the dash are hit (m). */
-    hitRadius: 2.6,
-  },
 
   superBreath: {
     range: 28,
@@ -109,6 +106,16 @@ export const HERO_COMBAT = {
     knockback: 52,
     lift: 16,
   },
+};
+
+/** Vehicles as targets: they can be iced, burned until they blow up, or knocked flying. */
+export const VEHICLE_DAMAGE = {
+  health: 60,
+  /** A single hit with at least this knockback (m/s) sends the vehicle flying as a wreck. */
+  launchKnock: 20,
+  maxFreeze: 6,
+  /** Paint of a burnt-out wreck. */
+  burntPaint: '#2a2523',
 };
 
 /** Lifting and throwing vehicles. */

@@ -2,14 +2,13 @@ const DESKTOP: [string, string][] = [
   ['W A S D / Arrows', 'Move'],
   ['Mouse', 'Look (click the game to capture the mouse)'],
   ['Space', 'Jump (hold for higher) · again in mid-air: fly · flying: up'],
-  ['Shift', 'Sprint (90 km/h) · flying: boost (150 km/h)'],
-  ['F', 'Take off / drop out of flight'],
+  ['Shift', 'Sprint (120 km/h) · flying: boost (250 km/h)'],
+  ['F', 'Take off / drop out of flight · hold on the ground to crouch and launch'],
   ['C', 'Flying: down'],
   ['Mouse while flying', 'Look up/down to climb/dive'],
   ['Left mouse', 'Punch (tap quickly for a 3-hit combo)'],
   ['Right mouse (hold)', 'Heat vision: aim with the crosshair'],
   ['Hold left mouse', 'Charge a power punch — release to send enemies flying'],
-  ['V', 'Speed dash (smashes through enemies)'],
   ['R (hold)', 'Super breath — a gale that blows enemies away'],
   ['Q (hold)', 'Freeze breath — ices enemies; frozen drones fall'],
   ['X (hold, release)', 'Super Nova — charge, then blast everything around you'],
@@ -22,11 +21,10 @@ const TOUCH: [string, string][] = [
   ['Drag right side', 'Look (flying: look up/down to climb/dive)'],
   ['▲ Jump / Up', 'Jump (hold for higher) · flying: up'],
   ['» Sprint / Boost', 'Sprint · flying: boost (hold)'],
-  ['✈ Fly / Land', 'Take off / drop out of flight'],
+  ['✈ Fly / Land', 'Take off (hold to crouch and launch) / drop out of flight'],
   ['▼ Down', 'Flying: down'],
   ['✊ Punch', 'Punch (tap quickly for a 3-hit combo)'],
   ['◉ Heat (hold)', 'Heat vision — slide your thumb on it to aim'],
-  ['⇥ Dash', 'Speed dash'],
   ['Power + ⟳', 'Breath / Freeze / Nova (hold); ⟳ switches power'],
   ['❚❚ top-right', 'Pause'],
 ];
@@ -60,7 +58,7 @@ export function ControlsReference({ onBack }: { onBack: () => void }) {
           </dl>
         </section>
       </div>
-      <p className="settings-note">Dash, breath and the Super Nova use solar energy (yellow bar), which recharges in the sun and when you land hits.</p>
+      <p className="settings-note">Breath and the Super Nova use solar energy (yellow bar), which recharges in the sun and when you land hits.</p>
       <div className="panel-actions">
         <button type="button" className="menu-btn" onClick={onBack} autoFocus>
           Back

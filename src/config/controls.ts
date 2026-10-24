@@ -11,7 +11,6 @@ export const DEFAULT_KEY_BINDINGS: Record<string, Action> = {
   KeyE: 'interact',
   KeyQ: 'freeze',
   KeyR: 'breath',
-  KeyV: 'dash',
   KeyX: 'nova',
   KeyF: 'fly',
   // Not Ctrl: Ctrl+W would close the browser tab mid-flight.

@@ -13,7 +13,6 @@ import {
   RingGeometry,
   SphereGeometry,
   Vector3,
-  type PointLight,
 } from 'three';
 import { HERO_COMBAT } from '../../config/combat';
 import { runtime } from '../runtime';
@@ -25,7 +24,9 @@ const PARTICLE_LIFE = 0.7;
 const EMIT_PER_SECOND = 260;
 const IMPACT_MESHES = 16;
 /** Flash size and duration per impact kind (m, s). The Nova's flash is small: its ring carries the blast. */
-const IMPACT_LOOK = { punch: { size: 0.9, time: 0.16 }, power: { size: 3, time: 0.3 }, nova: { size: 9, time: 0.35 } };
+const IMPACT_LOOK = { punch: { size: 0.9, time: 0.16 }, power: { size: 3, time: 0.3 }, nova: { size: 9, time: 0.35 }, launch: { size: 2.5, time: 0.25 } };
+/** Ground shockwave ring radius per kind (m). */
+const RING_RADIUS = { nova: HERO_COMBAT.nova.radius, launch: 10 };
 const NOVA_RING_TIME = 0.7;
 
 const SPREAD = new Vector3();
@@ -96,7 +97,6 @@ class Stream {
     this.particles.forEach((p, i) => this.positions.set([p.x, p.y, p.z], i * 3));
     this.geometry.setDrawRange(0, this.particles.length);
     this.geometry.attributes.position.needsUpdate = true;
-    this.geometry.computeBoundingSphere();
   }
 }
 
@@ -129,7 +129,6 @@ export function SkillFx() {
   );
 
   const glow = useRef<Mesh>(null);
-  const light = useRef<PointLight>(null);
   const streak = useRef<Mesh>(null);
   const ring = useRef<Mesh>(null);
   const flashes = useRef<(Mesh | null)[]>([]);
@@ -157,10 +156,6 @@ export function SkillFx() {
       glow.current.position.copy(chest);
       glow.current.scale.setScalar(0.5 + charge * 0.9 + Math.sin(performance.now() / 45) * 0.06 * charge);
       (glow.current.material as MeshBasicMaterial).opacity = 0.04 + 0.12 * charge;
-    }
-    if (light.current) {
-      light.current.position.copy(chest);
-      light.current.intensity = charge * 45;
     }
 
     // --- dash streak -------------------------------------------------------------------------
@@ -191,13 +186,13 @@ export function SkillFx() {
       (m.material as MeshBasicMaterial).opacity = 0.7 * (1 - k);
     });
     if (ring.current) {
-      const nova = [...impacts].reverse().find((i) => i.kind === 'nova');
-      const age = nova ? now - nova.born : Infinity;
+      const wave = [...impacts].reverse().find((i) => i.kind === 'nova' || i.kind === 'launch');
+      const age = wave ? now - wave.born : Infinity;
       ring.current.visible = age < NOVA_RING_TIME;
-      if (nova && ring.current.visible) {
+      if (wave && ring.current.visible) {
         const k = age / NOVA_RING_TIME;
-        ring.current.position.set(nova.x, heroFeetY() + 0.4, nova.z);
-        ring.current.scale.setScalar(1 + k * HERO_COMBAT.nova.radius);
+        ring.current.position.set(wave.x, wave.kind === 'launch' ? wave.y + 0.15 : heroFeetY() + 0.4, wave.z);
+        ring.current.scale.setScalar(1 + k * RING_RADIUS[wave.kind as 'nova' | 'launch']);
         (ring.current.material as MeshBasicMaterial).opacity = 0.8 * (1 - k);
       }
     }
@@ -208,7 +203,6 @@ export function SkillFx() {
       <points geometry={streams.wind.geometry} material={assets.wind} frustumCulled={false} />
       <points geometry={streams.frost.geometry} material={assets.frost} frustumCulled={false} />
       <mesh ref={glow} geometry={assets.glowGeo} material={assets.glow} visible={false} />
-      <pointLight ref={light} color="#fff0b0" intensity={0} distance={30} decay={2} />
       <mesh ref={streak} geometry={assets.streakGeo} material={assets.streak} visible={false} />
       <mesh ref={ring} geometry={assets.ringGeo} material={assets.ring} visible={false} frustumCulled={false} />
       {assets.flashes.map((mat, i) => (

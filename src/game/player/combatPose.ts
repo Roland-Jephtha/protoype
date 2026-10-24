@@ -81,7 +81,7 @@ export class CombatPose {
    * `height` the hero's height in metres. Call after the mixer has posed the
    * skeleton and world matrices are current.
    */
-  applyPunch(side: 'left' | 'right', progress: number, forward: Vector3, height: number) {
+  applyPunch(side: 'left' | 'right', progress: number, forward: Vector3, height: number, lean = PUNCH_LEAN) {
     const w = punchWeight(progress);
     const arm = this.arms[side];
     if (w <= 0 || !arm.upper || !arm.fore || !arm.hand) return;
@@ -91,7 +91,7 @@ export class CombatPose {
       this.rotateWorld(this.spine, this.q.full);
       // Lateral axis = up × forward; a positive turn about it tips the chest forward.
       this.v.dir.crossVectors(this.v.up, forward).normalize();
-      this.q.full.setFromAxisAngle(this.v.dir, PUNCH_LEAN * w);
+      this.q.full.setFromAxisAngle(this.v.dir, lean * w);
       this.rotateWorld(this.spine, this.q.full);
     }
     // Fist target: in front of the chest, at shoulder height, slightly toward the centre line.

@@ -5,8 +5,6 @@ export const ACTIONS = [
   'attack',
   'aim',
   'interact',
-  /** Speed dash (tap). */
-  'dash',
   /** Super breath: a gale that shoves enemies (hold). */
   'breath',
   /** Freeze breath (hold). */
