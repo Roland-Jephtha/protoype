@@ -127,7 +127,7 @@ async function desktopRun(browser) {
   const running = await state(page);
   await page.keyboard.up('KeyW');
   check('W moves the player forward (-Z)', running.pos.z < before.pos.z - 4, `dz=${(running.pos.z - before.pos.z).toFixed(2)}`);
-  check('reaches run speed', hspeed(running) > 7, `${hspeed(running).toFixed(2)} m/s, state=${running.state}`);
+  check('reaches run speed', hspeed(running) > 5, `${hspeed(running).toFixed(2)} m/s, state=${running.state}`);
   await page.screenshot({ path: path.join(OUT, '03-running.png') });
 
   await sleep(600);
@@ -173,11 +173,12 @@ async function desktopRun(browser) {
   // Sprint from spawn toward +Z (S = backwards relative to the camera): a clear street.
   await page.keyboard.down('ShiftLeft');
   await page.keyboard.down('KeyS');
-  await sleep(1500);
+  // Short burst: at 80 km/h a longer one reaches the buildings across the street.
+  await sleep(1100);
   const sprint = await state(page);
   await page.keyboard.up('KeyS');
   await page.keyboard.up('ShiftLeft');
-  check('Shift sprints', hspeed(sprint) > 12, `${hspeed(sprint).toFixed(2)} m/s, state=${sprint.state}`);
+  check('Shift sprints', hspeed(sprint) > 18, `${hspeed(sprint).toFixed(2)} m/s, state=${sprint.state}`);
   await page.screenshot({ path: path.join(OUT, '04b-sprint.png') });
 
   await page.keyboard.press('Escape');

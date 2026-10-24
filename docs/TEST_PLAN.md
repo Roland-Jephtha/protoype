@@ -16,7 +16,7 @@ Test categories are kept separate and reported honestly:
 
 Smoke checks: title renders · world loads, player grounded · W moves forward · run
 speed · decelerates · jump +2.25 m · lands · pause opens · sim frozen while paused ·
-settings · Esc back · restart checkpoint · sprint 16 m/s · return to title · re-enter ·
+settings · Esc back · restart checkpoint · sprint >18 m/s (80 km/h target) · return to title · re-enter ·
 no page errors · touch: controls shown · analog diagonal · move + look simultaneously ·
 jump during move + look (3 fingers) · touchend releases jump · stick neutral ·
 touchcancel releases stick + sprint · touch pause button · no page errors.

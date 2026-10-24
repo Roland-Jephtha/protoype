@@ -222,7 +222,8 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     const rate = (ref: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, hSpeed / ref));
     if (role === 'walk') next?.setEffectiveTimeScale(rate(sp.walk, 0.5, 2.2));
     else if (role === 'run') next?.setEffectiveTimeScale(rate(sp.run, 0.6, 2.2));
-    else if (role === 'sprint') next?.setEffectiveTimeScale(rate(sp.sprint, 0.7, 2.4));
+    // Up to ~5× so the legs keep pace at 80 km/h instead of the feet gliding.
+    else if (role === 'sprint') next?.setEffectiveTimeScale(rate(sp.sprint, 0.7, 5));
     else next?.setEffectiveTimeScale(1);
 
     anim.mixer.update(dt);

@@ -30,9 +30,10 @@ export const PLAYER = {
 
 export const GROUND_MOVEMENT = {
   walkSpeed: 3.2,
-  runSpeed: 8,
-  /** Phase 1 "sprint". Super-speed (Phase 3) will be a separate controller. */
-  sprintSpeed: 16,
+  /** 20 km/h on the HUD. */
+  runSpeed: 20 / 3.6,
+  /** 80 km/h on the HUD, on foot. Super-speed (Phase 3) will be a separate controller. */
+  sprintSpeed: 80 / 3.6,
   /** Stick magnitude below which analog input counts as walking. */
   walkThreshold: 0.55,
   acceleration: 40,

@@ -81,7 +81,8 @@ export const HERO_MODELS = {
       land: [/^mixamo\.com$/i],
       hardLand: [/dynamic pose/i, /^mixamo\.com$/i],
     },
-    clipSpeeds: { walk: 1.5, run: 3.8, sprint: 6.5 },
+    // Run and sprint both use the `Running` clip, measured at ~4.8 m/s from foot travel.
+    clipSpeeds: { walk: 1.5, run: 4.8, sprint: 4.8 },
     credit: '"Hatch Superman" by nitwit.friends — https://sketchfab.com/3d-models/hatch-superman-e023b533044a4c37a8f899c9517c9804 — CC BY 4.0',
   },
 } satisfies Record<string, HeroModelDef>;
