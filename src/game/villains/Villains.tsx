@@ -1,7 +1,8 @@
 import { useFrame } from '@react-three/fiber';
 import { useBeforePhysicsStep } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
-import { AdditiveBlending, ConeGeometry, CylinderGeometry, DoubleSide, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Quaternion, RingGeometry, Vector3 } from 'three';
+import { AdditiveBlending, CapsuleGeometry, ConeGeometry, MeshStandardMaterial, CylinderGeometry, DoubleSide, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Quaternion, RingGeometry, Vector3 } from 'three';
+import { HERO_COMBAT } from '../../config/combat';
 import type { RegionId } from '../../config/regions';
 import { VILLAIN_AI, VILLAIN_LAIRS, VILLAINS } from '../../config/villains';
 import { useApp } from '../../state/appStore';
@@ -11,7 +12,7 @@ import { LifeBoundary } from '../life/Wildlife';
 import { runtime } from '../runtime';
 import { mulberry32 } from '../world/cityLayout';
 import { VillainModel, type VillainAnim, type VillainModelHandle } from './VillainModel';
-import { createVillain, damageVillain, spawnOmega, stepOmega, stepVillain, villainCentre, type OmegaBolt, type Villain, type VillainEvent } from './villainBrain';
+import { createVillain, damageVillain, freezeVillain, spawnOmega, stepOmega, stepVillain, villainCentre, type OmegaBolt, type Villain, type VillainEvent } from './villainBrain';
 
 const MAX_OMEGA = 24;
 const MAX_WAVES = 4;
@@ -36,6 +37,7 @@ class VillainWorld {
       radius: v.def.heightMeters * 0.32,
       alive: true,
       damage: (amount, knock) => this.handle(v, damageVillain(v, amount, knock)),
+      freeze: (seconds) => this.handle(v, freezeVillain(v, seconds, HERO_COMBAT.freezeBreath.maxFreeze)),
     }));
   }
 
@@ -103,10 +105,29 @@ export function Villains({ regionId, ground }: { regionId: RegionId; ground: (x:
   );
 }
 
-/** One villain's model, placed and animated from its simulation state. */
+/** One villain's model, placed and animated from its simulation state; encased in ice when frozen. */
 function VillainActor({ v }: { v: Villain }) {
   const ref = useRef<VillainModelHandle>(null);
+  const ice = useRef<Mesh>(null);
+  const iceAssets = useMemo(() => {
+    const h = v.def.heightMeters;
+    return {
+      geo: new CapsuleGeometry(h * 0.3, h * 0.45, 4, 10),
+      mat: new MeshStandardMaterial({ color: '#bfe8ff', transparent: true, opacity: 0.55, roughness: 0.1, metalness: 0.1, emissive: '#3a6a88', emissiveIntensity: 0.4 }),
+    };
+  }, [v]);
+  useEffect(
+    () => () => {
+      iceAssets.geo.dispose();
+      iceAssets.mat.dispose();
+    },
+    [iceAssets],
+  );
   useFrame(() => {
+    if (ice.current) {
+      ice.current.visible = v.frozen > 0 && v.mode !== 'gone';
+      ice.current.position.set(v.x, v.y + v.def.heightMeters * 0.5, v.z);
+    }
     const h = ref.current;
     const r = h?.root;
     if (!h || !r) return;
@@ -140,10 +161,16 @@ function VillainActor({ v }: { v: Villain }) {
       anim = 'walk';
       rate = Math.min(2, speed / 1.5);
     }
-    h.play(anim, rate);
+    // Frozen solid: the pose holds still.
+    h.play(anim, v.frozen > 0 ? 0 : rate);
     h.punch(v.punch?.side ?? 'right', v.punch ? v.punch.t / 0.4 : -1);
   });
-  return <VillainModel ref={ref} def={v.def} />;
+  return (
+    <>
+      <VillainModel ref={ref} def={v.def} />
+      <mesh ref={ice} geometry={iceAssets.geo} material={iceAssets.mat} visible={false} />
+    </>
+  );
 }
 
 /** Heat beams, freeze breath, Omega beams and shockwave rings. */

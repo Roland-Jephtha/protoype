@@ -105,6 +105,9 @@ export class GroundMotor {
   lastLandingSpeed = 0;
   /** Seconds of lost control after a knockback (velocity carries the hero). */
   knockTimer = 0;
+  /** Speed dash: velocity held for `dashTimer` seconds, then normal control resumes. */
+  private dashTimer = 0;
+  private dashVelocity = { x: 0, y: 0, z: 0 };
 
   private coyoteTimer = 0;
   private jumpBufferTimer = 0;
@@ -134,6 +137,7 @@ export class GroundMotor {
 
   /** Advances one fixed step and returns the desired displacement for this step. */
   step(inp: MotorInput, dt: number): Vec3Like {
+    if (this.dashTimer > 0) return this.stepDash(dt);
     // --- flight transitions ---------------------------------------------
     if (this.mode === 'flight') {
       if (inp.flyPressed) {
@@ -281,6 +285,42 @@ export class GroundMotor {
       this.jumpAscending = false;
       this.setState('jump');
     }
+  }
+
+  /**
+   * Speed dash: moves at a fixed velocity for `duration` seconds (horizontal on
+   * the ground, any direction in flight), then hands control back.
+   */
+  dash(vx: number, vy: number, vz: number, duration: number) {
+    this.dashVelocity = { x: vx, y: this.mode === 'flight' ? vy : 0, z: vz };
+    this.dashTimer = duration;
+  }
+
+  get dashing() {
+    return this.dashTimer > 0;
+  }
+
+  private stepDash(dt: number): Vec3Like {
+    this.dashTimer -= dt;
+    const v = this.velocity;
+    const d = this.dashVelocity;
+    v.x = d.x;
+    v.z = d.z;
+    if (this.mode === 'flight') v.y = d.y;
+    else if (!this.grounded) v.y = Math.max(v.y - PHYSICS.gravity * dt, -PHYSICS.maxFallSpeed);
+    else v.y = -2;
+    this.facingYaw = Math.atan2(d.x, d.z);
+    // Leave the dash at a fast run rather than at dash speed.
+    if (this.dashTimer <= 0) {
+      const keep = this.mode === 'flight' ? FLIGHT.boostSpeed : this.t.sprintSpeed;
+      const sp = Math.hypot(v.x, v.y, v.z);
+      if (sp > keep) {
+        v.x *= keep / sp;
+        v.y *= keep / sp;
+        v.z *= keep / sp;
+      }
+    }
+    return { x: v.x * dt, y: v.y * dt, z: v.z * dt };
   }
 
   /** Start already in flight (arriving in a region mid-flight). */

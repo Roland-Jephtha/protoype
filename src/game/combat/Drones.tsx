@@ -7,11 +7,16 @@ import type { RegionId } from '../../config/regions';
 import { runtime } from '../runtime';
 import { mulberry32 } from '../world/cityLayout';
 import { merged, part } from '../world/propGeometries';
-import { createDrone, damageDrone, fireBolt, stepBolts, stepDrone, type Bolt, type Drone } from './drone';
+import { createDrone, damageDrone, fireBolt, freezeDrone, stepBolts, stepDrone, type Bolt, type Drone } from './drone';
 import { heroFeetY, knockOut } from './heroActions';
 import { targets, type Target } from './targets';
 
 const MAX_BOLTS = 48;
+
+function addBlast(blasts: { x: number; y: number; z: number; born: number }[], x: number, y: number, z: number, born: number) {
+  blasts.push({ x, y, z, born });
+  if (blasts.length > MAX_BLASTS) blasts.shift();
+}
 const MAX_BLASTS = 8;
 const BLAST_TIME = 0.6;
 const BODY = '#3a3f46';
@@ -56,12 +61,9 @@ export function Drones({ regionId, ground }: { regionId: RegionId; ground: (x: n
       radius: DRONE.radius,
       alive: true,
       damage: (amount, knock) => {
-        if (damageDrone(d, amount, knock)) {
-          runtime.dronesDestroyed++;
-          blasts.push({ x: d.x, y: d.y, z: d.z, born: clock.current });
-          if (blasts.length > MAX_BLASTS) blasts.shift();
-        }
+        damageDrone(d, amount, knock);
       },
+      freeze: (seconds) => freezeDrone(d, seconds),
     }));
     return { drones, bolts, blasts, hitTargets, rand };
   }, [regionId, ground]);
@@ -87,7 +89,13 @@ export function Drones({ regionId, ground }: { regionId: RegionId; ground: (x: n
       t.position.x = d.x;
       t.position.y = d.y;
       t.position.z = d.z;
-      t.alive = d.mode === 'patrol' || d.mode === 'attack';
+      const nowAlive = d.mode === 'patrol' || d.mode === 'attack';
+      // Destroyed this step (shot down, or shattered after freezing).
+      if (t.alive && !nowAlive) {
+        runtime.dronesDestroyed++;
+        addBlast(sim.blasts, d.x, d.y, d.z, clock.current);
+      }
+      t.alive = nowAlive;
       if (t.alive) alive++;
     });
     runtime.dronesAlive = alive;
@@ -118,7 +126,7 @@ export function Drones({ regionId, ground }: { regionId: RegionId; ground: (x: n
   const eyes = useRef<InstancedMesh>(null);
   const boltMesh = useRef<InstancedMesh>(null);
   const fires = useRef<InstancedMesh>(null);
-  const scratch = useRef({ m: new Matrix4(), q: new Quaternion(), e: new Euler(), p: new Vector3(), s: new Vector3(), z: new Vector3(0, 0, 1), d: new Vector3(), white: new Color('#ffffff'), base: new Color('#ffffff'), red: new Color('#ff2a1a'), dark: new Color('#3a2a22'), hidden: new Matrix4().makeScale(0, 0, 0), clock: 0 });
+  const scratch = useRef({ m: new Matrix4(), q: new Quaternion(), e: new Euler(), p: new Vector3(), s: new Vector3(), z: new Vector3(0, 0, 1), d: new Vector3(), white: new Color('#ffffff'), base: new Color('#ffffff'), red: new Color('#ff2a1a'), dark: new Color('#3a2a22'), ice: new Color('#a8dcff'), hidden: new Matrix4().makeScale(0, 0, 0), clock: 0 });
 
   useFrame((_, dt) => {
     const sc = scratch.current;
@@ -142,7 +150,7 @@ export function Drones({ regionId, ground }: { regionId: RegionId; ground: (x: n
         m.compose(p, q, s);
         b.setMatrixAt(i, m);
         ey.setMatrixAt(i, m);
-        b.setColorAt(i, d.mode === 'wreck' ? sc.dark : d.sinceHit < 0.08 ? sc.white : sc.base);
+        b.setColorAt(i, d.mode === 'wreck' ? sc.dark : d.frozen > 0 ? sc.ice : d.sinceHit < 0.08 ? sc.white : sc.base);
         ey.setColorAt(i, d.mode === 'wreck' ? sc.dark : sc.red);
       });
       b.instanceMatrix.needsUpdate = true;

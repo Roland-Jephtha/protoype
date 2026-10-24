@@ -22,6 +22,8 @@ export interface Drone {
   phase: number;
   /** Seconds since last hit (for the hit flash). */
   sinceHit: number;
+  /** Seconds left frozen: a frozen drone drops and shatters on the ground. */
+  frozen: number;
 }
 
 export interface DroneContext {
@@ -40,7 +42,7 @@ export interface Shot {
 export function createDrone(home: Drone['home'], phase: number, groundY: (x: number, z: number) => number): Drone {
   const x = home.x + Math.sin(phase) * home.radius;
   const z = home.z + Math.cos(phase) * home.radius;
-  return { x, y: groundY(x, z) + DRONE.patrolAltitude, z, vx: 0, vy: 0, vz: 0, heading: 0, spin: 0, health: DRONE.health, mode: 'patrol', timer: DRONE.fireInterval, home, phase, sinceHit: 99 };
+  return { x, y: groundY(x, z) + DRONE.patrolAltitude, z, vx: 0, vy: 0, vz: 0, heading: 0, spin: 0, health: DRONE.health, mode: 'patrol', timer: DRONE.fireInterval, home, phase, sinceHit: 99, frozen: 0 };
 }
 
 /** Steers velocity toward a point at up to `speed`, with limited acceleration. */
@@ -94,6 +96,23 @@ export function stepDrone(d: Drone, dt: number, ctx: DroneContext): Shot | null 
     return null;
   }
 
+  // Frozen: rotors stop, it drops, and shatters when it hits the ground.
+  if (d.frozen > 0) {
+    d.frozen -= dt;
+    d.vy -= DRONE.frozenGravity * dt;
+    d.x += d.vx * dt;
+    d.y += d.vy * dt;
+    d.z += d.vz * dt;
+    if (d.y <= ctx.groundY(d.x, d.z) + 0.5) {
+      d.y = ctx.groundY(d.x, d.z) + 0.5;
+      d.health = 0;
+      d.mode = 'wreck';
+      d.timer = DRONE.wreckTime;
+      d.frozen = 0;
+    }
+    return null;
+  }
+
   const hx = ctx.hero.x - d.x;
   const hz = ctx.hero.z - d.z;
   const heroDist = Math.hypot(hx, ctx.hero.y - d.y, hz);
@@ -139,6 +158,14 @@ export function stepDrone(d: Drone, dt: number, ctx: DroneContext): Shot | null 
     d.vy = Math.max(0, d.vy);
   }
   return shot;
+}
+
+/** Freezes a drone for a while (it falls out of the sky). */
+export function freezeDrone(d: Drone, seconds: number) {
+  if (d.mode === 'wreck' || d.mode === 'down') return;
+  d.frozen = Math.min(DRONE.maxFreeze, d.frozen + seconds);
+  d.vx *= 0.3;
+  d.vz *= 0.3;
 }
 
 /** Applies a hit; returns true if it destroyed the drone. */

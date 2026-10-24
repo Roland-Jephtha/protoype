@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import type { Action } from '../../input/actions';
 import { input } from '../../input/InputManager';
 import { useApp } from '../../state/appStore';
 import { useSettings } from '../../state/settings';
@@ -13,9 +14,18 @@ import { VirtualStick } from './VirtualStick';
  *  - top-right: pause
  * Only actions that actually do something are shown. In flight, Jump becomes
  * Up, Sprint becomes Boost, and a Down button appears.
- * Punch and Heat (hold; slide the thumb to aim) sit left of the movement cluster.
+ * Punch and Heat (hold; slide the thumb to aim) sit left of the movement cluster,
+ * then Dash and one Power button (Breath / Freeze / Nova; the small button cycles).
  */
+const POWERS: { action: Action; label: string; icon: string }[] = [
+  { action: 'breath', label: 'Breath', icon: '≋' },
+  { action: 'freeze', label: 'Freeze', icon: '❄' },
+  { action: 'nova', label: 'Nova', icon: '✺' },
+];
+
 export function TouchControls() {
+  const [powerIndex, setPowerIndex] = useState(0);
+  const power = POWERS[powerIndex];
   const opacity = useSettings((s) => s.touchControlOpacity);
   const scale = useSettings((s) => s.touchControlScale);
   const pause = useApp((s) => s.pause);
@@ -39,6 +49,23 @@ export function TouchControls() {
         <div className="touch-col">
           <TouchButton action="aim" label="Heat" icon="◉" size={60 * scale} className="btn-heat" dragToLook />
           <TouchButton action="attack" label="Punch" icon="✊" size={72 * scale} className="btn-punch" />
+        </div>
+        <div className="touch-col">
+          <div className="touch-power">
+            <TouchButton key={power.action} action={power.action} label={power.label} icon={power.icon} size={60 * scale} className="btn-power" dragToLook={power.action !== 'nova'} />
+            <button
+              type="button"
+              className="touch-power-cycle"
+              aria-label="Next power"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                setPowerIndex((i) => (i + 1) % POWERS.length);
+              }}
+            >
+              ⟳
+            </button>
+          </div>
+          <TouchButton action="dash" label="Dash" icon="⇥" size={60 * scale} className="btn-dash" />
         </div>
         {flying && <TouchButton action="descend" label="Down" icon="▼" size={60 * scale} className="btn-down" />}
         <TouchButton action="sprint" label={flying ? 'Boost' : 'Sprint'} icon="»" size={64 * scale} className="btn-sprint" />

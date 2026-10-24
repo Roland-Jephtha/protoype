@@ -8,6 +8,11 @@ const DESKTOP: [string, string][] = [
   ['Mouse while flying', 'Look up/down to climb/dive'],
   ['Left mouse', 'Punch (tap quickly for a 3-hit combo)'],
   ['Right mouse (hold)', 'Heat vision: aim with the crosshair'],
+  ['Hold left mouse', 'Charge a power punch — release to send enemies flying'],
+  ['V', 'Speed dash (smashes through enemies)'],
+  ['R (hold)', 'Super breath — a gale that blows enemies away'],
+  ['Q (hold)', 'Freeze breath — ices enemies; frozen drones fall'],
+  ['X (hold, release)', 'Super Nova — charge, then blast everything around you'],
   ['Esc / P', 'Pause'],
   ['F3', 'Diagnostics overlay'],
 ];
@@ -21,6 +26,8 @@ const TOUCH: [string, string][] = [
   ['▼ Down', 'Flying: down'],
   ['✊ Punch', 'Punch (tap quickly for a 3-hit combo)'],
   ['◉ Heat (hold)', 'Heat vision — slide your thumb on it to aim'],
+  ['⇥ Dash', 'Speed dash'],
+  ['Power + ⟳', 'Breath / Freeze / Nova (hold); ⟳ switches power'],
   ['❚❚ top-right', 'Pause'],
 ];
 
@@ -53,7 +60,7 @@ export function ControlsReference({ onBack }: { onBack: () => void }) {
           </dl>
         </section>
       </div>
-      <p className="settings-note">More powers (super breath, lifting, dash) arrive in later phases.</p>
+      <p className="settings-note">Dash, breath and the Super Nova use solar energy (yellow bar), which recharges in the sun and when you land hits.</p>
       <div className="panel-actions">
         <button type="button" className="menu-btn" onClick={onBack} autoFocus>
           Back

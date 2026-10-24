@@ -16,6 +16,8 @@ export interface Target {
   alive: boolean;
   /** `knock` is an impulse (m/s) added to the target's velocity. */
   damage: (amount: number, knock: Vec3) => void;
+  /** Adds seconds of being frozen (freeze breath). */
+  freeze?: (seconds: number) => void;
 }
 
 /** Live targets in the mounted region. */

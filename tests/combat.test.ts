@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { DRONE, HERO_COMBAT } from '../src/config/combat';
 import { createDrone, damageDrone, stepBolts, stepDrone, type Bolt, type DroneContext } from '../src/game/combat/drone';
-import { HeroCombat, type CombatEvent } from '../src/game/combat/heroCombat';
+import { HeroCombat, type CombatEvent, type CombatInput } from '../src/game/combat/heroCombat';
 import { inCone, pickAlongRay, raySphere, type Target } from '../src/game/combat/targets';
 import { mulberry32 } from '../src/game/world/cityLayout';
 
 const DT = 1 / 60;
-const idle = { attackPressed: false, aimHeld: false };
+const idle: CombatInput = { attackPressed: false, aimHeld: false };
 
 function run(c: HeroCombat, seconds: number, inp = idle) {
   const events: CombatEvent[] = [];
@@ -141,5 +141,66 @@ describe('drones', () => {
     hits = 0;
     for (let t = 0; t < 1; t += DT) hits += stepBolts(b, DT, { x: 3, y: 0, z: 0 }, true, ground);
     expect(hits).toBe(0);
+  });
+});
+
+describe('hero skills', () => {
+  it('holding punch and releasing throws a power punch that scales with the charge', () => {
+    const c = new HeroCombat();
+    const held = { attackPressed: false, attackHeld: true, aimHeld: false };
+    c.step({ ...held, attackPressed: true }, DT);
+    run(c, 1, held);
+    expect(c.charging).toBe(true);
+    const events = c.step({ attackPressed: false, attackHeld: false, aimHeld: false }, DT);
+    const power = events.find((e) => e.type === 'powerPunch');
+    expect(power && power.type === 'powerPunch' && power.charge).toBeCloseTo(1, 1);
+    expect(c.powerPunching).toBe(true);
+  });
+
+  it('a quick tap is just a punch, not a power punch', () => {
+    const c = new HeroCombat();
+    c.step({ attackPressed: true, attackHeld: true, aimHeld: false }, DT);
+    const events = [...c.step({ attackPressed: false, attackHeld: false, aimHeld: false }, DT), ...run(c, 1)];
+    expect(events.some((e) => e.type === 'powerPunch')).toBe(false);
+  });
+
+  it('dash costs solar energy and has a cooldown', () => {
+    const c = new HeroCombat();
+    const start = c.solar;
+    expect(c.step({ ...idle, dashPressed: true }, DT).some((e) => e.type === 'dash')).toBe(true);
+    expect(c.solar).toBeLessThan(start - HERO_COMBAT.dash.cost + 1);
+    expect(c.step({ ...idle, dashPressed: true }, DT).some((e) => e.type === 'dash')).toBe(false);
+  });
+
+  it('breaths drain solar energy; freeze wins over wind; none while firing heat vision', () => {
+    const c = new HeroCombat();
+    c.step({ ...idle, breathHeld: true, freezeHeld: true }, DT);
+    expect(c.breath).toBe('freeze');
+    c.step({ ...idle, breathHeld: true }, DT);
+    expect(c.breath).toBe('wind');
+    c.step({ ...idle, breathHeld: true, aimHeld: true }, DT);
+    expect(c.breath).toBe('none');
+    const before = c.solar;
+    run(c, 1, { ...idle, breathHeld: true });
+    expect(c.solar).toBeLessThan(before);
+  });
+
+  it('Super Nova fires only after a full charge, on release', () => {
+    const c = new HeroCombat();
+    run(c, HERO_COMBAT.nova.chargeTime * 0.5, { ...idle, novaHeld: true });
+    expect(c.step(idle, DT).some((e) => e.type === 'nova')).toBe(false); // released early: cancelled
+    run(c, HERO_COMBAT.nova.chargeTime + 0.1, { ...idle, novaHeld: true });
+    expect(c.novaCharge).toBe(1);
+    expect(c.step(idle, DT).some((e) => e.type === 'nova')).toBe(true);
+  });
+});
+
+describe('freezing', () => {
+  it('a frozen drone drops out of the sky and shatters', async () => {
+    const { freezeDrone } = await import('../src/game/combat/drone');
+    const d = createDrone({ x: 0, z: 0, radius: 50 }, 0, () => 0);
+    freezeDrone(d, 3);
+    for (let t = 0; t < 3; t += DT) stepDrone(d, DT, { hero: { x: 999, y: 0, z: 999 }, heroActive: true, groundY: () => 0, rand: mulberry32(1) });
+    expect(d.mode).toBe('wreck');
   });
 });

@@ -9,7 +9,10 @@ export const DEFAULT_KEY_BINDINGS: Record<string, Action> = {
   ShiftLeft: 'sprint',
   ShiftRight: 'sprint',
   KeyE: 'interact',
-  KeyQ: 'power',
+  KeyQ: 'freeze',
+  KeyR: 'breath',
+  KeyV: 'dash',
+  KeyX: 'nova',
   KeyF: 'fly',
   // Not Ctrl: Ctrl+W would close the browser tab mid-flight.
   KeyC: 'descend',

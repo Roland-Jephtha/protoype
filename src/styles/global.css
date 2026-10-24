@@ -675,6 +675,22 @@ input[type='range']::-moz-range-thumb {
   }
 }
 
+.hud-solar {
+  height: 5px;
+}
+
+.hud-solar .hud-bar-fill {
+  background: linear-gradient(90deg, #f2c14e, #fff3b0);
+}
+
+.hud-flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(circle at center, rgba(255, 250, 225, 0.38), rgba(255, 225, 150, 0.08));
+  transition: opacity 0.6s ease-out;
+}
+
 .hud-crosshair {
   position: absolute;
   left: 50%;
@@ -1030,6 +1046,35 @@ input[type='range']::-moz-range-thumb {
 
 .btn-punch {
   margin-bottom: 18px;
+}
+
+.btn-power {
+  border-color: rgba(242, 193, 78, 0.75);
+}
+
+.btn-dash {
+  margin-bottom: 18px;
+  border-color: rgba(150, 210, 255, 0.75);
+}
+
+.touch-power {
+  position: relative;
+}
+
+/* Small cycle button tucked on the power button's corner. */
+.touch-power-cycle {
+  position: absolute;
+  top: -10px;
+  left: -14px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(16, 22, 34, 0.7);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  touch-action: none;
 }
 
 .btn-down {

@@ -628,6 +628,27 @@ async function villainRun(browser) {
   await page.screenshot({ path: path.join(OUT, '14-villain.png') });
   const after = await rt();
   check('villains: heat vision damages Doomsday', !!after.boss && after.boss.health < after.boss.max - 20, after.boss ? `${after.boss.health.toFixed(0)}/${after.boss.max}` : 'no boss');
+
+  // Skills: freeze breath, then a charged Super Nova.
+  const btn = (a, d) => page.evaluate(([a, d]) => window.__krypton.input.setButton('keyboard', a, d), [a, d]);
+  const solar0 = await page.evaluate(() => window.__krypton.runtime.combat.solar);
+  await btn('freeze', true);
+  await sleep(600);
+  const breathing = await page.evaluate(() => window.__krypton.runtime.breath.kind);
+  await btn('freeze', false);
+  check('skills: freeze breath blows and uses solar energy', breathing === 'freeze' && (await page.evaluate(() => window.__krypton.runtime.combat.solar)) < solar0 + 2, `breath=${breathing}`);
+  await sleep(2500);
+  const before = await rt();
+  await btn('nova', true);
+  await sleep(1500);
+  await btn('nova', false);
+  await sleep(300);
+  const novaCount = await page.evaluate(() => window.__krypton.runtime.novaFlash);
+  check('skills: a charged Super Nova goes off', novaCount > 0, `novas=${novaCount}, boss before ${before.boss?.health.toFixed(0)}`);
+  await page.evaluate(() => window.__krypton.input.setButton('keyboard', 'dash', true));
+  await page.evaluate(() => window.__krypton.input.setButton('keyboard', 'dash', false));
+  await sleep(100);
+  check('skills: V dashes', await page.evaluate(() => window.__krypton.runtime.heroDashing || Math.hypot(window.__krypton.runtime.playerVelocity.x, window.__krypton.runtime.playerVelocity.z) > 20));
   check('no page errors (villains)', errors.length === 0, errors.slice(0, 3).join(' | '));
   await context.close();
 }

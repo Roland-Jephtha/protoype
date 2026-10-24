@@ -91,3 +91,16 @@ describe('villain brain', () => {
     expect(hits).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe('frozen villains', () => {
+  it('cannot act while frozen, and a frozen flier drops', async () => {
+    const { freezeVillain } = await import('../src/game/villains/villainBrain');
+    const v = createVillain(VILLAINS.zod, 0, 0, flat);
+    run(v, 6, ctxAt(20, 0, 30));
+    expect(v.flying).toBe(true);
+    freezeVillain(v, 4, 6);
+    const events = run(v, 3, ctxAt(1, 0, 0));
+    expect(events.filter((e) => e.type === 'hitHero')).toHaveLength(0);
+    expect(v.y).toBeLessThan(0.1);
+  });
+});

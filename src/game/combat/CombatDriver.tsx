@@ -7,7 +7,9 @@ import { input } from '../../input/InputManager';
 import { useApp } from '../../state/appStore';
 import { runtime } from '../runtime';
 import { heroFeetY } from './heroActions';
-import { inCone, pickAlongRay, targets, type Target } from './targets';
+import { SkillFx } from './SkillFx';
+import { inCone, pickAlongRay, targets, type Target, type Vec3 } from './targets';
+import { addImpact } from './impacts';
 
 const CHEST_HEIGHT = 1.25;
 
@@ -21,6 +23,10 @@ export function CombatDriver() {
   const { world, rapier } = useRapier();
   const rayRef = useRef<InstanceType<typeof rapier.Ray> | null>(null);
   const faceTimer = useRef(0);
+  const dashHits = useRef(new Set<Target>());
+  const dashDir = useRef(new Vector3());
+  const dashTime = useRef(0);
+  const power = useRef<{ target: Target | null; charge: number; timer: number } | null>(null);
   const tmp = useMemo(() => ({ aim: new Vector3(), dir: new Vector3(), chest: new Vector3(), eye: new Vector3() }), []);
 
   useEffect(() => {
@@ -37,46 +43,174 @@ export function CombatDriver() {
     const c = runtime.combat;
     const app = useApp.getState();
     const aimHeld = input.isHeld('aim');
-    const events = c.step({ attackPressed: input.consumePressed('attack'), aimHeld }, dt);
-    runtime.aiming = aimHeld;
+    const events = c.step(
+      {
+        attackPressed: input.consumePressed('attack'),
+        attackHeld: input.isHeld('attack'),
+        aimHeld,
+        dashPressed: input.consumePressed('dash'),
+        breathHeld: input.isHeld('breath'),
+        freezeHeld: input.isHeld('freeze'),
+        novaHeld: input.isHeld('nova'),
+      },
+      dt,
+    );
+    runtime.aiming = aimHeld || c.breath !== 'none';
 
     const fwd = runtime.cameraForward;
     const chest = tmp.chest.set(runtime.playerPosition.x, heroFeetY() + CHEST_HEIGHT, runtime.playerPosition.z);
     const punch = HERO_COMBAT.punch;
     const reach = runtime.moveMode === 'flight' ? punch.flightRange : punch.range;
+    const facing = () => {
+      const yaw = runtime.heroFacingYaw;
+      return { x: Math.sin(yaw), y: 0, z: Math.cos(yaw) };
+    };
+    /** Damages a target and charges solar energy for it. */
+    const hit = (t: Target, amount: number, knock: Vec3) => {
+      t.damage(amount, knock);
+      c.dealtDamage(amount);
+    };
+    /** Knockback away from the hero: horizontal push plus lift. */
+    const away = (t: Target, push: number, lift: number) => {
+      const dx = t.position.x - chest.x;
+      const dz = t.position.z - chest.z;
+      const len = Math.hypot(dx, dz) || 1;
+      return { x: (dx / len) * push, y: lift, z: (dz / len) * push };
+    };
+    /** Turns toward the nearest enemy within `range` for `seconds`. */
+    const faceNearest = (range: number, seconds: number) => {
+      let nearest: Target | null = null;
+      let best = range;
+      for (const t of targets) {
+        if (!t.alive) continue;
+        const d = Math.hypot(t.position.x - chest.x, t.position.y - chest.y, t.position.z - chest.z) - t.radius;
+        if (d < best) {
+          best = d;
+          nearest = t;
+        }
+      }
+      if (!nearest) return null;
+      runtime.combatFaceYaw = Math.atan2(nearest.position.x - chest.x, nearest.position.z - chest.z);
+      faceTimer.current = seconds;
+      return nearest;
+    };
 
     for (const e of events) {
       if (e.type === 'punch') {
-        // Turn toward the nearest enemy in reach (a little beyond, so swings connect).
-        let nearest: Target | null = null;
-        let best = reach + 2;
-        for (const t of targets) {
-          if (!t.alive) continue;
-          const d = Math.hypot(t.position.x - chest.x, t.position.y - chest.y, t.position.z - chest.z) - t.radius;
-          if (d < best) {
-            best = d;
-            nearest = t;
-          }
-        }
-        if (nearest) {
-          runtime.combatFaceYaw = Math.atan2(nearest.position.x - chest.x, nearest.position.z - chest.z);
-          faceTimer.current = punch.duration;
-        }
-      } else if (e.type === 'punchHit') {
-        const yaw = runtime.heroFacingYaw;
-        const forward = { x: Math.sin(yaw), y: 0, z: Math.cos(yaw) };
-        const { damage, knockback } = c.punchStrength();
-        for (const t of inCone(chest, forward, reach, punch.coneHalfAngle, targets)) {
+        const t = faceNearest(reach + punch.magnetRange, punch.duration);
+        // Just out of reach: step into the punch.
+        if (t) {
           const dx = t.position.x - chest.x;
           const dz = t.position.z - chest.z;
-          const len = Math.hypot(dx, dz) || 1;
-          t.damage(damage, { x: (dx / len) * knockback, y: knockback * 0.25, z: (dz / len) * knockback });
+          const d = Math.hypot(dx, dz) - t.radius;
+          if (d > reach * 0.7) {
+            runtime.heroImpulse.x += (dx / (d + t.radius)) * punch.magnetSpeed;
+            runtime.heroImpulse.z += (dz / (d + t.radius)) * punch.magnetSpeed;
+            runtime.heroControlLoss = Math.max(runtime.heroControlLoss, 0.12);
+          }
+        }
+      }
+      else if (e.type === 'punchHit') {
+        const { damage, knockback } = c.punchStrength();
+        for (const t of inCone(chest, facing(), reach, punch.coneHalfAngle, targets)) {
+          hit(t, damage, away(t, knockback, knockback * 0.25));
+          addImpact(t.position, 'punch');
+        }
+      } else if (e.type === 'powerPunch') {
+        const pp = HERO_COMBAT.powerPunch;
+        // Home onto the nearest enemy in range: dash to it, the blow lands on arrival.
+        const target = faceNearest(pp.homingRange, pp.homingTimeout);
+        power.current = { target, charge: e.charge, timer: pp.homingTimeout };
+        if (target) {
+          const dir = tmp.dir.set(target.position.x - chest.x, target.position.y - chest.y, target.position.z - chest.z);
+          const dist = dir.length() - target.radius - 1;
+          if (dist > 0.5) {
+            dir.normalize();
+            if (runtime.moveMode !== 'flight') dir.y = 0;
+            const speed = Math.min(HERO_COMBAT.dash.speed, dist / HERO_COMBAT.dash.duration);
+            runtime.heroDash = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
+          }
+        }
+      } else if (e.type === 'dash') {
+        const d = HERO_COMBAT.dash;
+        // In flight: straight where the camera looks; on foot: along the ground.
+        const dir = tmp.dir.copy(fwd);
+        if (runtime.moveMode !== 'flight') dir.y = 0;
+        dir.normalize();
+        runtime.heroDash = { x: dir.x * d.speed, y: dir.y * d.speed, z: dir.z * d.speed };
+        dashDir.current.copy(dir);
+        dashHits.current.clear();
+        dashTime.current = d.duration + 0.05;
+      } else if (e.type === 'nova') {
+        const n = HERO_COMBAT.nova;
+        for (const t of targets) {
+          if (!t.alive) continue;
+          const d = Math.hypot(t.position.x - chest.x, t.position.y - chest.y, t.position.z - chest.z);
+          if (d > n.radius + t.radius) continue;
+          const k = 1 - Math.min(1, d / n.radius) * 0.5;
+          hit(t, n.damage * k, away(t, n.knockback * k, n.lift * k));
+        }
+        addImpact(chest, 'nova');
+        runtime.cameraShake = 1;
+        runtime.novaFlash++;
+      }
+    }
+
+    // Power punch: lands when the homing lunge reaches its target (or on timeout, on whatever is in front).
+    const pw = power.current;
+    if (pw) {
+      pw.timer -= dt;
+      const pp = HERO_COMBAT.powerPunch;
+      const t = pw.target;
+      const reached = t && t.alive && Math.hypot(t.position.x - chest.x, t.position.y - chest.y, t.position.z - chest.z) - t.radius <= pp.range;
+      if (reached || pw.timer <= 0) {
+        power.current = null;
+        const k = 0.6 + 0.4 * pw.charge;
+        const struck = reached && t ? [t] : inCone(chest, facing(), pp.range, punch.coneHalfAngle + 0.2, targets);
+        for (const s of struck) {
+          hit(s, pp.damage * k, away(s, pp.knockback * k, pp.knockback * 0.35 * k));
+          addImpact(s.position, 'power');
+        }
+        runtime.cameraShake = Math.max(runtime.cameraShake, struck.length ? 0.5 : 0.15);
+      }
+    }
+
+    // Dash: everything the hero ploughs through is hit once.
+    if (dashTime.current > 0) {
+      dashTime.current -= dt;
+      const d = HERO_COMBAT.dash;
+      for (const t of targets) {
+        if (!t.alive || dashHits.current.has(t)) continue;
+        if (Math.hypot(t.position.x - chest.x, t.position.y - chest.y, t.position.z - chest.z) > d.hitRadius + t.radius) continue;
+        dashHits.current.add(t);
+        const dd = dashDir.current;
+        hit(t, d.damage, { x: dd.x * d.knockback, y: d.knockback * 0.3, z: dd.z * d.knockback });
+        addImpact(t.position, 'power');
+        runtime.cameraShake = Math.max(runtime.cameraShake, 0.3);
+      }
+    }
+
+    // Super breath / freeze breath: a cone from the mouth along the crosshair.
+    const br = runtime.breath;
+    br.kind = c.breath;
+    if (c.breath !== 'none') {
+      const eye = runtime.heroEyesValid ? runtime.heroEyes : tmp.eye.set(chest.x, heroFeetY() + HERO_COMBAT.heat.eyeHeightFallback, chest.z);
+      br.from.copy(eye).y -= 0.12;
+      br.dir.copy(fwd);
+      const cfg = c.breath === 'wind' ? HERO_COMBAT.superBreath : HERO_COMBAT.freezeBreath;
+      for (const t of inCone(br.from, br.dir, cfg.range, cfg.coneHalfAngle, targets)) {
+        if (c.breath === 'wind') {
+          const push = HERO_COMBAT.superBreath.push * dt;
+          hit(t, cfg.damagePerSecond * dt, { x: br.dir.x * push, y: Math.max(0, br.dir.y) * push + push * 0.15, z: br.dir.z * push });
+        } else {
+          hit(t, cfg.damagePerSecond * dt, { x: 0, y: 0, z: 0 });
+          t.freeze?.(HERO_COMBAT.freezeBreath.freezePerSecond * dt);
         }
       }
     }
 
-    // Facing: aiming faces the crosshair; a punch briefly faces its target.
-    if (aimHeld) runtime.combatFaceYaw = Math.atan2(fwd.x, fwd.z);
+    // Facing: aiming (heat vision, breath) faces the crosshair; a punch briefly faces its target.
+    if (runtime.aiming) runtime.combatFaceYaw = Math.atan2(fwd.x, fwd.z);
     else if (faceTimer.current > 0) faceTimer.current -= dt;
     else runtime.combatFaceYaw = null;
 
@@ -128,7 +262,12 @@ export function CombatDriver() {
     }
   });
 
-  return <HeatBeamFx />;
+  return (
+    <>
+      <HeatBeamFx />
+      <SkillFx />
+    </>
+  );
 }
 
 const SCORCH_COUNT = 64;

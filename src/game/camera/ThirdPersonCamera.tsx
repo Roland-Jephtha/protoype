@@ -113,6 +113,14 @@ export function ThirdPersonCamera() {
 
     camera.position.set(pivot.x + o.x * s.distance, pivot.y + o.y * s.distance, pivot.z + o.z * s.distance);
     camera.lookAt(pivot);
+    // Impact shake (power punches, dashes, the Super Nova), decaying quickly.
+    if (runtime.cameraShake > 0.001 && !settings.reducedMotion) {
+      const k = runtime.cameraShake * CAMERA.shakeAmplitude;
+      camera.position.x += (Math.random() - 0.5) * k;
+      camera.position.y += (Math.random() - 0.5) * k;
+      camera.position.z += (Math.random() - 0.5) * k;
+    }
+    runtime.cameraShake *= Math.exp(-CAMERA.shakeDecay * dt);
     runtime.cameraPosition.copy(camera.position);
     runtime.cameraForward.copy(pivot).sub(camera.position).normalize();
   }, -30);

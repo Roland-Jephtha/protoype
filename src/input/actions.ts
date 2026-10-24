@@ -5,7 +5,14 @@ export const ACTIONS = [
   'attack',
   'aim',
   'interact',
-  'power',
+  /** Speed dash (tap). */
+  'dash',
+  /** Super breath: a gale that shoves enemies (hold). */
+  'breath',
+  /** Freeze breath (hold). */
+  'freeze',
+  /** Super Nova: hold to charge, release to blast. */
+  'nova',
   'pause',
   /** Toggle flight (take off / drop out of flight). */
   'fly',

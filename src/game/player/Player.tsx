@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Group } from 'three';
 import { CAMERA, FLIGHT, PLAYER } from '../../config/gameConfig';
 import { crossedSide, oppositeSide, type Entry, type RegionDef } from '../../config/regions';
+import { HERO_COMBAT } from '../../config/combat';
 import { VILLAIN_AI } from '../../config/villains';
 import { input } from '../../input/InputManager';
 import { useApp } from '../../state/appStore';
@@ -131,6 +132,11 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
       runtime.heroControlLoss = 0;
     }
     runtime.heroFrozen = Math.max(0, runtime.heroFrozen - dt);
+    if (runtime.heroDash) {
+      const d = runtime.heroDash;
+      motor.dash(d.x, d.y, d.z, HERO_COMBAT.dash.duration);
+      runtime.heroDash = null;
+    }
 
     const move = input.getMove();
     const desired = motor.step(
@@ -204,6 +210,7 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
     runtime.playerPosition.set(nx, ny, nz);
     runtime.playerVelocity.set(motor.velocity.x, motor.velocity.y, motor.velocity.z);
     runtime.heroFacingYaw = motor.facingYaw;
+    runtime.heroDashing = motor.dashing;
     runtime.playerState = motor.state;
     runtime.moveMode = motor.mode;
     runtime.grounded = motor.grounded;

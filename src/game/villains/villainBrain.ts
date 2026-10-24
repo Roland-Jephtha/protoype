@@ -34,6 +34,8 @@ export interface Villain {
   sinceHit: number;
   /** Tumble angle while launched (rad). */
   tumble: number;
+  /** Seconds left frozen in ice (can't act; fliers drop). */
+  frozen: number;
 }
 
 export type VillainEvent =
@@ -81,6 +83,7 @@ export function createVillain(def: VillainDef, x: number, z: number, groundY: (x
     home: { x, z },
     sinceHit: 99,
     tumble: 0,
+    frozen: 0,
   };
 }
 
@@ -112,6 +115,17 @@ function moveToward(v: Villain, tx: number, ty: number, tz: number, speed: numbe
   v.vx += ((dx / d) * want - v.vx) * k;
   v.vz += ((dz / d) * want - v.vz) * k;
   if (fly) v.vy += ((dy / d) * want - v.vy) * k;
+}
+
+/** Encases the villain in ice for a while (stacks up to a cap). */
+export function freezeVillain(v: Villain, seconds: number, max: number): VillainEvent[] {
+  if (!alive(v)) return [];
+  v.frozen = Math.min(max, v.frozen + seconds);
+  if (v.mode === 'dormant') {
+    v.mode = 'engage';
+    return [{ type: 'engaged' }];
+  }
+  return [];
 }
 
 /** Applies a hit from the hero. Returns events (launched / defeated). */
@@ -188,6 +202,25 @@ export function stepVillain(v: Villain, dt: number, ctx: VillainContext): Villai
 
   // Regeneration (not once beaten).
   if (alive(v)) v.health = Math.min(def.health, v.health + def.regen * dt);
+
+  // Frozen in ice: no actions; a flier drops to the ground.
+  if (v.frozen > 0 && alive(v) && v.mode !== 'launched' && v.mode !== 'leap') {
+    v.frozen -= dt;
+    v.punch = null;
+    v.pending = null;
+    if (v.mode === 'windup' || v.mode === 'beam' || v.mode === 'breath' || v.mode === 'charge' || v.mode === 'dormant') v.mode = 'engage';
+    v.vx = 0;
+    v.vz = 0;
+    if (v.flying || v.y > ground + 0.05) {
+      v.vy -= AI.gravity * dt;
+      v.y = Math.max(ground, v.y + v.vy * dt);
+      if (v.y <= ground) {
+        v.flying = false;
+        v.vy = 0;
+      }
+    }
+    return events;
+  }
 
   const hx = ctx.hero.x - v.x;
   const hz = ctx.hero.z - v.z;

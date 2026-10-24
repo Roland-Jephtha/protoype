@@ -99,6 +99,9 @@ export const CAMERA = {
   aimDistance: 3.6,
   aimShoulderOffset: 0.85,
   aimFovBoost: -10,
+  /** Camera shake: offset (m) at full intensity, and decay rate (1/s). */
+  shakeAmplitude: 0.5,
+  shakeDecay: 6,
   /** Pitch limits in radians (negative = looking down from above). */
   minPitch: -1.2,
   maxPitch: 0.75,

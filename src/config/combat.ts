@@ -24,6 +24,9 @@ export const HERO_COMBAT = {
     hitAt: 0.1,
     /** Another press within this window after a punch continues the combo (s). */
     comboWindow: 0.45,
+    /** An enemy just out of reach pulls the punch toward it: within this extra distance (m), at this speed (m/s). */
+    magnetRange: 3.5,
+    magnetSpeed: 9,
   },
 
   heat: {
@@ -43,6 +46,66 @@ export const HERO_COMBAT = {
     touchAssistAngle: 0.2,
     /** Eyes above the hero's feet when the head bone isn't available (m). */
     eyeHeightFallback: 1.75,
+  },
+
+  /** Solar energy: powers dash, breath and the Super Nova. Recharges in the sun. */
+  solar: {
+    capacity: 100,
+    rechargePerSecond: 6,
+    /** Dealing damage charges it too (energy per damage point). */
+    perDamage: 0.08,
+  },
+
+  /** Hold punch past `holdTime` and release for a power punch that sends enemies flying. */
+  powerPunch: {
+    holdTime: 0.35,
+    maxCharge: 1,
+    damage: 70,
+    knockback: 48,
+    range: 3.6,
+    /** Homes onto the nearest enemy within this range (m), dashing to it; the blow lands on arrival. */
+    homingRange: 12,
+    /** The blow lands anyway after this long if the target wasn't reached (s). */
+    homingTimeout: 0.45,
+  },
+
+  dash: {
+    speed: 62,
+    duration: 0.3,
+    cost: 18,
+    cooldown: 0.6,
+    damage: 40,
+    knockback: 36,
+    /** Enemies within this distance of the hero during the dash are hit (m). */
+    hitRadius: 2.6,
+  },
+
+  superBreath: {
+    range: 28,
+    coneHalfAngle: 0.38,
+    /** Continuous push on what's in the cone (m/s²) and a little damage. */
+    push: 55,
+    damagePerSecond: 6,
+    costPerSecond: 14,
+  },
+
+  freezeBreath: {
+    range: 20,
+    coneHalfAngle: 0.32,
+    /** Seconds of freezing added per second in the cone, up to `maxFreeze`. */
+    freezePerSecond: 2.4,
+    maxFreeze: 4,
+    damagePerSecond: 8,
+    costPerSecond: 16,
+  },
+
+  nova: {
+    chargeTime: 1.2,
+    cost: 60,
+    radius: 36,
+    damage: 160,
+    knockback: 52,
+    lift: 16,
   },
 };
 
@@ -72,6 +135,9 @@ export const DRONE = {
   respawn: 45,
   /** Knockback damping (1/s). */
   knockDamping: 3,
+  /** A frozen drone drops at this gravity (m/s²); freezing caps at `maxFreeze` s. */
+  frozenGravity: 20,
+  maxFreeze: 6,
 };
 
 export interface DronePatrol {

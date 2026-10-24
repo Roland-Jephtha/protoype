@@ -53,6 +53,16 @@ export const runtime = {
   /** Knockback for the hero, applied (and cleared) at the next physics step, with its loss of control (s). */
   heroImpulse: new Vector3(),
   heroControlLoss: 0,
+  /** Speed dash requested by combat (velocity m/s), applied at the next physics step. */
+  heroDash: null as { x: number; y: number; z: number } | null,
+  /** True while the hero is dashing. */
+  heroDashing: false,
+  /** Breath blowing this step (from the mouth along the crosshair), for effects. */
+  breath: { kind: 'none' as 'none' | 'wind' | 'freeze', from: new Vector3(), dir: new Vector3(0, 0, -1) },
+  /** Incremented on each Super Nova (the HUD flashes). */
+  novaFlash: 0,
+  /** Camera shake intensity (decays). */
+  cameraShake: 0,
   /** Seconds the hero stays frozen (slowed) by freeze breath. */
   heroFrozen: 0,
   /** The engaged villain nearest the hero (boss bar), and villains beaten since load. */

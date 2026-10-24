@@ -36,6 +36,9 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
   const healthRef = useRef<HTMLDivElement>(null);
   const heatRef = useRef<HTMLDivElement>(null);
   const heatBarRef = useRef<HTMLDivElement>(null);
+  const solarRef = useRef<HTMLDivElement>(null);
+  const flashRef = useRef<HTMLDivElement>(null);
+  const lastNova = useRef(0);
   const crossRef = useRef<HTMLDivElement>(null);
   const hurtRef = useRef<HTMLDivElement>(null);
   const lastHealth = useRef<number>(HERO_COMBAT.maxHealth);
@@ -60,6 +63,18 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
       if (healthRef.current) healthRef.current.style.transform = `scaleX(${c.health / HERO_COMBAT.maxHealth})`;
       if (heatRef.current) heatRef.current.style.transform = `scaleX(${c.heat / HERO_COMBAT.heat.capacity})`;
       heatBarRef.current?.classList.toggle('overheated', c.overheated);
+      if (solarRef.current) solarRef.current.style.transform = `scaleX(${c.solar / HERO_COMBAT.solar.capacity})`;
+      // White flash on a Super Nova.
+      if (flashRef.current && runtime.novaFlash !== lastNova.current) {
+        lastNova.current = runtime.novaFlash;
+        const el = flashRef.current;
+        el.style.transition = 'none';
+        el.style.opacity = '1';
+        requestAnimationFrame(() => {
+          el.style.transition = '';
+          el.style.opacity = '0';
+        });
+      }
       if (crossRef.current) crossRef.current.style.display = runtime.aiming ? '' : 'none';
       // Flash red when hurt; the CSS transition fades it out.
       if (hurtRef.current && c.health < lastHealth.current - 0.5) {
@@ -113,6 +128,7 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
       )}
       <div ref={edgeRef} className="hud-edge" style={{ display: 'none' }} />
       <div ref={hurtRef} className="hud-hurt" />
+      <div ref={flashRef} className="hud-flash" />
       <div ref={frozenRef} className="hud-frozen" />
       <div ref={bossRef} className="hud-boss" style={{ display: 'none' }}>
         <span ref={bossNameRef} className="hud-boss-name" />
@@ -127,6 +143,9 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
         </div>
         <div ref={heatBarRef} className="hud-bar hud-heat" aria-label="Heat vision">
           <div ref={heatRef} className="hud-bar-fill" />
+        </div>
+        <div className="hud-bar hud-solar" aria-label="Solar energy">
+          <div ref={solarRef} className="hud-bar-fill" />
         </div>
       </div>
       <div className={`hud-speed ${touchUi ? 'touch' : ''}`}>
