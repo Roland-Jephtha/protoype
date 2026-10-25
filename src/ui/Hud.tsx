@@ -48,6 +48,7 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
   const bossNameRef = useRef<HTMLSpanElement>(null);
   const bossFillRef = useRef<HTMLDivElement>(null);
   const frozenRef = useRef<HTMLDivElement>(null);
+  const finisherRef = useRef<HTMLDivElement>(null);
   const pointerLocked = useApp((s) => s.pointerLocked);
   const regionId = useApp((s) => s.regionId);
   const mode = useApp((s) => s.mode);
@@ -100,6 +101,8 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
         bossNameRef.current.textContent = boss.name;
         bossFillRef.current.style.transform = `scaleX(${boss.health / boss.max})`;
       }
+      bossRef.current?.classList.toggle('enraged', boss?.phase === 2);
+      finisherRef.current?.classList.toggle('on', !!runtime.finisher);
       if (frozenRef.current) frozenRef.current.style.opacity = runtime.heroFrozen > 0 ? '1' : '0';
 
       // Nearest edge: point the way to the neighbouring region, or warn it's the boundary.
@@ -137,10 +140,12 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
       <div ref={flashRef} className="hud-flash" />
       <div ref={frozenRef} className="hud-frozen" />
       <div ref={speedTintRef} className="hud-speedforce" />
+      <div ref={finisherRef} className="hud-finisher" />
       <div ref={bossRef} className="hud-boss" style={{ display: 'none' }}>
         <span ref={bossNameRef} className="hud-boss-name" />
         <div className="hud-bar hud-boss-bar">
           <div ref={bossFillRef} className="hud-bar-fill" />
+          <div className="hud-boss-phase" />
         </div>
       </div>
       <div ref={crossRef} className="hud-crosshair" style={{ display: 'none' }} />

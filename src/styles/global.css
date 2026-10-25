@@ -764,8 +764,64 @@ input[type='range']::-moz-range-thumb {
   height: 8px;
 }
 
+.hud-boss-bar {
+  position: relative;
+}
+
 .hud-boss-bar .hud-bar-fill {
   background: linear-gradient(90deg, #7a1020, #ff3a30);
+}
+
+/* Phase-2 marker at half health; the bar burns orange once the boss is enraged. */
+.hud-boss-phase {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.hud-boss.enraged .hud-bar-fill {
+  background: linear-gradient(90deg, #a83a00, #ffb020);
+  animation: overheat-blink 0.9s steps(2) infinite;
+}
+
+.hud-boss.enraged .hud-boss-phase {
+  display: none;
+}
+
+/* Slow-motion finisher: letterbox bars slide in. */
+.hud-finisher {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hud-finisher::before,
+.hud-finisher::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 11vh;
+  background: #000;
+  transition: transform 0.35s ease-out;
+}
+
+.hud-finisher::before {
+  top: 0;
+  transform: translateY(-100%);
+}
+
+.hud-finisher::after {
+  bottom: 0;
+  transform: translateY(100%);
+}
+
+.hud-finisher.on::before,
+.hud-finisher.on::after {
+  transform: none;
 }
 
 .hud-speed-state {

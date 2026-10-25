@@ -35,7 +35,8 @@ export function MissionDirector({ regionId, ground }: { regionId: RegionId; grou
     const stepDt = tick.current;
     tick.current = 0;
     const app = useApp.getState();
-    if (app.mode !== 'story' || app.missionPhase !== 'active' || !app.mission || app.paused || !app.regionReady) return;
+    // Waits out a boss's slow-motion finisher, so "Mission complete" doesn't cut it off.
+    if (app.mode !== 'story' || app.missionPhase !== 'active' || !app.mission || app.paused || !app.regionReady || runtime.finisher) return;
     const d = MISSIONS[app.mission.missionId];
     const p = runtime.playerPosition;
     const ctx = { region: regionId, x: p.x, z: p.z, y: heroFeetY() };

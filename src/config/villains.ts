@@ -1,7 +1,7 @@
 import type { RegionId } from './regions';
 
 export type VillainId = 'doomsday' | 'zod' | 'darkseid' | 'clone';
-export type VillainPower = 'punch' | 'charge' | 'slam' | 'heatBeam' | 'omegaBeams' | 'freezeBreath';
+export type VillainPower = 'punch' | 'charge' | 'slam' | 'heatBeam' | 'omegaBeams' | 'freezeBreath' | 'flurry';
 
 export interface VillainDef {
   id: VillainId;
@@ -32,6 +32,8 @@ export interface VillainDef {
   powers: VillainPower[];
   /** Notices the hero within this range (m). */
   aggroRange: number;
+  /** Phase 2 (below half health): extra moves and the line it roars. */
+  phase2: { powers: VillainPower[]; line: string };
 }
 
 const base = import.meta.env.BASE_URL ?? '/';
@@ -55,6 +57,7 @@ export const VILLAINS: Record<VillainId, VillainDef> = {
     toughness: 0.7,
     powers: ['punch', 'charge', 'slam'],
     aggroRange: 90,
+    phase2: { powers: ['flurry'], line: 'It adapts. It gets stronger.' },
   },
   zod: {
     id: 'zod',
@@ -74,6 +77,7 @@ export const VILLAINS: Record<VillainId, VillainDef> = {
     toughness: 1,
     powers: ['punch', 'charge', 'heatBeam'],
     aggroRange: 110,
+    phase2: { powers: ['flurry', 'slam'], line: 'Kneel before Zod!' },
   },
   darkseid: {
     id: 'darkseid',
@@ -93,6 +97,7 @@ export const VILLAINS: Record<VillainId, VillainDef> = {
     toughness: 0.6,
     powers: ['punch', 'omegaBeams', 'slam'],
     aggroRange: 120,
+    phase2: { powers: ['charge', 'flurry'], line: 'I am the Omega.' },
   },
   clone: {
     id: 'clone',
@@ -113,6 +118,7 @@ export const VILLAINS: Record<VillainId, VillainDef> = {
     toughness: 1,
     powers: ['punch', 'charge', 'heatBeam', 'freezeBreath'],
     aggroRange: 110,
+    phase2: { powers: ['flurry'], line: 'I was made to replace you.' },
   },
 };
 
@@ -166,4 +172,34 @@ export const VILLAIN_AI = {
   defeatedLie: 15,
   respawn: 90,
   gravity: 22,
+  /** A flurry: this many punches in quick succession, chasing the hero. */
+  flurryPunches: 4,
+  flurryRange: 14,
+  flurryCooldown: 6,
+  /** Light hits make a villain flinch: its punch is cancelled and it can't act (s). */
+  flinchTime: 0.3,
+};
+
+/** Boss fights: a second phase at half health and a slow-motion finishing blow. */
+export const BOSS_FIGHT = {
+  /** Phase 2 starts at this fraction of health; a hit can't skip past it. */
+  phaseAt: 0.5,
+  /** Roar (invulnerable) before phase 2; the shockwave goes off halfway through (s, m, m/s, damage). */
+  enrageTime: 1.6,
+  enrageRadius: 16,
+  enrageKnock: 30,
+  enrageDamage: 8,
+  /** Phase 2: faster, shorter cooldowns and telegraphs, Omega beams doubled, half the flinch. */
+  speed: 1.3,
+  cooldown: 0.6,
+  windup: 0.7,
+  omegaMultiplier: 2,
+  flinch: 0.5,
+  /** The defeating blow plays in slow motion for this long (real s) at this world time scale. */
+  finisherTime: 2.4,
+  finisherScale: 0.12,
+  /** Finisher camera: distance from the boss, height and orbit speed (m, m, rad/s). */
+  finisherDistance: 9,
+  finisherHeight: 2.5,
+  finisherOrbit: 0.6,
 };

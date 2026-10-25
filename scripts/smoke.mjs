@@ -928,11 +928,21 @@ async function storyRun(browser) {
   const bossObjective = await page.locator('.hud-objective-text').textContent();
   const bossState = await page.evaluate(() => window.__krypton.runtime.boss);
   check('mission: Doomsday mission starts with the boss engaged', (bossObjective ?? '').includes('Defeat Doomsday') && bossState?.name === 'Doomsday', `${bossObjective} / boss=${bossState?.name}`);
-  await page.evaluate(() => {
-    for (const t of window.__krypton.targets) if (t.alive && t.radius > 0.7) t.damage(99999, { x: 0, y: 10, z: 20 });
-  });
+  const smash = () =>
+    page.evaluate(() => {
+      for (const t of window.__krypton.targets) if (t.alive && t.radius > 0.7 && t.kind !== 'vehicle') t.damage(99999, { x: 0, y: 10, z: 20 });
+    });
+  await smash();
+  await sleep(300);
+  const enraged = await page.evaluate(() => window.__krypton.runtime.boss);
+  check('boss: a huge blow only drops Doomsday to half — he roars into phase 2', enraged?.phase === 2 && Math.abs(enraged.health / enraged.max - 0.5) < 0.05, enraged ? `phase ${enraged.phase} ${enraged.health.toFixed(0)}/${enraged.max}` : 'no boss');
+  await sleep(2500);
+  await smash();
+  await sleep(200);
+  const fin = await page.evaluate(() => ({ on: !!window.__krypton.runtime.finisher, scale: window.__krypton.runtime.timeScale, phase: window.__krypton.app.getState().missionPhase }));
+  check('boss: the defeating blow plays in slow motion before the mission ends', fin.on && fin.scale < 0.5 && fin.phase === 'active', `finisher=${fin.on} scale=${fin.scale} phase=${fin.phase}`);
   const won = page.getByRole('dialog', { name: 'Mission complete' });
-  await won.waitFor({ timeout: 8000 }).catch(() => {});
+  await won.waitFor({ timeout: 12000 }).catch(() => {});
   check('mission: defeating Doomsday completes the mission and offers the next one', (await won.isVisible()) && (await page.getByRole('button', { name: 'Next mission' }).isVisible()));
 
   // Act I city missions.

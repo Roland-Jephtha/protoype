@@ -1,7 +1,7 @@
-import { VILLAIN_AI, type VillainDef, type VillainPower } from '../../config/villains';
+import { BOSS_FIGHT, VILLAIN_AI, type VillainDef, type VillainPower } from '../../config/villains';
 import type { Vec3 } from '../combat/targets';
 
-export type VillainMode = 'dormant' | 'engage' | 'windup' | 'charge' | 'leap' | 'beam' | 'breath' | 'launched' | 'downed' | 'defeated' | 'gone';
+export type VillainMode = 'dormant' | 'engage' | 'enrage' | 'windup' | 'charge' | 'leap' | 'beam' | 'breath' | 'launched' | 'downed' | 'defeated' | 'gone';
 
 export interface Villain {
   def: VillainDef;
@@ -36,6 +36,14 @@ export interface Villain {
   tumble: number;
   /** Seconds left frozen in ice (can't act; fliers drop). */
   frozen: number;
+  /** Boss phase: 2 below half health (faster, more moves). */
+  phase: 1 | 2;
+  /** The phase-2 roar's shockwave has gone off. */
+  roared: boolean;
+  /** Seconds left flinching from a hit. */
+  flinch: number;
+  /** Punches left in a flurry. */
+  flurry: number;
 }
 
 export type VillainEvent =
@@ -45,6 +53,8 @@ export type VillainEvent =
   | { type: 'shockwave'; x: number; y: number; z: number; radius: number }
   | { type: 'engaged' }
   | { type: 'launched' }
+  /** Dropped to half health: roars into phase 2. */
+  | { type: 'enraged' }
   | { type: 'defeated' };
 
 export interface VillainContext {
@@ -57,7 +67,7 @@ export interface VillainContext {
 
 const AI = VILLAIN_AI;
 const HERO_CHEST = 1.2;
-const POWERS: VillainPower[] = ['punch', 'charge', 'slam', 'heatBeam', 'omegaBeams', 'freezeBreath'];
+const POWERS: VillainPower[] = ['punch', 'charge', 'slam', 'heatBeam', 'omegaBeams', 'freezeBreath', 'flurry'];
 
 export function createVillain(def: VillainDef, x: number, z: number, groundY: (x: number, z: number) => number): Villain {
   return {
@@ -84,8 +94,15 @@ export function createVillain(def: VillainDef, x: number, z: number, groundY: (x
     sinceHit: 99,
     tumble: 0,
     frozen: 0,
+    phase: 1,
+    roared: false,
+    flinch: 0,
+    flurry: 0,
   };
 }
+
+/** Phase-2 scaling: 1 in phase 1. */
+const phaseScale = (v: Villain, k: number) => (v.phase === 2 ? k : 1);
 
 /** Centre of the villain's body (hit sphere centre). */
 export function villainCentre(v: Villain, out: Vec3) {
@@ -130,7 +147,7 @@ export function freezeVillain(v: Villain, seconds: number, max: number): Villain
 
 /** Applies a hit from the hero. Returns events (launched / defeated). */
 export function damageVillain(v: Villain, amount: number, knock: Vec3): VillainEvent[] {
-  if (!alive(v)) return [];
+  if (!alive(v) || v.mode === 'enrage') return [];
   const events: VillainEvent[] = [];
   if (v.mode === 'dormant') {
     v.mode = 'engage';
@@ -139,7 +156,24 @@ export function damageVillain(v: Villain, amount: number, knock: Vec3): VillainE
   v.health -= amount * v.def.toughness;
   v.sinceHit = 0;
   const strength = Math.hypot(knock.x, knock.y, knock.z);
-  if (v.health <= 0) {
+  const threshold = v.def.health * BOSS_FIGHT.phaseAt;
+  if (v.phase === 1 && v.health <= threshold) {
+    // Half health: roar into phase 2 (no single blow skips it).
+    v.health = threshold;
+    v.phase = 2;
+    v.mode = 'enrage';
+    v.timer = BOSS_FIGHT.enrageTime;
+    v.roared = false;
+    v.vx = 0;
+    v.vz = 0;
+    v.vy = v.flying ? 0 : v.vy;
+    v.punch = null;
+    v.pending = null;
+    v.flurry = 0;
+    v.frozen = 0;
+    v.tumble = 0;
+    events.push({ type: 'enraged' });
+  } else if (v.health <= 0) {
     v.health = 0;
     v.mode = 'defeated';
     v.timer = AI.defeatedLie;
@@ -161,10 +195,14 @@ export function damageVillain(v: Villain, amount: number, knock: Vec3): VillainE
     v.pending = null;
     events.push({ type: 'launched' });
   } else {
-    // Staggered.
+    // Staggered: flinches (cancelling its punch) unless mid special move.
     v.vx += knock.x * 0.5;
     v.vz += knock.z * 0.5;
     if (v.flying) v.vy += knock.y * 0.5;
+    if (v.mode === 'engage') {
+      v.flinch = VILLAIN_AI.flinchTime * phaseScale(v, BOSS_FIGHT.flinch);
+      v.punch = null;
+    }
   }
   return events;
 }
@@ -172,7 +210,7 @@ export function damageVillain(v: Villain, amount: number, knock: Vec3): VillainE
 function startSpecial(v: Villain, power: VillainPower) {
   v.mode = 'windup';
   v.pending = power;
-  v.timer = AI.windup;
+  v.timer = AI.windup * phaseScale(v, BOSS_FIGHT.windup);
   v.vx *= 0.3;
   v.vz *= 0.3;
 }
@@ -191,6 +229,7 @@ export function stepVillain(v: Villain, dt: number, ctx: VillainContext): Villai
   const def = v.def;
   const ground = ctx.groundY(v.x, v.z);
   v.sinceHit += dt;
+  v.flinch = Math.max(0, v.flinch - dt);
   for (const p of POWERS) v.cooldowns[p] = Math.max(0, v.cooldowns[p] - dt);
   v.specialGap = Math.max(0, v.specialGap - dt);
 
@@ -283,6 +322,26 @@ export function stepVillain(v: Villain, dt: number, ctx: VillainContext): Villai
     return events;
   }
 
+  // Phase-2 roar: plants its feet; halfway through, a shockwave throws the hero back.
+  if (v.mode === 'enrage') {
+    v.timer -= dt;
+    turnToward(v, ctx.hero.x, ctx.hero.z, 4, dt);
+    if (!v.flying) v.y = ground;
+    if (!v.roared && v.timer <= BOSS_FIGHT.enrageTime * 0.5) {
+      v.roared = true;
+      events.push({ type: 'shockwave', x: v.x, y: v.y, z: v.z, radius: BOSS_FIGHT.enrageRadius });
+      if (ctx.heroActive && heroDist < BOSS_FIGHT.enrageRadius) {
+        const len = heroFlat || 1;
+        events.push({ type: 'hitHero', amount: BOSS_FIGHT.enrageDamage, knock: { x: (hx / len) * BOSS_FIGHT.enrageKnock, y: 9, z: (hz / len) * BOSS_FIGHT.enrageKnock }, controlLoss: 0.7 });
+      }
+    }
+    if (v.timer <= 0) {
+      v.mode = 'engage';
+      v.specialGap = 0.4;
+    }
+    return events;
+  }
+
   if (v.mode === 'downed') {
     v.timer -= dt;
     v.y = ground;
@@ -334,7 +393,14 @@ export function stepVillain(v: Villain, dt: number, ctx: VillainContext): Villai
         events.push({ type: 'hitHero', amount: AI.punchDamage, knock: { x: (hx / len) * AI.punchKnock, y: 4, z: (hz / len) * AI.punchKnock }, controlLoss: 0.45 });
       }
     }
-    if (v.punch.t >= 0.4) v.punch = null;
+    if (v.punch.t >= 0.4) {
+      v.punch = null;
+      // A flurry throws the next punch straight away, alternating fists.
+      if (v.flurry > 0 && v.mode === 'engage' && v.flinch <= 0) {
+        v.flurry--;
+        v.punch = { side: v.flurry % 2 ? 'left' : 'right', t: 0.12, hit: false };
+      }
+    }
   }
 
   if (v.mode === 'windup') {
@@ -344,8 +410,9 @@ export function stepVillain(v: Villain, dt: number, ctx: VillainContext): Villai
     if (v.timer <= 0) {
       const p = v.pending;
       v.pending = null;
-      v.cooldowns[p ?? 'punch'] = p === 'charge' ? AI.chargeCooldown : p === 'slam' ? AI.slamCooldown : p === 'heatBeam' ? AI.beamCooldown : p === 'omegaBeams' ? AI.omegaCooldown : AI.freezeCooldown;
-      v.specialGap = 1.5;
+      const cd = p === 'charge' ? AI.chargeCooldown : p === 'slam' ? AI.slamCooldown : p === 'heatBeam' ? AI.beamCooldown : p === 'omegaBeams' ? AI.omegaCooldown : p === 'flurry' ? AI.flurryCooldown : AI.freezeCooldown;
+      v.cooldowns[p ?? 'punch'] = cd * phaseScale(v, BOSS_FIGHT.cooldown);
+      v.specialGap = 1.5 * phaseScale(v, BOSS_FIGHT.cooldown);
       if (p === 'charge') {
         const tx = hx;
         const ty = def.canFly ? hy : 0;
@@ -364,7 +431,10 @@ export function stepVillain(v: Villain, dt: number, ctx: VillainContext): Villai
         v.timer = 1.4;
         v.breathHit = false;
       } else if (p === 'omegaBeams') {
-        events.push({ type: 'omega', from: { x: v.x, y: v.y + def.heightMeters * 0.9, z: v.z }, count: AI.omegaCount });
+        events.push({ type: 'omega', from: { x: v.x, y: v.y + def.heightMeters * 0.9, z: v.z }, count: AI.omegaCount * phaseScale(v, BOSS_FIGHT.omegaMultiplier) });
+        v.mode = 'engage';
+      } else if (p === 'flurry') {
+        v.flurry = AI.flurryPunches;
         v.mode = 'engage';
       } else {
         v.mode = 'engage';
@@ -416,21 +486,32 @@ export function stepVillain(v: Villain, dt: number, ctx: VillainContext): Villai
     // --- engage: pick a move, close in --------------------------------------------------
     turnToward(v, ctx.hero.x, ctx.hero.z, 5, dt);
     const reach = AI.punchRange + def.radius;
-    if (!v.punch && heroDist < reach && v.cooldowns.punch <= 0) {
+    const fast = phaseScale(v, BOSS_FIGHT.speed);
+    if (v.flinch > 0) {
+      // Reeling from a hit.
+    } else if (v.flurry > 0 && !v.punch && heroDist < reach) {
+      v.flurry--;
+      v.punch = { side: v.flurry % 2 ? 'left' : 'right', t: 0, hit: false };
+    } else if (!v.punch && heroDist < reach && v.cooldowns.punch <= 0) {
       v.punch = { side: ctx.rand() < 0.5 ? 'left' : 'right', t: 0, hit: false };
-      v.cooldowns.punch = AI.punchCooldown;
-    } else if (v.specialGap <= 0) {
+      v.cooldowns.punch = AI.punchCooldown * phaseScale(v, BOSS_FIGHT.cooldown);
+    } else if (v.specialGap <= 0 && v.flurry <= 0) {
       const options: VillainPower[] = [];
-      const has = (p: VillainPower) => def.powers.includes(p) && v.cooldowns[p] <= 0;
+      const has = (p: VillainPower) => (def.powers.includes(p) || (v.phase === 2 && def.phase2.powers.includes(p))) && v.cooldowns[p] <= 0;
       if (has('charge') && heroDist > 8 && heroDist < AI.chargeRange) options.push('charge');
       if (has('slam') && !def.canFly && (heroFlat < 30 || (heroAboveGround > 4 && heroFlat < 45))) options.push('slam');
       if (has('heatBeam') && heroDist > 6 && heroDist < AI.beamRange) options.push('heatBeam');
       if (has('omegaBeams') && heroDist < 90) options.push('omegaBeams');
       if (has('freezeBreath') && heroDist < AI.freezeRange) options.push('freezeBreath');
+      if (has('flurry') && heroDist < AI.flurryRange) options.push('flurry');
       if (options.length) startSpecial(v, options[Math.floor(ctx.rand() * options.length)]);
     }
 
-    if (v.mode === 'engage') {
+    if (v.mode === 'engage' && v.flinch > 0) {
+      v.vx *= 0.85;
+      v.vz *= 0.85;
+      if (v.flying) v.vy *= 0.85;
+    } else if (v.mode === 'engage') {
       if (def.canFly) {
         // Fly at the hero's height, holding just outside punching distance.
         v.flying = heroAboveGround > 1.5 || v.flying;
@@ -438,9 +519,9 @@ export function stepVillain(v: Villain, dt: number, ctx: VillainContext): Villai
         const tx = ctx.hero.x - (hx / (heroFlat || 1)) * keep;
         const tz = ctx.hero.z - (hz / (heroFlat || 1)) * keep;
         const ty = v.flying ? Math.max(ctx.hero.y + 0.2, ctx.groundY(tx, tz)) : ctx.groundY(tx, tz);
-        moveToward(v, tx, ty, tz, heroDist > 15 ? def.flySpeed : def.runSpeed, dt, v.flying);
+        moveToward(v, tx, ty, tz, (heroDist > 15 ? def.flySpeed : v.flurry > 0 ? def.runSpeed * 1.5 : def.runSpeed) * fast, dt, v.flying);
       } else {
-        const speed = heroFlat > 12 ? def.runSpeed : heroFlat > reach ? def.walkSpeed * 1.5 : 0;
+        const speed = (heroFlat > 12 || (v.flurry > 0 && heroFlat > reach) ? def.runSpeed : heroFlat > reach ? def.walkSpeed * 1.5 : 0) * fast;
         if (speed > 0) moveToward(v, ctx.hero.x, 0, ctx.hero.z, speed, dt, false);
         else {
           v.vx *= 0.7;

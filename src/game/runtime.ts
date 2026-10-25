@@ -92,7 +92,11 @@ export const runtime = {
   /** Seconds the hero stays frozen (slowed) by freeze breath. */
   heroFrozen: 0,
   /** The engaged villain nearest the hero (boss bar), and villains beaten since load. */
-  boss: null as { name: string; health: number; max: number } | null,
+  boss: null as { name: string; health: number; max: number; phase: 1 | 2 } | null,
+  /** Slow-motion finishing blow on a boss: real seconds left and the boss's centre (followed by the camera). */
+  finisher: null as { time: number; target: { x: number; y: number; z: number } } | null,
+  /** Bumped when a boss roars into phase 2 (audio / HUD). */
+  bossEnraged: 0,
   villainsDefeated: 0,
   /** Drones alive in the region and destroyed since load (smoke test, HUD). */
   dronesAlive: 0,

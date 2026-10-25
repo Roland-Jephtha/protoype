@@ -4,6 +4,7 @@ import { Physics } from '@react-three/rapier';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { DirectionalLight, Object3D } from 'three';
 import { HIT_STOP, SPEED_FORCE } from '../config/combat';
+import { BOSS_FIGHT } from '../config/villains';
 import { CAMERA, GRAPHICS_PRESETS, PHYSICS } from '../config/gameConfig';
 import { OUTDOOR_DRAW_SCALE, REGIONS, type RegionLook } from '../config/regions';
 import { useApp } from '../state/appStore';
@@ -65,9 +66,12 @@ function Lighting({ look, shadows, mapSize }: { look: RegionLook; shadows: boole
 /** Sets the world time scale each frame: Speed Force slow-motion and hit-stop. Runs before everything else. */
 function TimeControl() {
   useFrame((_, dt) => {
-    runtime.hitStop = Math.max(0, runtime.hitStop - Math.min(dt, 0.05));
+    const step = Math.min(dt, 0.05);
+    runtime.hitStop = Math.max(0, runtime.hitStop - step);
+    const f = runtime.finisher;
+    if (f && !useApp.getState().paused && (f.time -= step) <= 0) runtime.finisher = null;
     runtime.speedForce = runtime.combat.speedForce;
-    runtime.timeScale = runtime.hitStop > 0 ? HIT_STOP.scale : runtime.speedForce ? SPEED_FORCE.worldScale : 1;
+    runtime.timeScale = runtime.hitStop > 0 ? HIT_STOP.scale : runtime.finisher ? BOSS_FIGHT.finisherScale : runtime.speedForce ? SPEED_FORCE.worldScale : 1;
   }, -60);
   return null;
 }

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { AdditiveBlending, CapsuleGeometry, ConeGeometry, MeshStandardMaterial, CylinderGeometry, DoubleSide, IcosahedronGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Quaternion, RingGeometry, Vector3 } from 'three';
 import { HERO_COMBAT } from '../../config/combat';
 import type { RegionId } from '../../config/regions';
-import { VILLAIN_AI, VILLAIN_LAIRS, VILLAINS } from '../../config/villains';
+import { BOSS_FIGHT, VILLAIN_AI, VILLAIN_LAIRS, VILLAINS } from '../../config/villains';
 import { MISSIONS } from '../../missions/missions';
 import { useApp } from '../../state/appStore';
 import { heroFeetY, hitHero } from '../combat/heroActions';
@@ -16,6 +16,7 @@ import { VillainModel, type VillainAnim, type VillainModelHandle } from './Villa
 import { createVillain, damageVillain, freezeVillain, spawnOmega, stepOmega, stepVillain, villainCentre, type OmegaBolt, type Villain, type VillainEvent } from './villainBrain';
 
 const MAX_OMEGA = 24;
+const tmpCam = new Vector3();
 const MAX_WAVES = 4;
 const WAVE_TIME = 0.6;
 
@@ -46,6 +47,7 @@ class VillainWorld {
   }
 
   private handle(v: Villain, events: VillainEvent[]) {
+    const target = this.hitTargets[this.villains.indexOf(v)];
     for (const e of events) {
       if (e.type === 'hitHero') hitHero(e.amount, e.knock, e.controlLoss);
       else if (e.type === 'freezeHero') runtime.heroFrozen = Math.max(runtime.heroFrozen, e.seconds);
@@ -54,7 +56,13 @@ class VillainWorld {
         this.waves.push({ ...e, born: this.clock });
         if (this.waves.length > MAX_WAVES) this.waves.shift();
       } else if (e.type === 'engaged') useApp.getState().showToast(`${v.def.name} — ${v.def.title}`);
-      else if (e.type === 'defeated') {
+      else if (e.type === 'enraged') {
+        runtime.bossEnraged++;
+        runtime.cameraShake = Math.max(runtime.cameraShake, 0.8);
+        useApp.getState().showToast(`${v.def.name}: “${v.def.phase2.line}”`);
+      } else if (e.type === 'defeated') {
+        // The finishing blow plays in slow motion, the camera circling the boss.
+        if (target) runtime.finisher = { time: BOSS_FIGHT.finisherTime, target: target.position };
         runtime.villainsDefeated++;
         runtime.defeatedVillains.push(v.def.id);
         useApp.getState().showToast(`${v.def.name} is down!`);
@@ -80,7 +88,7 @@ class VillainWorld {
       }
     });
     const b = boss as Villain | null;
-    runtime.boss = b ? { name: b.def.name, health: b.health, max: b.def.health } : null;
+    runtime.boss = b ? { name: b.def.name, health: b.health, max: b.def.health, phase: b.phase } : null;
     const hits = stepOmega(this.omega, dt, hero, heroActive, this.ground);
     for (let i = 0; i < hits; i++) hitHero(VILLAIN_AI.omegaDamage, { x: 0, y: 3, z: 0 }, 0.3);
   }
@@ -95,10 +103,34 @@ export function Villains({ regionId, ground }: { regionId: RegionId; ground: (x:
     return () => {
       for (const t of world.hitTargets) targets.delete(t);
       runtime.boss = null;
+      runtime.finisher = null;
     };
   }, [world]);
 
   useBeforePhysicsStep((w) => world.step(w.timestep * runtime.timeScale));
+
+  // Finisher camera: circles the beaten boss while the world crawls (runs after the gameplay camera).
+  const orbit = useRef({ angle: 0, active: false, pos: new Vector3() });
+  useFrame(({ camera }, dt) => {
+    const f = runtime.finisher;
+    const o = orbit.current;
+    if (!f) {
+      o.active = false;
+      return;
+    }
+    const F = BOSS_FIGHT;
+    if (!o.active) {
+      o.active = true;
+      // Start from the gameplay camera's side of the boss.
+      o.angle = Math.atan2(camera.position.x - f.target.x, camera.position.z - f.target.z);
+      o.pos.copy(camera.position);
+    }
+    o.angle += F.finisherOrbit * Math.min(dt, 0.05);
+    const want = tmpCam.set(f.target.x + Math.sin(o.angle) * F.finisherDistance, f.target.y + F.finisherHeight, f.target.z + Math.cos(o.angle) * F.finisherDistance);
+    o.pos.lerp(want, Math.min(1, 6 * Math.min(dt, 0.05)));
+    camera.position.copy(o.pos);
+    camera.lookAt(f.target.x, f.target.y, f.target.z);
+  }, -29);
 
   return (
     <LifeBoundary>
@@ -148,13 +180,14 @@ function VillainActor({ v }: { v: Villain }) {
             : -v.tumble
           : v.mode === 'downed'
             ? (-Math.PI / 2) * Math.min(1, v.timer / VILLAIN_AI.getUpTime)
-            : 0;
+            : // Flinch: rocked back by a hit.
+              (-0.35 * v.flinch) / VILLAIN_AI.flinchTime;
     r.rotation.set(tilt, v.heading, 0, 'YXZ');
     const speed = Math.hypot(v.vx, v.vz);
     let anim: VillainAnim = 'idle';
     let rate = 1;
     if (v.mode === 'launched' || v.mode === 'defeated' || v.mode === 'leap' || v.mode === 'downed') anim = 'fall';
-    else if (v.mode === 'windup') anim = 'taunt';
+    else if (v.mode === 'windup' || v.mode === 'enrage') anim = 'taunt';
     else if (v.flying || (v.def.canFly && v.mode === 'charge')) anim = speed > 6 || v.mode === 'charge' ? 'fly' : 'idle';
     else if (v.mode === 'charge') {
       anim = 'run';

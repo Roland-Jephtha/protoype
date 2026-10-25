@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { VILLAIN_AI, VILLAINS } from '../src/config/villains';
+import { BOSS_FIGHT, VILLAIN_AI, VILLAINS } from '../src/config/villains';
 import { mulberry32 } from '../src/game/world/cityLayout';
 import { createVillain, damageVillain, spawnOmega, stepOmega, stepVillain, type Villain, type VillainContext, type VillainEvent } from '../src/game/villains/villainBrain';
 
@@ -55,6 +55,8 @@ describe('villain brain', () => {
 
   it('is defeated at zero health and returns later at full strength', () => {
     const v = createVillain(VILLAINS.zod, 0, 0, flat);
+    damageVillain(v, 99999, { x: 0, y: 0, z: 10 }); // phase 2 first
+    run(v, BOSS_FIGHT.enrageTime + 0.1, ctxAt(500, 0));
     const ev = damageVillain(v, 99999, { x: 0, y: 0, z: 10 });
     expect(ev.some((e) => e.type === 'defeated')).toBe(true);
     run(v, VILLAIN_AI.defeatedLie + 1, ctxAt(500, 0));
@@ -102,5 +104,43 @@ describe('frozen villains', () => {
     const events = run(v, 3, ctxAt(1, 0, 0));
     expect(events.filter((e) => e.type === 'hitHero')).toHaveLength(0);
     expect(v.y).toBeLessThan(0.1);
+  });
+});
+
+describe('boss fights', () => {
+  it('no blow skips phase 2: at half health the boss roars (invulnerable), its shockwave throws the hero back', () => {
+    const v = createVillain(VILLAINS.doomsday, 0, 0, flat);
+    const ev = damageVillain(v, 99999, { x: 0, y: 0, z: 10 });
+    expect(ev.some((e) => e.type === 'enraged')).toBe(true);
+    expect(v.health).toBe(VILLAINS.doomsday.health * BOSS_FIGHT.phaseAt);
+    expect(v.phase).toBe(2);
+    expect(damageVillain(v, 500, { x: 0, y: 0, z: 1 })).toHaveLength(0);
+    expect(v.health).toBe(VILLAINS.doomsday.health * BOSS_FIGHT.phaseAt);
+    const roar = run(v, BOSS_FIGHT.enrageTime + 0.05, ctxAt(6, 0));
+    expect(roar.some((e) => e.type === 'shockwave')).toBe(true);
+    const hit = roar.find((e) => e.type === 'hitHero');
+    expect(hit && hit.type === 'hitHero' && hit.knock && hit.knock.x).toBeGreaterThan(BOSS_FIGHT.enrageKnock * 0.9);
+    expect(v.mode).not.toBe('enrage');
+  });
+
+  it('phase 2 adds moves: an enraged Doomsday throws punch flurries', () => {
+    const v = createVillain(VILLAINS.doomsday, 0, 0, flat);
+    damageVillain(v, 99999, { x: 0, y: 0, z: 0 });
+    const hits = run(v, 20, ctxAt(4, 0)).filter((e) => e.type === 'hitHero' && e.amount === VILLAIN_AI.punchDamage).length;
+    const calm = createVillain(VILLAINS.doomsday, 0, 0, flat);
+    calm.mode = 'engage';
+    const calmHits = run(calm, 20, ctxAt(4, 0)).filter((e) => e.type === 'hitHero' && e.amount === VILLAIN_AI.punchDamage).length;
+    expect(hits).toBeGreaterThan(calmHits);
+  });
+
+  it('a light hit makes the villain flinch, cancelling its punch', () => {
+    const v = createVillain(VILLAINS.zod, 0, 0, flat);
+    v.mode = 'engage';
+    v.punch = { side: 'left', t: 0.05, hit: false };
+    damageVillain(v, 5, { x: 3, y: 1, z: 0 });
+    expect(v.punch).toBeNull();
+    expect(v.flinch).toBeGreaterThan(0);
+    const events = run(v, VILLAIN_AI.flinchTime * 0.9, ctxAt(1.5, 0));
+    expect(events.filter((e) => e.type === 'hitHero')).toHaveLength(0);
   });
 });
