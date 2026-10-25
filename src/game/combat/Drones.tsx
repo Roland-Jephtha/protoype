@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef } from 'react';
 import { AdditiveBlending, BoxGeometry, Color, CylinderGeometry, Euler, IcosahedronGeometry, InstancedMesh, Matrix4, MeshBasicMaterial, MeshStandardMaterial, Quaternion, SphereGeometry, Vector3 } from 'three';
 import { DRONE, DRONE_PATROLS } from '../../config/combat';
 import type { RegionId } from '../../config/regions';
+import { MISSIONS } from '../../missions/missions';
+import { useApp } from '../../state/appStore';
 import { runtime } from '../runtime';
 import { mulberry32 } from '../world/cityLayout';
 import { merged, part } from '../world/propGeometries';
@@ -51,7 +53,10 @@ export function Drones({ regionId, ground }: { regionId: RegionId; ground: (x: n
   const clock = useRef(0);
   const sim = useMemo(() => {
     const rand = mulberry32(911);
-    const drones: Drone[] = DRONE_PATROLS[regionId].flatMap((p) =>
+    // Story mode: the mission's drones; free roam: the region's patrols.
+    const app = useApp.getState();
+    const patrols = app.mode === 'story' && app.mission ? (MISSIONS[app.mission.missionId].drones ?? []) : DRONE_PATROLS[regionId];
+    const drones: Drone[] = patrols.flatMap((p) =>
       Array.from({ length: p.count }, (_, i) => createDrone({ x: p.x, z: p.z, radius: p.radius }, (i / p.count) * Math.PI * 2, ground)),
     );
     const bolts: Bolt[] = [];

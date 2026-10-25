@@ -160,7 +160,7 @@ export function GameCanvas() {
   const dpr = dprState.quality === quality ? dprState.value : preset.maxDpr;
   const setDpr = (f: (d: number) => number) => setDprState({ quality, value: f(dpr) });
   // The briefing and the mission-complete screen freeze the world like the pause menu.
-  const paused = useApp((s) => s.paused || s.missionPhase === 'briefing' || s.missionPhase === 'complete');
+  const paused = useApp((s) => s.paused || s.missionPhase === 'intro' || s.missionPhase === 'complete');
   const regionId = useApp((s) => s.regionId);
   const travelCount = useApp((s) => s.travelCount);
   const region = REGIONS[regionId];

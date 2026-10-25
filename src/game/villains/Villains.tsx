@@ -5,6 +5,7 @@ import { AdditiveBlending, CapsuleGeometry, ConeGeometry, MeshStandardMaterial, 
 import { HERO_COMBAT } from '../../config/combat';
 import type { RegionId } from '../../config/regions';
 import { VILLAIN_AI, VILLAIN_LAIRS, VILLAINS } from '../../config/villains';
+import { MISSIONS } from '../../missions/missions';
 import { useApp } from '../../state/appStore';
 import { heroFeetY, hitHero } from '../combat/heroActions';
 import { targets, type Target } from '../combat/targets';
@@ -31,7 +32,10 @@ class VillainWorld {
 
   constructor(regionId: RegionId, ground: (x: number, z: number) => number) {
     this.ground = ground;
-    this.villains = VILLAIN_LAIRS[regionId].map((l) => createVillain(VILLAINS[l.id], l.x, l.z, ground));
+    // Story mode: only the current mission's villains; free roam: every lair.
+    const app = useApp.getState();
+    const only = app.mode === 'story' && app.mission ? (MISSIONS[app.mission.missionId].villains ?? []) : null;
+    this.villains = VILLAIN_LAIRS[regionId].filter((l) => !only || only.includes(l.id)).map((l) => createVillain(VILLAINS[l.id], l.x, l.z, ground));
     this.hitTargets = this.villains.map((v) => ({
       position: villainCentre(v, { x: 0, y: 0, z: 0 }),
       radius: v.def.heightMeters * 0.32,
@@ -52,6 +56,7 @@ class VillainWorld {
       } else if (e.type === 'engaged') useApp.getState().showToast(`${v.def.name} — ${v.def.title}`);
       else if (e.type === 'defeated') {
         runtime.villainsDefeated++;
+        runtime.defeatedVillains.push(v.def.id);
         useApp.getState().showToast(`${v.def.name} is down!`);
       }
     }

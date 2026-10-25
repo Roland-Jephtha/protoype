@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Project Krypton emblem (original): a gold diamond crest with a rising star, on a night-blue field. -->
+  <defs>
+    <radialGradient id="sky" cx="50%" cy="38%" r="70%">
+      <stop offset="0" stop-color="#2a4a8f"/>
+      <stop offset="0.55" stop-color="#14254f"/>
+      <stop offset="1" stop-color="#070c1c"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe9a3"/>
+      <stop offset="0.5" stop-color="#f2c14e"/>
+      <stop offset="1" stop-color="#b9821f"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff5a5a"/>
+      <stop offset="1" stop-color="#a3121f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <!-- light rays -->
+  <g opacity="0.18" fill="#9fc6ff">
+    <polygon points="256,256 236,0 276,0"/>
+    <polygon points="256,256 0,170 0,215"/>
+    <polygon points="256,256 512,170 512,215"/>
+    <polygon points="256,256 120,512 165,512"/>
+    <polygon points="256,256 392,512 347,512"/>
+  </g>
+  <!-- crest: gold diamond, red inner diamond, gold star -->
+  <polygon points="256,86 404,236 256,430 108,236" fill="url(#gold)" stroke="#5a3d0a" stroke-width="8" stroke-linejoin="round"/>
+  <polygon points="256,128 364,238 256,382 148,238" fill="url(#red)"/>
+  <polygon points="256,170 275,224 332,224 286,257 303,312 256,279 209,312 226,257 180,224 237,224" fill="url(#gold)" stroke="#5a3d0a" stroke-width="4" stroke-linejoin="round"/>
+</svg>

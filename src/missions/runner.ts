@@ -37,7 +37,7 @@ export function availableInteraction(def: MissionDef, s: MissionState, ctx: Omit
 export function activeTargets(def: MissionDef, s: MissionState, region: string): MissionTarget[] {
   const o = currentObjective(def, s);
   if (!o) return [];
-  if (o.type === 'reach') return o.target.region === region ? [o.target] : [];
+  if (o.type === 'reach' || o.type === 'defeat' || o.type === 'destroy') return o.target.region === region ? [o.target] : [];
   if (o.type === 'interact') return o.targets.filter((t, i) => !s.done[i] && t.region === region);
   return o.hint && o.hint.region === region ? [o.hint] : [];
 }
@@ -51,6 +51,12 @@ export function stepMission(def: MissionDef, s: MissionState, ctx: MissionContex
 
   if (o.type === 'reachRegion') {
     objectiveDone = ctx.region === o.region;
+  } else if (o.type === 'defeat') {
+    objectiveDone = !!ctx.defeated?.includes(o.villain);
+  } else if (o.type === 'destroy') {
+    const total = ctx.dronesDestroyed ?? 0;
+    if (s.baseline === undefined) next = { ...s, baseline: total };
+    else objectiveDone = total - s.baseline >= o.count;
   } else if (o.type === 'reach') {
     objectiveDone = ctx.region === o.target.region && dist(o.target, ctx.x, ctx.z) <= o.radius;
   } else if (ctx.interactPressed) {
@@ -68,16 +74,17 @@ export function stepMission(def: MissionDef, s: MissionState, ctx: MissionContex
     events.push({ type: 'objectiveComplete', objectiveId: o.id });
     const objectiveIndex = next.objectiveIndex + 1;
     const complete = objectiveIndex >= def.objectives.length;
-    next = { ...next, objectiveIndex, complete, done: initialDone(def.objectives[objectiveIndex]) };
+    next = { ...next, objectiveIndex, complete, done: initialDone(def.objectives[objectiveIndex]), baseline: undefined };
     if (complete) events.push({ type: 'missionComplete' });
   }
   return { state: next, events };
 }
 
 /** "Rescue the survivors (1/3)" style progress text. */
-export function objectiveText(def: MissionDef, s: MissionState): string {
+export function objectiveText(def: MissionDef, s: MissionState, progress = 0): string {
   const o = currentObjective(def, s);
   if (!o) return '';
+  if (o.type === 'destroy') return `${o.text} (${Math.min(o.count, Math.max(0, progress - (s.baseline ?? progress)))}/${o.count})`;
   if (o.type !== 'interact' || o.targets.length < 2) return o.text;
   return `${o.text} (${s.done.filter(Boolean).length}/${o.targets.length})`;
 }

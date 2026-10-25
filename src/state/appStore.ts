@@ -1,14 +1,16 @@
 import { create } from 'zustand';
 import type { RegionId, Side } from '../config/regions';
-import { MISSIONS } from '../missions/missions';
+import { CAMPAIGN, MISSIONS } from '../missions/missions';
+import type { MissionDef } from '../missions/types';
+import { runtime } from '../game/runtime';
 import { startMission } from '../missions/runner';
-import { markMissionComplete } from '../missions/storyProgress';
+import { loadCompletedMissions, markMissionComplete } from '../missions/storyProgress';
 import type { MissionState } from '../missions/types';
 import { input } from '../input/InputManager';
 
 export type Screen = 'title' | 'game';
 export type GameMode = 'free' | 'story';
-export type MissionPhase = 'briefing' | 'active' | 'complete';
+export type MissionPhase = 'intro' | 'active' | 'complete';
 export type PauseView = 'main' | 'settings' | 'controls' | 'travel' | 'confirmQuit';
 
 /** How the hero arrives in a region. */
@@ -19,6 +21,18 @@ export interface Arrival {
   flying?: boolean;
   /** Exact arrival point (mission starts, tests); overrides `side`. */
   at?: { x: number; z: number; facing: number };
+}
+
+/** The first campaign mission not completed yet (or the last one once all are done). */
+export function nextMission(): MissionDef {
+  const done = new Set(loadCompletedMissions());
+  return CAMPAIGN.find((m) => !done.has(m.id)) ?? CAMPAIGN[CAMPAIGN.length - 1];
+}
+
+function resetMissionRuntime() {
+  runtime.cinematic.t = 0;
+  runtime.cinematic.active = false;
+  runtime.defeatedVillains.length = 0;
 }
 
 /**
@@ -58,7 +72,10 @@ interface AppState {
   toast: { id: number; text: string } | null;
 
   /** Start from the title screen. Story mode begins at the first incomplete mission's briefing. */
-  startGame: (mode?: GameMode) => void;
+  /** Story mode plays `missionId`, or the next unfinished mission of the campaign. */
+  startGame: (mode?: GameMode, missionId?: string) => void;
+  /** From the mission-complete screen: go straight into another mission. */
+  playMission: (missionId: string) => void;
   beginMission: () => void;
   setMission: (m: MissionState) => void;
   completeMission: () => void;
@@ -103,20 +120,22 @@ export const useApp = create<AppState>((set, get) => ({
   liftPrompt: null,
   toast: null,
 
-  startGame: (mode = 'free') => {
+  startGame: (mode = 'free', missionId) => {
     input.releaseAll();
     if (mode === 'story') {
-      const def = MISSIONS.prologue;
+      const def = missionId ? MISSIONS[missionId] : nextMission();
+      resetMissionRuntime();
       set({
         screen: 'game',
         mode,
         regionId: def.startRegion,
         mission: startMission(def),
-        missionPhase: 'briefing',
+        missionPhase: 'intro',
         paused: false,
         pauseView: 'main',
         regionReady: false,
-        arrival: null,
+        arrival: def.startAt ? { at: def.startAt } : null,
+        travelCount: get().travelCount + 1,
         interactPrompt: null,
         toast: null,
       });
@@ -126,7 +145,8 @@ export const useApp = create<AppState>((set, get) => ({
   },
   beginMission: () => {
     input.releaseAll();
-    set({ missionPhase: 'active' });
+    runtime.cinematic.active = false;
+    if (get().missionPhase === 'intro') set({ missionPhase: 'active' });
   },
   setMission: (mission) => set({ mission }),
   completeMission: () => {
@@ -137,11 +157,15 @@ export const useApp = create<AppState>((set, get) => ({
   },
   restartMission: () => {
     const m = get().mission;
-    const def = m ? MISSIONS[m.missionId] : MISSIONS.prologue;
+    get().playMission(m ? m.missionId : CAMPAIGN[0].id);
+  },
+  playMission: (missionId) => {
+    const def = MISSIONS[missionId];
     input.releaseAll();
-    set({ mission: startMission(def), missionPhase: 'briefing', paused: false, pauseView: 'main', interactPrompt: null, toast: null });
-    if (get().regionId !== def.startRegion) get().travelTo(def.startRegion);
-    else set((s) => ({ respawnToken: s.respawnToken + 1 }));
+    resetMissionRuntime();
+    set({ mode: 'story', mission: startMission(def), missionPhase: 'intro', paused: false, pauseView: 'main', interactPrompt: null, toast: null, pendingRegion: null });
+    // Always reload the start region: villains and drones reset for the mission.
+    get().travelTo(def.startRegion, def.startAt ? { at: def.startAt } : {});
   },
   continueInFreeRoam: () => {
     input.releaseAll();

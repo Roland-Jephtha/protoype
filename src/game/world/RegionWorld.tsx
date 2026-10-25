@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo } from 'react';
 import { REGIONS, type RegionId, type TerrainRegion } from '../../config/regions';
 import { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
 import { MissionDirector } from '../missions/MissionDirector';
+import { CinematicCamera } from '../cinematics/CinematicCamera';
 import { CombatDriver } from '../combat/CombatDriver';
 import { Drones } from '../combat/Drones';
 import { Lifting } from '../combat/Lifting';
@@ -39,6 +40,7 @@ export const RegionWorld = memo(function RegionWorld({ regionId }: { regionId: R
         <Player region={region} half={cityHalf} />
         <ThirdPersonCamera />
         <MissionDirector regionId={regionId} ground={cityGround} />
+        <CinematicCamera regionId={regionId} ground={cityGround} />
         <CombatDriver />
         <Lifting />
       </>
@@ -72,7 +74,12 @@ function TerrainCombat({ regionId }: { regionId: RegionId }) {
 
 function TerrainMissions({ regionId }: { regionId: RegionId }) {
   const { ground } = useTerrain();
-  return <MissionDirector regionId={regionId} ground={ground} />;
+  return (
+    <>
+      <MissionDirector regionId={regionId} ground={ground} />
+      <CinematicCamera regionId={regionId} ground={ground} />
+    </>
+  );
 }
 
 /** Player standing on the terrain (spawn height from the exact surface). */

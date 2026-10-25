@@ -10,7 +10,8 @@ import { useApp } from '../state/appStore';
 import { useSettings } from '../state/settings';
 import { DebugOverlay } from './DebugOverlay';
 import { Hud } from './Hud';
-import { MissionBriefing, MissionComplete } from './MissionScreens';
+import { CinematicOverlay } from './CinematicOverlay';
+import { MissionComplete } from './MissionScreens';
 import { OrientationPrompt } from './OrientationPrompt';
 import { PauseMenu } from './PauseMenu';
 import { TouchControls } from './touch/TouchControls';
@@ -72,9 +73,9 @@ export function GameScreen() {
           <p>{pendingRegion ? `Travelling to ${loadingName}…` : `Loading ${loadingName}…`}</p>
         </div>
       )}
-      {ready && !paused && missionPhase !== 'briefing' && missionPhase !== 'complete' && <Hud touchUi={touchUi} />}
-      {ready && !paused && missionPhase !== 'briefing' && missionPhase !== 'complete' && touchUi && <TouchControls />}
-      {ready && !paused && missionPhase === 'briefing' && <MissionBriefing />}
+      {ready && !paused && missionPhase !== 'intro' && missionPhase !== 'complete' && <Hud touchUi={touchUi} />}
+      {ready && !paused && missionPhase !== 'intro' && missionPhase !== 'complete' && touchUi && <TouchControls />}
+      {ready && !paused && missionPhase === 'intro' && <CinematicOverlay />}
       {ready && !paused && missionPhase === 'complete' && <MissionComplete />}
       {ready && touchUi && !forceLandscape && <OrientationPrompt />}
       {paused && <PauseMenu onResume={onResume} />}

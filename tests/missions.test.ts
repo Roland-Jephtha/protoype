@@ -62,3 +62,51 @@ describe('mission runner — prologue', () => {
     expect(objectiveText(PROLOGUE, again.state)).toBe('Rescue the survivors (1/3)');
   });
 });
+
+describe('campaign objectives', () => {
+  it('a defeat objective completes when the villain is beaten', async () => {
+    const { DOOMSDAY } = await import('../src/missions/missions');
+    let s = startMission(DOOMSDAY);
+    const ctx = { region: 'desert' as const, x: 0, z: 0, interactPressed: false };
+    expect(stepMission(DOOMSDAY, s, { ...ctx, defeated: [] }).state.complete).toBe(false);
+    const r = stepMission(DOOMSDAY, s, { ...ctx, defeated: ['doomsday'] });
+    s = r.state;
+    expect(s.complete).toBe(true);
+    expect(r.events.some((e) => e.type === 'missionComplete')).toBe(true);
+  });
+
+  it('a destroy objective counts drones from when it starts', async () => {
+    const { HIGHWAY } = await import('../src/missions/missions');
+    const ctx = { region: 'desert' as const, x: 0, z: 0, interactPressed: false };
+    let s = startMission(HIGHWAY);
+    s = stepMission(HIGHWAY, s, { ...ctx, dronesDestroyed: 7 }).state; // baseline: 7 already destroyed earlier
+    s = stepMission(HIGHWAY, s, { ...ctx, dronesDestroyed: 10 }).state;
+    expect(s.complete).toBe(false);
+    expect(objectiveText(HIGHWAY, s, 10)).toContain('3/5');
+    s = stepMission(HIGHWAY, s, { ...ctx, dronesDestroyed: 12 }).state;
+    expect(s.complete).toBe(true);
+  });
+
+  it('every mission has an intro and objectives, and the campaign ids are unique', async () => {
+    const { CAMPAIGN } = await import('../src/missions/missions');
+    expect(new Set(CAMPAIGN.map((m) => m.id)).size).toBe(CAMPAIGN.length);
+    for (const m of CAMPAIGN) {
+      expect(m.intro.lines.length).toBeGreaterThan(0);
+      expect(m.objectives.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('intro camera', () => {
+  it('starts high over the focus and ends behind the hero, looking where he faces', async () => {
+    const { buildIntro, introLength, sampleIntro } = await import('../src/game/cinematics/intro');
+    const shots = buildIntro({ x: 0, z: 100 }, { x: 0, z: 0, facing: 0 }, () => 0);
+    const pos = { x: 0, y: 0, z: 0 };
+    const look = { x: 0, y: 0, z: 0 };
+    sampleIntro(shots, 0, pos, look);
+    expect(pos.y).toBeGreaterThan(40);
+    sampleIntro(shots, introLength(shots), pos, look);
+    expect(pos.z).toBeLessThan(0); // behind the hero (who faces +Z)
+    expect(look.z).toBeGreaterThan(0);
+  });
+});

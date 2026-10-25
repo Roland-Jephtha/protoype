@@ -1176,3 +1176,139 @@ input[type='range']::-moz-range-thumb {
     font-size: clamp(28px, 9vh, 56px);
   }
 }
+
+/* ------------------------------------------------------------ install */
+
+.install-btn,
+.install-hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 8px 16px 8px 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(242, 193, 78, 0.6);
+  background: linear-gradient(90deg, rgba(242, 193, 78, 0.18), rgba(11, 22, 48, 0.7));
+  color: var(--c-text);
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+  text-align: left;
+}
+
+.install-btn {
+  cursor: pointer;
+}
+
+.install-btn img,
+.install-hint img {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.install-btn small {
+  display: block;
+  font-size: 11px;
+  color: var(--c-text-dim);
+}
+
+/* ---------------------------------------------------------- cinematic */
+
+.cinematic {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  font-family: var(--font-display);
+}
+
+.cinematic-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 12%;
+  background: #000;
+  animation: bars-in 0.6s ease-out;
+}
+
+.cinematic-bar.top {
+  top: 0;
+}
+
+.cinematic-bar.bottom {
+  bottom: 0;
+}
+
+@keyframes bars-in {
+  from {
+    height: 0;
+  }
+}
+
+.cinematic-title {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.9);
+  animation: title-in 3.6s ease-in-out forwards;
+}
+
+.cinematic-title h2 {
+  margin: 4px 0 0;
+  font-size: clamp(28px, 6vw, 56px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@keyframes title-in {
+  0% {
+    opacity: 0;
+    letter-spacing: 0.3em;
+  }
+  20%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.cinematic-line {
+  position: absolute;
+  left: 50%;
+  bottom: calc(12% + 18px);
+  transform: translateX(-50%);
+  width: min(760px, 86vw);
+  margin: 0;
+  text-align: center;
+  font-size: clamp(14px, 2.2vw, 20px);
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 1);
+  animation: line-in 0.5s ease-out;
+}
+
+@keyframes line-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+
+.cinematic-skip {
+  position: absolute;
+  right: calc(18px + var(--safe-r));
+  bottom: calc(3% + var(--safe-b));
+  pointer-events: auto;
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-family: var(--font-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}

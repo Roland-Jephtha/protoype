@@ -36,7 +36,7 @@ export function MissionDirector({ regionId, ground }: { regionId: RegionId; grou
     const o = currentObjective(d, app.mission);
     app.setInteractPrompt(near && o?.type === 'interact' ? `${o.prompt} · ${near.target.label}` : null);
     // Only take the Interact press when there's something to interact with (it also lifts cars).
-    const { state, events } = stepMission(d, app.mission, { ...ctx, interactPressed: !!near && input.consumePressed('interact') });
+    const { state, events } = stepMission(d, app.mission, { ...ctx, interactPressed: !!near && input.consumePressed('interact'), defeated: runtime.defeatedVillains, dronesDestroyed: runtime.dronesDestroyed });
     if (state !== app.mission) app.setMission(state);
     for (const e of events) {
       if (e.type === 'targetDone' && e.message) app.showToast(e.message);

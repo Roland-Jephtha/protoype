@@ -705,7 +705,7 @@ async function villainRun(browser) {
   await context.close();
 }
 
-/** Story mode: plays the whole prologue (briefing → forest → crash site → survivors → wreck → complete). */
+/** Story mode: plays the whole prologue (intro → forest → crash site → survivors → wreck → complete), then a boss mission. */
 async function storyRun(browser) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
@@ -713,12 +713,25 @@ async function storyRun(browser) {
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
   page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
   await page.goto(BASE);
-  await page.getByRole('button', { name: 'Story mode' }).click();
+  // Installable app: manifest, icons and the service worker.
+  const manifest = await page.evaluate(async () => {
+    const r = await fetch('/manifest.webmanifest');
+    const m = await r.json();
+    const icon = await fetch('/' + m.icons[1].src);
+    const reg = await navigator.serviceWorker.getRegistration();
+    return { ok: r.ok, name: m.short_name, icon: icon.ok, sw: !!reg };
+  });
+  check('pwa: manifest, icons and service worker are served', manifest.ok && manifest.icon && manifest.sw && manifest.name === 'Krypton', JSON.stringify(manifest));
+
+  await page.getByRole('button', { name: /^(Play|Continue)/ }).click();
   await waitForReady(page);
-  const briefing = page.getByRole('dialog', { name: 'Mission briefing' });
-  check('story: briefing shows before the mission', await briefing.isVisible());
-  await page.screenshot({ path: path.join(OUT, '10-briefing.png') });
-  await page.getByRole('button', { name: 'Begin' }).click();
+  const intro = page.getByRole('dialog', { name: 'Mission intro' });
+  check('story: a cinematic intro plays before the mission', await intro.isVisible());
+  await sleep(2500);
+  await page.screenshot({ path: path.join(OUT, '10-intro.png') });
+  await sleep(3500);
+  await page.screenshot({ path: path.join(OUT, '10b-intro.png') });
+  await page.getByRole('button', { name: /Skip/ }).click();
   await sleep(300);
   const objective = () => page.locator('.hud-objective-text').textContent();
   check('story: first objective is to fly north', (await objective())?.includes('Fly north') ?? false, await objective());
@@ -847,6 +860,25 @@ async function storyRun(browser) {
   await sleep(500);
   const after = await page.evaluate(() => window.__krypton.app.getState().mode);
   check('story: "Free roam" continues in free mode', after === 'free');
+
+  // Boss mission: Doomsday (Chapter 2). Skip the intro, check the objective, then win.
+  await page.evaluate(() => window.__krypton.app.getState().playMission('doomsday'));
+  for (let i = 0; i < 240; i++) {
+    if (await page.evaluate(() => window.__krypton.runtime.regionId === 'desert' && window.__krypton.ready && window.__krypton.app.getState().missionPhase === 'intro')) break;
+    await sleep(250);
+  }
+  await sleep(1000);
+  await page.keyboard.press('Space');
+  await sleep(2500);
+  const bossObjective = await page.locator('.hud-objective-text').textContent();
+  const bossState = await page.evaluate(() => window.__krypton.runtime.boss);
+  check('mission: Doomsday mission starts with the boss engaged', (bossObjective ?? '').includes('Defeat Doomsday') && bossState?.name === 'Doomsday', `${bossObjective} / boss=${bossState?.name}`);
+  await page.evaluate(() => {
+    for (const t of window.__krypton.targets) if (t.alive && t.radius > 0.7) t.damage(99999, { x: 0, y: 10, z: 20 });
+  });
+  const won = page.getByRole('dialog', { name: 'Mission complete' });
+  await won.waitFor({ timeout: 8000 }).catch(() => {});
+  check('mission: defeating Doomsday completes the mission and offers the next one', (await won.isVisible()) && (await page.getByRole('button', { name: 'Next mission' }).isVisible()));
   check('no page errors (story)', errors.length === 0, errors.slice(0, 3).join(' | '));
   await context.close();
 }

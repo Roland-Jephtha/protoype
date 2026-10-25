@@ -23,11 +23,11 @@ Roadmap (approved 2026-10-24, owner wants most action outside the city):
 | 2 | City life: pedestrians, traffic + lights, street props; wildlife/convoys outdoors | ✅ v1 done (2026-10-24) — street props still to add |
 | 3 | Combat: heat vision, punches, lift/throw, health, enemy AI (drones, soldiers) | 🔶 Heat vision, punch combo, homing power punch, speed dash, super breath, freeze breath, Super Nova, solar meter, drones, lifting/throwing traffic vehicles done |
 | 4 | Villains: DC models the owner downloads (licence-checked) + original henchmen, boss AI | 🔶 v1 — Doomsday, Zod, Darkseid, Subject Zero (clone) with powers and boss AI |
-| 5 | Missions + IndexedDB saves (3 slots, autosave, versioned) | ☐ |
+| 5 | Missions + IndexedDB saves (3 slots, autosave, versioned) | 🔶 Campaign of 6 missions with progress in localStorage; save slots still to do |
 | 6 | Campaign levels (prologue → chapter 5, side missions) — mostly desert/forest | ☐ |
-| 7 | Presentation: intro cinematic (video + in-engine fallback), briefings, results | ☐ |
+| 7 | Presentation: intro cinematic (video + in-engine fallback), briefings, results | 🔶 In-engine cinematic intro before every mission (bars, title card, camera shots, narration, music sting, skip) |
 | 8 | Flight polish + audio (banking, capsule orientation, wind, ambience, music) | 🔶 Procedural audio v1 done (wind, powers, hits, explosions, ambience); music and volume settings next |
-| 9 | Release candidate: device testing, performance, deploy docs | ☐ |
+| 9 | Release candidate: device testing, performance, deploy docs | 🔶 Installable PWA (manifest, icons, offline service worker, install button) |
 
 The level/region plan and villain roster are in docs/GAME_DESIGN.md.
 

@@ -109,6 +109,35 @@ class AudioEngine {
     }
   }
 
+  /** Cinematic music sting: a swelling minor chord with a low boom under it. */
+  sting() {
+    const ctx = this.ctx;
+    if (!ctx || !this.master || ctx.state !== 'running') return;
+    const t = ctx.currentTime;
+    const out = ctx.createGain();
+    out.gain.setValueAtTime(0.0001, t);
+    out.gain.exponentialRampToValueAtTime(AUDIO.sting, t + 1.6);
+    out.gain.exponentialRampToValueAtTime(0.0001, t + 6);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(400, t);
+    lp.frequency.exponentialRampToValueAtTime(2200, t + 2);
+    lp.connect(out).connect(this.master);
+    for (const f of [110, 130.8, 164.8, 220, 261.6]) {
+      for (const detune of [-6, 6]) {
+        const o = ctx.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.value = f;
+        o.detune.value = detune;
+        o.connect(lp);
+        o.start(t);
+        o.stop(t + 6.2);
+      }
+    }
+    this.play('boom', 0.5);
+    setTimeout(() => out.disconnect(), 7000);
+  }
+
   /** One-shot effects. `strength` 0..1 scales loudness. */
   play(kind: 'punch' | 'power' | 'explosion' | 'zap' | 'hurt' | 'boom' | 'throw' | 'freeze', strength = 1) {
     const ctx = this.ctx;

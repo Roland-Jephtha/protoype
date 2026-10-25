@@ -1,35 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { MISSIONS } from '../missions/missions';
+import { CAMPAIGN, MISSIONS } from '../missions/missions';
 import { activeTargets, objectiveText } from '../missions/runner';
 import { runtime } from '../game/runtime';
 import { useApp } from '../state/appStore';
-
-/** Pre-mission briefing card. The world is frozen until "Begin". */
-export function MissionBriefing() {
-  const mission = useApp((s) => s.mission);
-  const begin = useApp((s) => s.beginMission);
-  if (!mission) return null;
-  const def = MISSIONS[mission.missionId];
-  return (
-    <div className="overlay mission-overlay" role="dialog" aria-modal="true" aria-label="Mission briefing">
-      <div className="panel mission-panel">
-        <p className="title-kicker">{def.chapter}</p>
-        <h2 className="mission-title">{def.title}</h2>
-        {def.briefing.map((line, i) => (
-          <p key={i} className="panel-text">
-            {line}
-          </p>
-        ))}
-        <p className="mission-first">First objective: {def.objectives[0].text}</p>
-        <div className="panel-actions">
-          <button type="button" className="menu-btn primary" onClick={begin} autoFocus>
-            Begin
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /** Mission-complete screen with what to do next. */
 export function MissionComplete() {
@@ -37,15 +10,17 @@ export function MissionComplete() {
   const toFree = useApp((s) => s.continueInFreeRoam);
   const replay = useApp((s) => s.restartMission);
   const toTitle = useApp((s) => s.returnToTitle);
+  const playMission = useApp((s) => s.playMission);
   if (!mission) return null;
   const def = MISSIONS[mission.missionId];
+  const next = CAMPAIGN[CAMPAIGN.findIndex((m) => m.id === def.id) + 1];
   return (
     <div className="overlay mission-overlay" role="dialog" aria-modal="true" aria-label="Mission complete">
       <div className="panel mission-panel">
         <p className="title-kicker">{def.chapter} · Mission complete</p>
         <h2 className="mission-title">{def.title}</h2>
         <p className="panel-text">{def.outro}</p>
-        <p className="settings-note">Chapter 1 — The City's Guardian — is coming next. Your progress is saved in this browser.</p>
+        <p className="settings-note">{next ? `Next: ${next.chapter} — ${next.title}. ` : 'Campaign complete! '}Your progress is saved in this browser.</p>
         <div className="panel-actions">
           <button type="button" className="menu-btn secondary" onClick={toTitle}>
             Title
@@ -53,9 +28,14 @@ export function MissionComplete() {
           <button type="button" className="menu-btn secondary" onClick={replay}>
             Replay
           </button>
-          <button type="button" className="menu-btn primary" onClick={toFree} autoFocus>
+          <button type="button" className={`menu-btn ${next ? 'secondary' : 'primary'}`} onClick={toFree} autoFocus={!next}>
             Free roam
           </button>
+          {next && (
+            <button type="button" className="menu-btn primary" onClick={() => playMission(next.id)} autoFocus>
+              Next mission
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -100,13 +80,14 @@ export function MissionHud({ touchUi }: { touchUi: boolean }) {
 
   if (!mission) return null;
   const def = MISSIONS[mission.missionId];
+  const progress = runtime.dronesDestroyed;
   return (
     <>
       <div className="hud-objective">
         <span className="hud-kicker">
           {def.chapter} · {def.title}
         </span>
-        <span className="hud-objective-text">{objectiveText(def, mission)}</span>
+        <span className="hud-objective-text">{objectiveText(def, mission, progress)}</span>
         <span ref={distRef} className="hud-objective-dist" />
       </div>
       {prompt && <div className="hud-interact">{touchUi ? prompt : `E · ${prompt}`}</div>}
