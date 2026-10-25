@@ -30,19 +30,26 @@ describe('hero combat', () => {
     expect(c.heat).toBeGreaterThan(HERO_COMBAT.heat.capacity * 0.9);
   });
 
-  it('punches land at full extension and chain into a three-hit combo', () => {
+  it('every tap is a two-handed one-two; the third tap is a flurry ending in a heavy blow', () => {
     const c = new HeroCombat();
     const combos: number[] = [];
+    const hits: CombatEvent[][] = [];
     for (let i = 0; i < 3; i++) {
       const events = c.step({ attackPressed: true, aimHeld: false }, DT);
-      events.push(...run(c, HERO_COMBAT.punch.duration));
-      expect(events.filter((e) => e.type === 'punchHit')).toHaveLength(1);
+      // Hold until this punch's last fist is done, then tap again within the combo window.
+      events.push(...run(c, HERO_COMBAT.punch.duration + c.strikes[c.strikes.length - 1].at + 0.05));
+      hits.push(events.filter((e) => e.type === 'punchHit'));
       combos.push(c.combo);
     }
     expect(combos).toEqual([1, 2, 3]);
-    expect(c.punchStrength().damage).toBe(HERO_COMBAT.punch.finisherDamage);
+    expect(hits[0]).toHaveLength(2);
+    expect(c.strikes.map((s) => s.side)).toEqual(['left', 'right', 'left', 'right']);
+    expect(hits[2]).toHaveLength(4);
+    expect(hits[2].filter((e) => e.type === 'punchHit' && e.heavy)).toHaveLength(1);
+    expect(c.punchStrength(true).damage).toBe(HERO_COMBAT.punch.finisherDamage);
+    expect(c.punchStrength(false).damage).toBeLessThan(HERO_COMBAT.punch.damage);
     // After a pause the combo starts over.
-    run(c, 1);
+    run(c, 1.5);
     c.step({ attackPressed: true, aimHeld: false }, DT);
     expect(c.combo).toBe(1);
   });

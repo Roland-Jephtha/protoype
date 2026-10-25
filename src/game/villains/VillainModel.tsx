@@ -161,7 +161,7 @@ export const VillainModel = forwardRef<VillainModelHandle, { def: VillainDef }>(
       r.updateWorldMatrix(true, true);
       r.getWorldQuaternion(tmp.current.q);
       tmp.current.fwd.set(0, 0, 1).applyQuaternion(tmp.current.q);
-      built.pose.applyPunch(p.side, p.progress, tmp.current.fwd, def.heightMeters);
+      built.pose.applyFighting(tmp.current.fwd, def.heightMeters, 0, [{ side: p.side, progress: p.progress, twist: 0.45, lean: 0.2 }]);
     }
   });
 

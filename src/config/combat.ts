@@ -29,6 +29,37 @@ export const HERO_COMBAT = {
     magnetSpeed: 9,
     /** Every punch pushes off: a short step forward into the blow (m/s). */
     stepSpeed: 5,
+    /** Torso turn and lean per punch (rad): a straight jab, then a harder cross. */
+    jab: { twist: 0.32, lean: 0.12 },
+    cross: { twist: 0.5, lean: 0.22 },
+    /**
+     * Both hands every time. Each tap throws a one-two; the third tap of a combo is a
+     * flurry ending in a heavy blow; the power punch is a fast flurry ending in the
+     * knockout cross. `at` = seconds after the press; `heavy` = full damage/knockback.
+     */
+    patterns: {
+      oneTwo: [
+        { side: 'left', at: 0 },
+        { side: 'right', at: 0.15 },
+      ],
+      finisher: [
+        { side: 'left', at: 0 },
+        { side: 'right', at: 0.12 },
+        { side: 'left', at: 0.24 },
+        { side: 'right', at: 0.38, heavy: true },
+      ],
+      power: [
+        { side: 'left', at: 0 },
+        { side: 'right', at: 0.1 },
+        { side: 'left', at: 0.2 },
+        { side: 'right', at: 0.34, heavy: true },
+      ],
+    } as Record<'oneTwo' | 'finisher' | 'power', { side: 'left' | 'right'; at: number; heavy?: boolean }[]>,
+    /** A light strike in a combo does this share of a punch's damage / knockback. */
+    lightShare: 0.6,
+    /** Fighting stance stays up this long after a punch, or while an enemy is this close (s, m). */
+    guardAfterPunch: 2.5,
+    guardRange: 14,
   },
 
   heat: {
@@ -72,8 +103,8 @@ export const HERO_COMBAT = {
     /** Homing lunge: top speed (m/s) and how long it lasts (s). */
     lungeSpeed: 62,
     lungeTime: 0.3,
-    /** One-two: the second (knockout) fist lands this long after the first (s). */
-    secondFistAt: 0.18,
+    /** The knockout (last) fist of the power flurry lands this long after the release (s). */
+    secondFistAt: 0.34,
     /** Forward lean at full extension (rad) — much deeper than a normal punch. */
     lean: 0.62,
   },

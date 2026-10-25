@@ -43,11 +43,15 @@ export function TitleScreen() {
       <div className="title-vignette" aria-hidden="true" />
       {view === 'main' && (
         <div className="title-content">
-          <p className="title-kicker">Project Krypton</p>
-          <h1 className="title-logo">
-            Shadow over <span>Metropolis</span>
-          </h1>
-          <p className="title-build">Campaign · 6 missions · Doomsday, Zod, Darkseid and more</p>
+          <div className="title-head">
+            <p className="title-kicker">Project Krypton</p>
+            <h1 className="title-logo">
+              Shadow over <span>Metropolis</span>
+            </h1>
+            <p className="title-build">Campaign · {CAMPAIGN.length} missions · Doomsday, Zod, Darkseid and more</p>
+            <p className="title-legal">Non-commercial fan prototype. Not affiliated with or endorsed by DC or Warner Bros.</p>
+          </div>
+          <div className="title-side">
           <nav className="menu-list title-menu">
             <button type="button" className="menu-btn primary" onClick={() => play('story')} autoFocus>
               {completed.length || save.current ? 'Continue' : 'Play'}
@@ -95,7 +99,7 @@ export function TitleScreen() {
               Install: tap Share, then Add to Home Screen
             </p>
           )}
-          <p className="title-legal">Non-commercial fan prototype. Not affiliated with or endorsed by DC or Warner Bros.</p>
+          </div>
         </div>
       )}
       {view === 'chapters' && (

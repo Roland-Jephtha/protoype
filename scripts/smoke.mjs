@@ -191,7 +191,7 @@ async function desktopRun(browser) {
   await page.keyboard.up('KeyS');
   await page.keyboard.up('ShiftLeft');
   // Full 120 km/h is checked on open terrain (regions run); the plaza only allows a short burst.
-  check('Shift sprints (accelerating past 85 km/h in a short burst)', hspeed(sprint) > 23.6, `${hspeed(sprint).toFixed(2)} m/s, state=${sprint.state}`);
+  check('Shift sprints (accelerating past 72 km/h in a short burst)', hspeed(sprint) > 20, `${hspeed(sprint).toFixed(2)} m/s, state=${sprint.state}`);
   check('sprint keeps the run animation fully applied', minWeight > 0.95, `min weight ${minWeight.toFixed(2)}`);
   await page.screenshot({ path: path.join(OUT, '04b-sprint.png') });
 

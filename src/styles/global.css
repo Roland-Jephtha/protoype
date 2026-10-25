@@ -1352,3 +1352,115 @@ input[type='range']::-moz-range-thumb {
   padding: 6px 10px;
   font-size: 12px;
 }
+
+/* ------------------------------------------------- responsive title screen */
+
+/* The title scrolls rather than overflowing on short screens. */
+.title-content {
+  overflow-y: auto;
+}
+
+.title-head .title-legal {
+  margin-top: 6px;
+}
+
+/* Wide screens: logo on the left, menu on the right. */
+@media (min-width: 900px) {
+  .title-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+    align-content: center;
+    align-items: center;
+    column-gap: clamp(24px, 5vw, 80px);
+    max-width: 1200px;
+  }
+  .title-menu {
+    width: 100%;
+  }
+}
+
+/* Phones in landscape (short screens): two columns, compact two-up menu grid. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .title-content {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-content: center;
+    align-items: center;
+    column-gap: 20px;
+    max-width: none;
+    padding: calc(10px + var(--safe-t)) calc(14px + var(--safe-r)) calc(10px + var(--safe-b)) calc(18px + var(--safe-l));
+  }
+  .title-kicker {
+    font-size: 10px;
+    letter-spacing: 0.35em;
+  }
+  .title-logo {
+    font-size: clamp(24px, 6vw, 44px);
+    margin: 4px 0;
+  }
+  .title-build {
+    margin: 0;
+    font-size: 11px;
+  }
+  .title-legal {
+    display: none;
+  }
+  .title-menu {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .title-menu .menu-btn {
+    min-height: 36px;
+    padding: 5px 10px;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+  }
+  .title-menu .menu-btn.primary {
+    grid-column: 1 / -1;
+    min-height: 46px;
+    font-size: 15px;
+  }
+  .title-menu .menu-sub {
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .install-btn,
+  .install-hint {
+    margin-top: 8px;
+    padding: 4px 10px 4px 4px;
+    font-size: 12px;
+  }
+  .install-btn img,
+  .install-hint img {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Narrow portrait screens: single column, smaller logo. */
+@media (max-width: 600px) and (orientation: portrait) {
+  .title-content {
+    justify-content: flex-start;
+    padding-top: calc(32px + var(--safe-t));
+  }
+  .title-logo {
+    font-size: clamp(30px, 11vw, 48px);
+  }
+  .title-menu {
+    width: 100%;
+  }
+}
+
+/* Panels (chapters, saves, settings) scroll inside short screens. */
+.title-panel-wrap {
+  overflow-y: auto;
+}
+
+.title-panel-wrap > .panel {
+  max-height: 100%;
+  overflow-y: auto;
+}

@@ -49,6 +49,8 @@ export const runtime = {
   /** Combat asks the motor to face this way (aiming, punching a target); null = free. */
   combatFaceYaw: null as number | null,
   aiming: false,
+  /** Fighting stance wanted (an enemy is close or the hero just punched). */
+  combatReady: false,
   /** Heat-vision beam this step: eye → end point; `surface` when it hit the world (scorch). */
   beam: { active: false, from: new Vector3(), to: new Vector3(), surface: false, normal: new Vector3(0, 1, 0), hitTarget: false },
   /** Knockback for the hero, applied (and cleared) at the next physics step, with its loss of control (s). */

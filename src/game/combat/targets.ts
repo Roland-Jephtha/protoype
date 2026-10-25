@@ -18,6 +18,8 @@ export interface Target {
   damage: (amount: number, knock: Vec3) => void;
   /** Adds seconds of being frozen (freeze breath). */
   freeze?: (seconds: number) => void;
+  /** Vehicles are targets too, but don't make the hero raise his guard. */
+  kind?: 'enemy' | 'vehicle';
 }
 
 /** Live targets in the mounted region. */

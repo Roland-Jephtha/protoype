@@ -53,6 +53,17 @@ export function CombatDriver() {
       dt,
     );
     runtime.aiming = aimHeld || c.breath !== 'none';
+    // Fighting stance: just punched, or an enemy (not traffic) is close.
+    let enemyNear = false;
+    const pp0 = runtime.playerPosition;
+    for (const t of targets) {
+      if (!t.alive || t.kind === 'vehicle') continue;
+      if (Math.hypot(t.position.x - pp0.x, t.position.z - pp0.z) < HERO_COMBAT.punch.guardRange) {
+        enemyNear = true;
+        break;
+      }
+    }
+    runtime.combatReady = c.sinceLastPunch < HERO_COMBAT.punch.guardAfterPunch || enemyNear;
 
     const fwd = runtime.cameraForward;
     const chest = tmp.chest.set(runtime.playerPosition.x, heroFeetY() + CHEST_HEIGHT, runtime.playerPosition.z);
@@ -113,7 +124,7 @@ export function CombatDriver() {
         }
       }
       else if (e.type === 'punchHit') {
-        const { damage, knockback } = c.punchStrength();
+        const { damage, knockback } = c.punchStrength(e.heavy);
         for (const t of inCone(chest, facing(), reach, punch.coneHalfAngle, targets)) {
           hit(t, damage, away(t, knockback, knockback * 0.25));
           addImpact(t.position, 'punch');

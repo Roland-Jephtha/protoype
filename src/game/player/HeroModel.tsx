@@ -31,7 +31,7 @@ import { FootSoles, nextFootLift } from './footGrounding';
 import type { GroundMotor } from './groundMovement';
 import { LOCOMOTION, LOOPING, resolveClips, roleForState } from './heroAnimation';
 import { applySuperSuit, measureModel } from './superSuit';
-import { CombatPose } from './combatPose';
+import { CombatPose, type PunchPose } from './combatPose';
 import { HERO_COMBAT } from '../../config/combat';
 
 /** Diagnostics: `?nofootfix` disables foot grounding to compare before/after. */
@@ -186,7 +186,7 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
   const pivotY = def.heightMeters * 0.6;
   const flight = useRef({ pitch: 0, bob: 0 });
   const tmpPos = useMemo(() => new Vector3(), []);
-  const combatTmp = useRef({ q: new Quaternion(), forward: new Vector3(), up: new Vector3() });
+  const combatTmp = useRef({ q: new Quaternion(), forward: new Vector3(), up: new Vector3(), guard: 0 });
 
   const anim = useMemo(() => {
     const mixer = new AnimationMixer(built.model);
@@ -303,14 +303,24 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       ct.forward.set(0, 0, 1).applyQuaternion(ct.q);
       ct.up.set(0, 1, 0).applyQuaternion(ct.q);
       const c = runtime.combat;
+      // Fighting stance near enemies (on foot or hovering, not while flying fast or carrying).
+      const speed = Math.hypot(v.x, v.y, v.z);
+      const wantGuard = runtime.combatReady && !runtime.carrying && speed < 9 ? 1 : 0;
+      ct.guard += (wantGuard - ct.guard) * Math.min(1, dt * 8);
       if (runtime.carrying) built.pose.applyLift(ct.forward, def.heightMeters, 1);
-      else if (c.powerPunching) {
-        // Super punch: a left jab, then the right cross, leaning deep into it.
-        const pp = HERO_COMBAT.powerPunch;
-        const d = HERO_COMBAT.punch.duration;
-        built.pose.applyPunch('left', c.punchTime / d, ct.forward, def.heightMeters, pp.lean * 0.6);
-        built.pose.applyPunch('right', (c.punchTime - pp.secondFistAt) / d, ct.forward, def.heightMeters, pp.lean);
-      } else if (c.punching) built.pose.applyPunch(c.side, c.punchTime / HERO_COMBAT.punch.duration, ct.forward, def.heightMeters);
+      else {
+        const P = HERO_COMBAT.punch;
+        const d = P.duration;
+        // Every strike of the current punch (both hands, in turn); heavy blows put the whole body in.
+        const punches: PunchPose[] = c.punching
+          ? c.strikes.map((st) => ({
+              side: st.side,
+              progress: (c.punchTime - st.at) / d,
+              ...(st.heavy ? { twist: P.cross.twist * 1.2, lean: c.powerPunching ? HERO_COMBAT.powerPunch.lean : P.cross.lean * 1.5 } : st.side === 'right' ? P.cross : P.jab),
+            }))
+          : [];
+        built.pose.applyFighting(ct.forward, def.heightMeters, ct.guard, punches);
+      }
       runtime.heroEyesValid = built.pose.eyes(runtime.heroEyes, ct.forward, ct.up, def.heightMeters);
     }
 

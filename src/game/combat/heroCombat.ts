@@ -15,8 +15,8 @@ export interface CombatInput {
 
 export type CombatEvent =
   | { type: 'punch'; side: 'left' | 'right'; combo: number }
-  /** The punch reaches full extension: resolve hits now. */
-  | { type: 'punchHit'; combo: number }
+  /** A strike of the current punch reaches full extension: resolve hits now. */
+  | { type: 'punchHit'; combo: number; heavy: boolean }
   /** A charged power punch was released (0..1 extra charge beyond the hold threshold). */
   | { type: 'powerPunch'; side: 'left' | 'right'; charge: number }
   | { type: 'nova' }
@@ -43,6 +43,12 @@ export class HeroCombat {
   punchTime = -1;
   /** The current punch is a power punch. */
   powerPunching = false;
+  /** Strikes (one per fist) of the current punch. */
+  strikes: { side: 'left' | 'right'; at: number; heavy?: boolean }[] = [];
+  private strikesHit = 0;
+  /** Seconds since the last punch finished (combo window), and a tap made mid-punch, thrown next. */
+  private sinceEnd = Infinity;
+  private buffered = false;
   combo = 0;
   side: 'left' | 'right' = 'right';
   /** Seconds the punch button has been held (charging a power punch). */
@@ -52,7 +58,6 @@ export class HeroCombat {
   private sinceDamage = Infinity;
   private sinceFire = Infinity;
   private sincePunch = Infinity;
-  private hitResolved = false;
   private grace = 0;
   private powerCharge = 0;
 
@@ -70,6 +75,11 @@ export class HeroCombat {
     this.novaCharge = 0;
     this.sinceDamage = Infinity;
     this.grace = HERO_COMBAT.respawnGrace;
+  }
+
+  /** Seconds since the last punch started. */
+  get sinceLastPunch() {
+    return this.sincePunch;
   }
 
   get punching() {
@@ -131,21 +141,28 @@ export class HeroCombat {
 
     // --- punches ------------------------------------------------------------
     this.sincePunch += dt;
+    this.sinceEnd += dt;
     if (this.punchTime >= 0) {
       this.punchTime += dt;
-      if (!this.hitResolved && this.punchTime >= p.hitAt) {
-        this.hitResolved = true;
-        // A power punch lands when its homing lunge arrives (resolved by the combat driver).
-        if (!this.powerPunching) events.push({ type: 'punchHit', combo: this.combo });
+      // Each fist lands its own hit (a power punch's final knockout blow is resolved by the driver when the lunge arrives).
+      while (this.strikesHit < this.strikes.length && this.punchTime >= this.strikes[this.strikesHit].at + p.hitAt) {
+        const st = this.strikes[this.strikesHit++];
+        if (!(this.powerPunching && st.heavy)) events.push({ type: 'punchHit', combo: this.combo, heavy: !!st.heavy });
       }
-      if (this.punchTime >= p.duration + (this.powerPunching ? pp.secondFistAt : 0)) {
+      const last = this.strikes[this.strikes.length - 1];
+      if (this.punchTime >= p.duration + (last?.at ?? 0)) {
         this.punchTime = -1;
+        this.sinceEnd = 0;
         this.powerPunching = false;
       }
     }
-    if (inp.attackPressed && this.punchTime < 0) {
-      this.combo = this.sincePunch <= p.comboWindow && this.combo < 3 ? this.combo + 1 : 1;
+    // A tap during a punch is remembered and thrown as soon as it ends (fast tapping chains the combo).
+    if (inp.attackPressed && this.punchTime >= 0) this.buffered = true;
+    if ((inp.attackPressed || this.buffered) && this.punchTime < 0) {
+      this.buffered = false;
+      this.combo = this.sinceEnd <= p.comboWindow && this.combo < 3 ? this.combo + 1 : 1;
       this.side = this.combo % 2 === 1 ? 'right' : 'left';
+      this.strikes = this.combo >= 3 ? p.patterns.finisher : p.patterns.oneTwo;
       this.startPunch(false);
       events.push({ type: 'punch', side: this.side, combo: this.combo });
     }
@@ -156,6 +173,7 @@ export class HeroCombat {
         this.powerCharge = Math.min(1, (this.holdTime - pp.holdTime) / (pp.maxCharge - pp.holdTime));
         this.side = 'right';
         this.combo = 0;
+        this.strikes = p.patterns.power;
         this.startPunch(true);
         events.push({ type: 'powerPunch', side: this.side, charge: this.powerCharge });
       }
@@ -172,8 +190,8 @@ export class HeroCombat {
 
   private startPunch(power: boolean) {
     this.punchTime = 0;
+    this.strikesHit = 0;
     this.sincePunch = 0;
-    this.hitResolved = false;
     this.powerPunching = power;
   }
 
@@ -190,9 +208,9 @@ export class HeroCombat {
     this.solar = Math.min(HERO_COMBAT.solar.capacity, this.solar + amount * HERO_COMBAT.solar.perDamage);
   }
 
-  /** Damage and knockback of the current punch. */
-  punchStrength() {
+  /** Damage and knockback of one strike: light jabs share a punch's power, heavy blows hit full. */
+  punchStrength(heavy = false) {
     const p = HERO_COMBAT.punch;
-    return this.combo >= 3 ? { damage: p.finisherDamage, knockback: p.finisherKnockback } : { damage: p.damage, knockback: p.knockback };
+    return heavy ? { damage: p.finisherDamage, knockback: p.finisherKnockback } : { damage: p.damage * p.lightShare, knockback: p.knockback * p.lightShare };
   }
 }

@@ -91,6 +91,7 @@ export function TrafficLayer({ lanes, setup, groundY, roadLift = 0 }: { lanes: L
           position: { x: 0, y: -100, z: 0 },
           radius: Math.max(spec.length, spec.width) * 0.45,
           alive: false,
+          kind: 'vehicle',
           damage: (amount, knock) => {
             if (v.out) return;
             health -= amount;
