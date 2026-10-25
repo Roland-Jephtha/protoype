@@ -1312,3 +1312,43 @@ input[type='range']::-moz-range-thumb {
   text-transform: uppercase;
   cursor: pointer;
 }
+
+/* -------------------------------------------------------------- saves */
+
+.save-slot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(10, 16, 28, 0.55);
+}
+
+.save-slot.active {
+  border-color: rgba(242, 193, 78, 0.7);
+}
+
+.save-slot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--font-display);
+}
+
+.save-slot-info span {
+  font-size: 12px;
+  color: var(--c-text-dim);
+}
+
+.save-slot-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.save-slot-actions .menu-btn {
+  padding: 6px 10px;
+  font-size: 12px;
+}

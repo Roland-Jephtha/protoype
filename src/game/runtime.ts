@@ -66,6 +66,13 @@ export const runtime = {
   novaFlash: 0,
   /** Mission intro camera clock (s), total length (s), and whether it's driving the camera. */
   cinematic: { t: 0, length: 0, active: false },
+  /** Story missions: where a knocked-out hero respawns (the last checkpoint), and knockouts so far. */
+  respawnPoint: null as { region: string; x: number; z: number; facing: number } | null,
+  knockouts: 0,
+  /** Mission actors: raised flags, fires out in the current extinguish objective, the runaway bus position. */
+  missionFlags: new Set<string>(),
+  firesOut: 0,
+  busPosition: null as { x: number; z: number } | null,
   /** Villains beaten during the current mission (ids). */
   defeatedVillains: [] as string[],
   /** Vehicles blown up (heat vision, big hits) since load. */

@@ -4,11 +4,17 @@ import { AdditiveBlending, DoubleSide, type MeshBasicMaterial } from 'three';
 import type { RegionId } from '../../config/regions';
 import { input } from '../../input/InputManager';
 import { MISSIONS } from '../../missions/missions';
-import { activeTargets, availableInteraction, currentObjective, stepMission } from '../../missions/runner';
+import { saveCheckpoint } from '../../missions/storyProgress';
+import { activeTargets, availableInteraction, checkpointSpawn, currentObjective, stepMission } from '../../missions/runner';
 import type { MissionTarget } from '../../missions/types';
 import { useApp } from '../../state/appStore';
 import { Civilian } from '../characters/Civilian';
+import { heroFeetY } from '../combat/heroActions';
 import { runtime } from '../runtime';
+import { MissionActors } from './MissionActors';
+
+/** How close the hero must be to the runaway bus to grab it (m). */
+const BUS_REACH = 7;
 
 /**
  * In-world side of story mode: advances the active mission from the hero's
@@ -26,20 +32,46 @@ export function MissionDirector({ regionId, ground }: { regionId: RegionId; grou
   useFrame((_, dt) => {
     tick.current += dt;
     if (tick.current < 0.05) return;
+    const stepDt = tick.current;
     tick.current = 0;
     const app = useApp.getState();
     if (app.mode !== 'story' || app.missionPhase !== 'active' || !app.mission || app.paused || !app.regionReady) return;
     const d = MISSIONS[app.mission.missionId];
     const p = runtime.playerPosition;
-    const ctx = { region: regionId, x: p.x, z: p.z };
+    const ctx = { region: regionId, x: p.x, z: p.z, y: heroFeetY() };
     const near = availableInteraction(d, app.mission, ctx);
     const o = currentObjective(d, app.mission);
-    app.setInteractPrompt(near && o?.type === 'interact' ? `${o.prompt} · ${near.target.label}` : null);
+    // The runaway bus: Interact next to it stops it.
+    const bus = o?.type === 'flag' && o.actor.kind === 'runawayBus' && !runtime.missionFlags.has(o.flag) ? runtime.busPosition : null;
+    const nearBus = !!bus && Math.hypot(bus.x - p.x, bus.z - p.z) < BUS_REACH;
+    app.setInteractPrompt(nearBus ? 'Stop the bus · Bus' : near && (o?.type === 'interact' || o?.type === 'deliver') ? `${o.prompt} · ${near.target.label}` : null);
+    if (nearBus && o?.type === 'flag' && input.consumePressed('interact')) {
+      runtime.missionFlags.add(o.flag);
+      runtime.cameraShake = Math.max(runtime.cameraShake, 0.5);
+      app.showToast('You caught the bus!');
+    }
     // Only take the Interact press when there's something to interact with (it also lifts cars).
-    const { state, events } = stepMission(d, app.mission, { ...ctx, interactPressed: !!near && input.consumePressed('interact'), defeated: runtime.defeatedVillains, dronesDestroyed: runtime.dronesDestroyed });
+    const { state, events } = stepMission(d, app.mission, {
+      ...ctx,
+      interactPressed: !!near && input.consumePressed('interact'),
+      defeated: runtime.defeatedVillains,
+      dronesDestroyed: runtime.dronesDestroyed,
+      dt: stepDt,
+      flags: runtime.missionFlags,
+      firesOut: runtime.firesOut,
+    });
     if (state !== app.mission) app.setMission(state);
     for (const e of events) {
       if (e.type === 'targetDone' && e.message) app.showToast(e.message);
+      if (e.type === 'pickedUp') app.showToast('Got them — fly to the ambulance');
+      if (e.type === 'failed') app.failMission(e.reason);
+      if (e.type === 'checkpoint') {
+        saveCheckpoint(d.id, e.index);
+        const sp = checkpointSpawn(d, e.index);
+        if (sp.at) runtime.respawnPoint = { region: sp.region, ...sp.at };
+        runtime.knockouts = 0;
+        app.showToast('Checkpoint');
+      }
       if (e.type === 'objectiveComplete' && !state.complete) app.showToast('Objective complete');
       if (e.type === 'missionComplete') app.completeMission();
     }
@@ -49,8 +81,9 @@ export function MissionDirector({ regionId, ground }: { regionId: RegionId; grou
   const targets = activeTargets(def, mission, regionId);
   return (
     <group>
+      <MissionActors regionId={regionId} ground={ground} />
       {targets.map((t, i) => (
-        <Beacon key={`${t.label}-${t.x}-${t.z}-${i}`} target={t} y={ground(t.x, t.z)} />
+        <Beacon key={`${t.label}-${t.x}-${t.z}-${i}`} target={t} y={t.y ?? ground(t.x, t.z)} />
       ))}
       {def.id === 'prologue' && regionId === 'forest' && <PrologueSurvivors ground={ground} />}
     </group>

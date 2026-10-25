@@ -3,14 +3,15 @@ import type { RegionId, Side } from '../config/regions';
 import { CAMPAIGN, MISSIONS } from '../missions/missions';
 import type { MissionDef } from '../missions/types';
 import { runtime } from '../game/runtime';
-import { startMission } from '../missions/runner';
-import { loadCompletedMissions, markMissionComplete } from '../missions/storyProgress';
+import { checkpointSpawn, startMission } from '../missions/runner';
+import { loadCompletedMissions, markMissionComplete, saveCheckpoint } from '../missions/storyProgress';
+import { activeSave } from '../save/saveStore';
 import type { MissionState } from '../missions/types';
 import { input } from '../input/InputManager';
 
 export type Screen = 'title' | 'game';
 export type GameMode = 'free' | 'story';
-export type MissionPhase = 'intro' | 'active' | 'complete';
+export type MissionPhase = 'intro' | 'active' | 'complete' | 'failed';
 export type PauseView = 'main' | 'settings' | 'controls' | 'travel' | 'confirmQuit';
 
 /** How the hero arrives in a region. */
@@ -33,6 +34,10 @@ function resetMissionRuntime() {
   runtime.cinematic.t = 0;
   runtime.cinematic.active = false;
   runtime.defeatedVillains.length = 0;
+  runtime.knockouts = 0;
+  runtime.missionFlags.clear();
+  runtime.firesOut = 0;
+  runtime.busPosition = null;
 }
 
 /**
@@ -79,6 +84,11 @@ interface AppState {
   beginMission: () => void;
   setMission: (m: MissionState) => void;
   completeMission: () => void;
+  /** Why the mission failed (shown on the failure screen). */
+  failReason: string | null;
+  failMission: (reason: string) => void;
+  /** Restart the mission at its last checkpoint (no intro). */
+  retryFromCheckpoint: () => void;
   restartMission: () => void;
   continueInFreeRoam: () => void;
   setInteractPrompt: (p: string | null) => void;
@@ -116,6 +126,7 @@ export const useApp = create<AppState>((set, get) => ({
   mode: 'free',
   mission: null,
   missionPhase: null,
+  failReason: null,
   interactPrompt: null,
   liftPrompt: null,
   toast: null,
@@ -124,22 +135,30 @@ export const useApp = create<AppState>((set, get) => ({
     input.releaseAll();
     if (mode === 'story') {
       const def = missionId ? MISSIONS[missionId] : nextMission();
+      // Continue resumes a mission in progress at its last checkpoint (skipping the intro).
+      const saved = activeSave().current;
+      const cp = !missionId && saved?.missionId === def.id ? saved.checkpoint : 0;
+      const spawn = checkpointSpawn(def, cp);
       resetMissionRuntime();
+      runtime.respawnPoint = spawn.at ? { region: spawn.region, ...spawn.at } : null;
+      saveCheckpoint(def.id, cp);
       set({
         screen: 'game',
         mode,
-        regionId: def.startRegion,
-        mission: startMission(def),
-        missionPhase: 'intro',
+        regionId: spawn.region,
+        mission: startMission(def, cp),
+        missionPhase: cp > 0 ? 'active' : 'intro',
+        failReason: null,
         paused: false,
         pauseView: 'main',
         regionReady: false,
-        arrival: def.startAt ? { at: def.startAt } : null,
+        arrival: spawn.at ? { at: spawn.at } : null,
         travelCount: get().travelCount + 1,
         interactPrompt: null,
         toast: null,
       });
     } else {
+      runtime.respawnPoint = null;
       set({ screen: 'game', mode, mission: null, missionPhase: null, paused: false, pauseView: 'main', regionReady: false, arrival: null, interactPrompt: null, toast: null });
     }
   },
@@ -163,11 +182,29 @@ export const useApp = create<AppState>((set, get) => ({
     const def = MISSIONS[missionId];
     input.releaseAll();
     resetMissionRuntime();
-    set({ mode: 'story', mission: startMission(def), missionPhase: 'intro', paused: false, pauseView: 'main', interactPrompt: null, toast: null, pendingRegion: null });
+    runtime.respawnPoint = def.startAt ? { region: def.startRegion, ...def.startAt } : null;
+    saveCheckpoint(def.id, 0);
+    set({ mode: 'story', mission: startMission(def), missionPhase: 'intro', failReason: null, paused: false, pauseView: 'main', interactPrompt: null, toast: null, pendingRegion: null });
     // Always reload the start region: villains and drones reset for the mission.
     get().travelTo(def.startRegion, def.startAt ? { at: def.startAt } : {});
   },
+  failMission: (reason) => {
+    input.releaseAll();
+    set({ missionPhase: 'failed', failReason: reason, interactPrompt: null });
+  },
+  retryFromCheckpoint: () => {
+    const m = get().mission;
+    if (!m) return;
+    const def = MISSIONS[m.missionId];
+    const spawn = checkpointSpawn(def, m.checkpoint);
+    input.releaseAll();
+    resetMissionRuntime();
+    runtime.respawnPoint = spawn.at ? { region: spawn.region, ...spawn.at } : null;
+    set({ mission: startMission(def, m.checkpoint), missionPhase: 'active', failReason: null, paused: false, pauseView: 'main', interactPrompt: null, toast: null, pendingRegion: null });
+    get().travelTo(spawn.region, spawn.at ? { at: spawn.at } : {});
+  },
   continueInFreeRoam: () => {
+    runtime.respawnPoint = null;
     input.releaseAll();
     set({ mode: 'free', mission: null, missionPhase: null, interactPrompt: null });
   },

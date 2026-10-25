@@ -1,3 +1,4 @@
+import { MISSION_RULES } from '../../config/combat';
 import { useApp } from '../../state/appStore';
 import { CAPSULE_REST_HEIGHT } from '../player/groundSnap';
 import { runtime } from '../runtime';
@@ -29,6 +30,16 @@ export function knockOut() {
   runtime.heroImpulse.set(0, 0, 0);
   runtime.heroFrozen = 0;
   const app = useApp.getState();
+  if (app.mode === 'story' && app.missionPhase === 'active') {
+    runtime.knockouts++;
+    if (runtime.knockouts >= MISSION_RULES.knockoutsToFail) {
+      app.failMission('You were knocked out.');
+      return;
+    }
+    app.restartCheckpoint();
+    app.showToast('Knocked down — back to the checkpoint. One more and the mission fails.');
+    return;
+  }
   app.restartCheckpoint();
   app.showToast('Knocked down: back at the start point');
 }

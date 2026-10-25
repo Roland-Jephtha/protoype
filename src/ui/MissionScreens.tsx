@@ -4,6 +4,37 @@ import { activeTargets, objectiveText } from '../missions/runner';
 import { runtime } from '../game/runtime';
 import { useApp } from '../state/appStore';
 
+/** Mission failed: retry from the last checkpoint, restart, or quit. */
+export function MissionFailed() {
+  const mission = useApp((s) => s.mission);
+  const reason = useApp((s) => s.failReason);
+  const retry = useApp((s) => s.retryFromCheckpoint);
+  const restart = useApp((s) => s.restartMission);
+  const toTitle = useApp((s) => s.returnToTitle);
+  if (!mission) return null;
+  const def = MISSIONS[mission.missionId];
+  return (
+    <div className="overlay mission-overlay" role="dialog" aria-modal="true" aria-label="Mission failed">
+      <div className="panel mission-panel">
+        <p className="title-kicker">{def.chapter} · Mission failed</p>
+        <h2 className="mission-title">{def.title}</h2>
+        <p className="panel-text">{reason}</p>
+        <div className="panel-actions">
+          <button type="button" className="menu-btn secondary" onClick={toTitle}>
+            Quit
+          </button>
+          <button type="button" className="menu-btn secondary" onClick={restart}>
+            Restart mission
+          </button>
+          <button type="button" className="menu-btn primary" onClick={retry} autoFocus>
+            {mission.checkpoint > 0 ? 'Retry from checkpoint' : 'Retry'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Mission-complete screen with what to do next. */
 export function MissionComplete() {
   const mission = useApp((s) => s.mission);

@@ -110,3 +110,66 @@ describe('intro camera', () => {
     expect(look.z).toBeGreaterThan(0);
   });
 });
+
+describe('checkpoints', () => {
+  it('reaching a checkpoint objective records it, and a mission can resume there', async () => {
+    const { checkpointSpawn } = await import('../src/missions/runner');
+    let s = startMission(PROLOGUE);
+    const r = stepMission(PROLOGUE, s, { region: 'forest', x: 0, z: 0, interactPressed: false });
+    s = r.state;
+    expect(r.events.some((e) => e.type === 'checkpoint')).toBe(true);
+    expect(s.checkpoint).toBe(1);
+    const resumed = startMission(PROLOGUE, s.checkpoint);
+    expect(resumed.objectiveIndex).toBe(1);
+    expect(checkpointSpawn(PROLOGUE, 1).region).toBe('forest');
+    expect(checkpointSpawn(PROLOGUE, 0).region).toBe(PROLOGUE.startRegion);
+  });
+});
+
+describe('Act I objectives', () => {
+  const city = { region: 'metropolis' as const, interactPressed: false };
+
+  it('the runaway bus objective completes when its flag is raised, and fails when time runs out', async () => {
+    const { RUSH_HOUR } = await import('../src/missions/missions');
+    let s = startMission(RUSH_HOUR);
+    s = stepMission(RUSH_HOUR, s, { ...city, x: 0, z: 0, dt: 1, flags: new Set() }).state;
+    expect(objectiveText(RUSH_HOUR, s)).toContain('74 s');
+    expect(stepMission(RUSH_HOUR, s, { ...city, x: 0, z: 0, dt: 0.05, flags: new Set(['busStopped']) }).state.objectiveIndex).toBe(1);
+    const late = stepMission(RUSH_HOUR, s, { ...city, x: 0, z: 0, dt: 80, flags: new Set() });
+    expect(late.events).toContainEqual({ type: 'failed', reason: 'Time ran out.' });
+  });
+
+  it('carrying: pick someone up, bring them to the drop zone', async () => {
+    const { RUSH_HOUR } = await import('../src/missions/missions');
+    const o = RUSH_HOUR.objectives[1];
+    if (o.type !== 'deliver') throw new Error('expected deliver');
+    let s = startMission(RUSH_HOUR, 1);
+    const p = o.pickups[0];
+    let r = stepMission(RUSH_HOUR, s, { ...city, x: p.x + 1, z: p.z, interactPressed: true });
+    s = r.state;
+    expect(s.carrying).toBe(0);
+    expect(r.events.some((e) => e.type === 'pickedUp')).toBe(true);
+    r = stepMission(RUSH_HOUR, s, { ...city, x: o.dropZone.x, z: o.dropZone.z });
+    s = r.state;
+    expect(s.carrying).toBeUndefined();
+    expect(s.done[0]).toBe(true);
+    expect(objectiveText(RUSH_HOUR, s)).toContain('1/3');
+  });
+
+  it('rooftop pickups need the hero up on the roof', async () => {
+    const { KORD_FIRE } = await import('../src/missions/missions');
+    const o = KORD_FIRE.objectives[1];
+    if (o.type !== 'deliver') throw new Error('expected deliver');
+    const s = startMission(KORD_FIRE, 1);
+    const p = o.pickups[0];
+    expect(stepMission(KORD_FIRE, s, { ...city, x: p.x, z: p.z, y: 0, interactPressed: true }).state.carrying).toBeUndefined();
+    expect(stepMission(KORD_FIRE, s, { ...city, x: p.x, z: p.z, y: 210, interactPressed: true }).state.carrying).toBe(0);
+  });
+
+  it('extinguish completes when every fire is out', async () => {
+    const { KORD_FIRE } = await import('../src/missions/missions');
+    const s = startMission(KORD_FIRE);
+    expect(stepMission(KORD_FIRE, s, { ...city, x: 0, z: 0, firesOut: 4 }).state.objectiveIndex).toBe(0);
+    expect(stepMission(KORD_FIRE, s, { ...city, x: 0, z: 0, firesOut: 5 }).state.objectiveIndex).toBe(1);
+  });
+});

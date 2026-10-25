@@ -95,8 +95,9 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
   const respawn = useCallback(() => {
     const b = body.current;
     if (!b) return;
-    // Restart always returns to solid ground at the region's spawn.
-    const s = region.spawn;
+    // Restart returns to solid ground: the mission checkpoint if it's in this region, else the region's spawn.
+    const rp = runtime.respawnPoint;
+    const s = rp && rp.region === region.id ? rp : region.spawn;
     const y = ground ? ground(s.x, s.z) + CAPSULE_REST_HEIGHT + 0.2 : PLAYER.spawn[1];
     b.setTranslation({ x: s.x, y, z: s.z }, true);
     b.setNextKinematicTranslation({ x: s.x, y, z: s.z });

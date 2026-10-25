@@ -705,6 +705,52 @@ async function villainRun(browser) {
   await context.close();
 }
 
+/** Saves: reach a checkpoint, reload the page, Continue resumes there; failing a mission offers Retry. */
+async function saveRun(browser) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
+  await page.goto(BASE);
+  await page.getByRole('button', { name: /^(Play|Continue)/ }).click();
+  await waitForReady(page);
+  await page.getByRole('button', { name: /Skip/ }).click();
+  // Objective 1 (reach the forest) completes on arrival and the next objective is a checkpoint.
+  await page.evaluate(() => window.__krypton.app.getState().travelTo('forest'));
+  for (let i = 0; i < 240; i++) {
+    if (await page.evaluate(() => window.__krypton.runtime.regionId === 'forest' && window.__krypton.ready)) break;
+    await sleep(250);
+  }
+  await sleep(1500);
+  await page.reload();
+  const cont = page.getByRole('button', { name: /^Continue/ });
+  await cont.waitFor({ timeout: 10000 }).catch(() => {});
+  const label = (await cont.textContent().catch(() => '')) ?? '';
+  await cont.click();
+  for (let i = 0; i < 240; i++) {
+    if (await page.evaluate(() => window.__krypton?.ready && window.__krypton.runtime.regionId === 'forest')) break;
+    await sleep(250);
+  }
+  await sleep(800);
+  const resumed = await page.evaluate(() => ({ phase: window.__krypton.app.getState().missionPhase, objective: window.__krypton.app.getState().mission?.objectiveIndex }));
+  check('saves: after a reload, Continue resumes the mission at its checkpoint', label.includes('from checkpoint') && resumed.phase === 'active' && resumed.objective === 1, `${label.trim()} / ${JSON.stringify(resumed)}`);
+
+  await page.evaluate(() => window.__krypton.app.getState().failMission('Test failure.'));
+  const failed = page.getByRole('dialog', { name: 'Mission failed' });
+  await failed.waitFor({ timeout: 5000 }).catch(() => {});
+  const failedShown = await failed.isVisible();
+  await page.getByRole('button', { name: /Retry/ }).click();
+  for (let i = 0; i < 240; i++) {
+    if (await page.evaluate(() => window.__krypton.ready && window.__krypton.app.getState().missionPhase === 'active')) break;
+    await sleep(250);
+  }
+  const retried = await page.evaluate(() => window.__krypton.app.getState().mission?.objectiveIndex);
+  check('saves: a failed mission offers Retry from checkpoint', failedShown && retried === 1, `shown=${failedShown} objective=${retried}`);
+  check('no page errors (saves)', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await context.close();
+}
+
 /** Story mode: plays the whole prologue (intro → forest → crash site → survivors → wreck → complete), then a boss mission. */
 async function storyRun(browser) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
@@ -879,6 +925,52 @@ async function storyRun(browser) {
   const won = page.getByRole('dialog', { name: 'Mission complete' });
   await won.waitFor({ timeout: 8000 }).catch(() => {});
   check('mission: defeating Doomsday completes the mission and offers the next one', (await won.isVisible()) && (await page.getByRole('button', { name: 'Next mission' }).isVisible()));
+
+  // Act I city missions.
+  const startMissionSkipIntro = async (id, region) => {
+    await page.evaluate((id) => window.__krypton.app.getState().playMission(id), id);
+    for (let i = 0; i < 240; i++) {
+      if (await page.evaluate((r) => window.__krypton.runtime.regionId === r && window.__krypton.ready && window.__krypton.app.getState().missionPhase === 'intro', region)) break;
+      await sleep(250);
+    }
+    await sleep(800);
+    await page.keyboard.press('Space');
+    await sleep(1200);
+  };
+  await startMissionSkipIntro('rush', 'metropolis');
+  const bus1 = await page.evaluate(() => window.__krypton.runtime.busPosition);
+  await sleep(1000);
+  const bus2 = await page.evaluate(() => window.__krypton.runtime.busPosition);
+  check('mission: Rush Hour — the runaway bus is driving', !!bus1 && !!bus2 && Math.hypot(bus2.x - bus1.x, bus2.z - bus1.z) > 5, JSON.stringify({ bus1, bus2 }));
+  await page.screenshot({ path: path.join(OUT, '15-rush-hour.png') });
+  await page.evaluate(() => window.__krypton.runtime.missionFlags.add('busStopped'));
+  await sleep(600);
+  const rushObjective = await page.locator('.hud-objective-text').textContent();
+  // Carry the first injured person to the ambulance.
+  await page.evaluate(() => window.__krypton.app.getState().travelTo('metropolis', { at: { x: 36.5, z: 31.5, facing: Math.PI } }));
+  for (let i = 0; i < 240; i++) {
+    if (await page.evaluate(() => window.__krypton.ready)) break;
+    await sleep(250);
+  }
+  await sleep(800);
+  await page.keyboard.press('KeyE');
+  await sleep(500);
+  const carrying = await page.evaluate(() => window.__krypton.app.getState().mission?.carrying);
+  await page.evaluate(() => window.__krypton.app.getState().travelTo('metropolis', { at: { x: 12, z: 18, facing: Math.PI } }));
+  for (let i = 0; i < 240; i++) {
+    if (await page.evaluate(() => window.__krypton.ready)) break;
+    await sleep(250);
+  }
+  await sleep(1000);
+  const delivered = await page.evaluate(() => window.__krypton.app.getState().mission?.done?.[0]);
+  check('mission: Rush Hour — catching the bus, then carrying the injured to the ambulance', (rushObjective ?? '').includes('Carry the injured') && carrying === 0 && delivered === true, `${rushObjective} / carrying=${carrying} delivered=${delivered}`);
+
+  await startMissionSkipIntro('fire', 'metropolis');
+  const fireObjective = await page.locator('.hud-objective-text').textContent();
+  await page.evaluate(() => window.__krypton.input.addLook(0, 0.6));
+  await sleep(600);
+  await page.screenshot({ path: path.join(OUT, '16-kord-fire.png') });
+  check('mission: Fire at Kord Tower — fires and the countdown are up', /\(0\/5\) · \d+ s/.test(fireObjective ?? ''), fireObjective);
   check('no page errors (story)', errors.length === 0, errors.slice(0, 3).join(' | '));
   await context.close();
 }
@@ -935,6 +1027,7 @@ try {
   await combatRun(browser);
   await villainRun(browser);
   await storyRun(browser);
+  await saveRun(browser);
 } catch (e) {
   check('smoke run completed without exceptions', false, e.message);
 } finally {

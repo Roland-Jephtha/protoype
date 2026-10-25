@@ -9,7 +9,7 @@ import { SettingsPanel } from './SettingsPanel';
 import { promptInstall, useInstallState } from './install';
 import { useSaves } from '../save/saveStore';
 
-type View = 'main' | 'settings' | 'controls' | 'credits' | 'chapters';
+type View = 'main' | 'settings' | 'controls' | 'credits' | 'chapters' | 'saves';
 
 /**
  * Phase 1 title screen. Only lists options that work today; Continue / Load /
@@ -22,7 +22,11 @@ export function TitleScreen() {
   const touchDetected = useApp((s) => s.touchDetected);
   const install = useInstallState();
   // Re-render when the save slots finish loading or change.
-  useSaves((s) => s.slots[s.active]);
+  const save = useSaves((s) => s.slots[s.active]);
+  const slots = useSaves((s) => s.slots);
+  const activeSlot = useSaves((s) => s.active);
+  const saves = useSaves.getState();
+  const [confirmSlot, setConfirmSlot] = useState<number | null>(null);
 
   const completed = loadCompletedMissions();
   const next = nextMission();
@@ -46,14 +50,21 @@ export function TitleScreen() {
           <p className="title-build">Campaign · 6 missions · Doomsday, Zod, Darkseid and more</p>
           <nav className="menu-list title-menu">
             <button type="button" className="menu-btn primary" onClick={() => play('story')} autoFocus>
-              {completed.length ? 'Continue' : 'Play'}
-              <span className="menu-sub">{allDone ? 'Campaign complete ✓ — replay the finale' : `${next.chapter}: ${next.title}`}</span>
+              {completed.length || save.current ? 'Continue' : 'Play'}
+              <span className="menu-sub">
+                {allDone ? 'Campaign complete ✓ — replay the finale' : `${next.chapter}: ${next.title}`}
+                {save.current?.missionId === next.id && save.current.checkpoint > 0 ? ' · from checkpoint' : ''}
+              </span>
             </button>
             <button type="button" className="menu-btn" onClick={() => setView('chapters')}>
               Chapters
               <span className="menu-sub">
                 {completed.filter((id) => CAMPAIGN.some((m) => m.id === id)).length}/{CAMPAIGN.length} complete
               </span>
+            </button>
+            <button type="button" className="menu-btn" onClick={() => setView('saves')}>
+              Saves
+              <span className="menu-sub">Slot {activeSlot + 1} · 3 slots</span>
             </button>
             <button type="button" className="menu-btn" onClick={() => play('free')}>
               Free roam
@@ -104,6 +115,67 @@ export function TitleScreen() {
             </nav>
             <div className="panel-actions">
               <button type="button" className="menu-btn" onClick={() => setView('main')}>
+                Back
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {view === 'saves' && (
+        <div className="title-panel-wrap">
+          <div className="panel">
+            <h2 className="panel-title">Saves</h2>
+            <div className="menu-list">
+              {slots.map((s, i) => {
+                const done = s.completed.filter((id) => CAMPAIGN.some((m) => m.id === id)).length;
+                const empty = s.updatedAt === 0;
+                return (
+                  <div key={i} className={`save-slot ${i === activeSlot ? 'active' : ''}`}>
+                    <div className="save-slot-info">
+                      <strong>Slot {i + 1}{i === activeSlot ? ' · in use' : ''}</strong>
+                      <span>{empty ? 'Empty' : `${done}/${CAMPAIGN.length} missions · ${new Date(s.updatedAt).toLocaleString()}`}</span>
+                    </div>
+                    <div className="save-slot-actions">
+                      {!empty && i !== activeSlot && (
+                        <button type="button" className="menu-btn" onClick={() => saves.select(i)}>
+                          Load
+                        </button>
+                      )}
+                      {confirmSlot === i ? (
+                        <button
+                          type="button"
+                          className="menu-btn primary"
+                          onClick={() => {
+                            saves.newGame(i);
+                            setConfirmSlot(null);
+                          }}
+                        >
+                          {empty ? 'Start here' : 'Erase & start'}
+                        </button>
+                      ) : (
+                        <button type="button" className="menu-btn" onClick={() => setConfirmSlot(i)}>
+                          New game
+                        </button>
+                      )}
+                      {!empty && (
+                        <button type="button" className="menu-btn" onClick={() => saves.deleteSlot(i)}>
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="panel-actions">
+              <button
+                type="button"
+                className="menu-btn"
+                onClick={() => {
+                  setConfirmSlot(null);
+                  setView('main');
+                }}
+              >
                 Back
               </button>
             </div>

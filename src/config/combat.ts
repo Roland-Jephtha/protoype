@@ -191,3 +191,8 @@ export const DRONE_PATROLS: Record<RegionId, DronePatrol[]> = {
   ],
   forest: [{ x: 300, z: 0, radius: 90, count: 3 }], // the dam (Chapter 3 lab)
 };
+
+/** Story missions: how many knockouts fail the mission (each earlier one returns you to the checkpoint). */
+export const MISSION_RULES = {
+  knockoutsToFail: 2,
+};
