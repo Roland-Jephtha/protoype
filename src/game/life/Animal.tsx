@@ -183,7 +183,7 @@ export const Animal = forwardRef<AnimalHandle, { kind: AnimalKind; seed: number;
     r.visible = d < visibleWithin;
     // Hidden: skip its whole skeleton in the per-frame matrix update.
     r.matrixWorldAutoUpdate = r.visible;
-    if (d < animateWithin) anim.mixer.update(Math.min(dt, 0.05));
+    if (d < animateWithin) anim.mixer.update(Math.min(dt, 0.05) * runtime.timeScale);
   });
 
   return (

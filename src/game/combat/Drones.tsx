@@ -83,7 +83,7 @@ export function Drones({ regionId, ground }: { regionId: RegionId; ground: (x: n
 
   const hero = useMemo(() => new Vector3(), []);
   useBeforePhysicsStep((w) => {
-    const dt = w.timestep;
+    const dt = w.timestep * runtime.timeScale;
     hero.set(runtime.playerPosition.x, heroFeetY(), runtime.playerPosition.z);
     const heroActive = runtime.combat.health > 0;
     let alive = 0;
@@ -135,7 +135,7 @@ export function Drones({ regionId, ground }: { regionId: RegionId; ground: (x: n
 
   useFrame((_, dt) => {
     const sc = scratch.current;
-    sc.clock += dt;
+    sc.clock += dt * runtime.timeScale;
     const { m, q, e, p, s } = sc;
     const b = bodies.current;
     const ey = eyes.current;

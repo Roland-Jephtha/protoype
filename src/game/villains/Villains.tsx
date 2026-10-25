@@ -98,7 +98,7 @@ export function Villains({ regionId, ground }: { regionId: RegionId; ground: (x:
     };
   }, [world]);
 
-  useBeforePhysicsStep((w) => world.step(w.timestep));
+  useBeforePhysicsStep((w) => world.step(w.timestep * runtime.timeScale));
 
   return (
     <LifeBoundary>

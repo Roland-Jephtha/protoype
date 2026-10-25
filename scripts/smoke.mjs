@@ -591,6 +591,15 @@ async function combatRun(browser) {
   await page.evaluate(() => window.__krypton.input.setButton('mouse', 'attack', false));
   await sleep(80);
   check('combat: left click throws a punch', (await page.evaluate(() => window.__krypton.runtime.combat.combo)) >= 1);
+  await page.evaluate(() => window.__krypton.input.setButton('keyboard', 'slowmo', true));
+  await page.evaluate(() => window.__krypton.input.setButton('keyboard', 'slowmo', false));
+  await sleep(300);
+  const slow = await page.evaluate(() => ({ on: window.__krypton.runtime.speedForce, scale: window.__krypton.runtime.timeScale, energy: window.__krypton.runtime.combat.speedEnergy }));
+  check('combat: T starts Speed Force (world slows, meter drains)', slow.on && slow.scale < 0.5 && slow.energy < 100, `on=${slow.on} scale=${slow.scale} energy=${slow.energy.toFixed(1)}`);
+  await page.evaluate(() => window.__krypton.input.setButton('keyboard', 'slowmo', true));
+  await page.evaluate(() => window.__krypton.input.setButton('keyboard', 'slowmo', false));
+  await sleep(200);
+  check('combat: T again ends Speed Force', (await page.evaluate(() => window.__krypton.runtime.timeScale)) === 1);
   await page.mouse.click(640, 400);
   await sleep(300);
   const audioState = await page.evaluate(() => window.__krypton.audio.ctx?.state ?? 'none');

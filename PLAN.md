@@ -1,6 +1,6 @@
 # PLAN — Project Krypton: Shadow over Metropolis
 
-_Last updated: 2026-10-24_
+_Last updated: 2026-10-25_
 
 ## Where we are
 
@@ -21,7 +21,7 @@ Roadmap (approved 2026-10-24, owner wants most action outside the city):
 |---|---|---|
 | 1 | Region system + desert + forest | ✅ v1 done (2026-10-24) |
 | 2 | City life: pedestrians, traffic + lights, street props; wildlife/convoys outdoors | ✅ v1 done (2026-10-24) — street props still to add |
-| 3 | Combat: heat vision, punches, lift/throw, health, enemy AI (drones, soldiers) | 🔶 Heat vision, punch combo, homing power punch, speed dash, super breath, freeze breath, Super Nova, solar meter, drones, lifting/throwing traffic vehicles done |
+| 3 | Combat: heat vision, punches, lift/throw, health, enemy AI (drones, soldiers) | 🔶 Heat vision, punch combo, homing power punch, super breath, freeze breath, Super Nova, solar meter, drones, lifting/throwing traffic vehicles done. **Speed Force** (T / touch Speed): world slows to 15% while the hero moves 1.35× faster, ~16 s meter. Punches: random two-handed combos (jab, cross, hook, uppercut), never the same twice in a row, random finishers; uppercuts launch enemies; hit-stop on heavy blows |
 | 4 | Villains: DC models the owner downloads (licence-checked) + original henchmen, boss AI | 🔶 v1 — Doomsday, Zod, Darkseid, Subject Zero (clone) with powers and boss AI |
 | 5 | Missions + IndexedDB saves (3 slots, autosave, versioned) | 🔶 Campaign of 6 missions with progress in localStorage; save slots still to do |
 | 6 | Campaign levels (prologue → chapter 5, side missions) — mostly desert/forest | ☐ |

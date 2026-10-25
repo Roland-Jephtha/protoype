@@ -82,6 +82,11 @@ export const runtime = {
   /** Man of Steel launches so far and the last one's strength (0..1), for effects and sound. */
   launches: 0,
   launchPower: 0,
+  /** World time scale (Speed Force slow-motion, hit-stop); the hero always runs at real time. */
+  timeScale: 1,
+  /** Seconds of hit-stop left (real time). */
+  hitStop: 0,
+  speedForce: false,
   /** Camera shake intensity (decays). */
   cameraShake: 0,
   /** Seconds the hero stays frozen (slowed) by freeze breath. */

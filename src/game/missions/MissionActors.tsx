@@ -74,7 +74,7 @@ function RunawayBus({ route, speed, flag, ground }: { route: [number, number][];
   const sim = useRef({ s: 0, v: speed });
   useFrame((_, rawDt) => {
     if (useApp.getState().paused || useApp.getState().missionPhase !== 'active') return;
-    const dt = Math.min(rawDt, 0.05);
+    const dt = Math.min(rawDt, 0.05) * runtime.timeScale;
     const st = sim.current;
     // Caught: grind to a halt.
     st.v = runtime.missionFlags.has(flag) ? Math.max(0, st.v - 25 * dt) : speed;

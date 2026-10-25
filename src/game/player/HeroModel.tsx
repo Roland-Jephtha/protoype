@@ -315,8 +315,17 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
         const punches: PunchPose[] = c.punching
           ? c.strikes.map((st) => ({
               side: st.side,
+              kind: st.kind,
               progress: (c.punchTime - st.at) / d,
-              ...(st.heavy ? { twist: P.cross.twist * 1.2, lean: c.powerPunching ? HERO_COMBAT.powerPunch.lean : P.cross.lean * 1.5 } : st.side === 'right' ? P.cross : P.jab),
+              ...(st.heavy
+                ? { twist: P.cross.twist * 1.2, lean: c.powerPunching ? HERO_COMBAT.powerPunch.lean : P.cross.lean * 1.5 }
+                : st.kind === 'hook'
+                  ? { twist: P.cross.twist * 1.3, lean: P.jab.lean }
+                  : st.kind === 'uppercut'
+                    ? { twist: P.jab.twist, lean: -0.05 }
+                    : st.kind === 'cross'
+                      ? P.cross
+                      : P.jab),
             }))
           : [];
         built.pose.applyFighting(ct.forward, def.heightMeters, ct.guard, punches);

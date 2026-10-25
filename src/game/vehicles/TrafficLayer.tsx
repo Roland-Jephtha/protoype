@@ -148,7 +148,7 @@ export function TrafficLayer({ lanes, setup, groundY, roadLift = 0 }: { lanes: L
 
   useFrame((_, rawDt) => {
     if (useApp.getState().paused) return;
-    const dt = Math.min(rawDt, 0.05);
+    const dt = Math.min(rawDt, 0.05) * runtime.timeScale;
     runtime.trafficTime += dt;
     const time = runtime.trafficTime;
     stepTraffic(sim.vehicles, lanes, dt, { player: runtime.playerPosition, groundY, light: (g) => lightState(g, time) });

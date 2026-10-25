@@ -8,6 +8,7 @@ import { VILLAINS, type VillainDef } from '../../config/villains';
 import { MIXAMO_TO_DAVIDA3D, retargetClip } from '../characters/retarget';
 import { CombatPose, type BoneAliases } from '../player/combatPose';
 import { resolveClips } from '../player/heroAnimation';
+import { runtime } from '../runtime';
 
 export type VillainAnim = 'idle' | 'walk' | 'run' | 'fly' | 'fall' | 'taunt';
 
@@ -155,7 +156,7 @@ export const VillainModel = forwardRef<VillainModelHandle, { def: VillainDef }>(
     const r = root.current;
     if (!r) return;
     if (!r.visible || r.position.distanceTo(camera.position) > VILLAIN_ANIMATE_WITHIN) return;
-    anim.mixer.update(Math.min(dt, 0.05));
+    anim.mixer.update(Math.min(dt, 0.05) * runtime.timeScale);
     const p = overlay.current.punch;
     if (p) {
       r.updateWorldMatrix(true, true);

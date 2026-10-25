@@ -139,7 +139,7 @@ class AudioEngine {
   }
 
   /** One-shot effects. `strength` 0..1 scales loudness. */
-  play(kind: 'punch' | 'power' | 'explosion' | 'zap' | 'hurt' | 'boom' | 'throw' | 'freeze', strength = 1) {
+  play(kind: 'punch' | 'power' | 'explosion' | 'zap' | 'hurt' | 'boom' | 'throw' | 'freeze' | 'slowIn' | 'slowOut', strength = 1) {
     const ctx = this.ctx;
     if (!ctx || !this.master || ctx.state !== 'running') return;
     const t = ctx.currentTime;
@@ -202,6 +202,13 @@ class AudioEngine {
       burst('bandpass', 700, 0.5, vol);
     } else if (kind === 'freeze') {
       burst('highpass', 5000, 0.4, vol);
+    } else if (kind === 'slowIn') {
+      // Time winding down: a falling whoosh over a deep drop.
+      thump(260, 40, 0.9);
+      burst('bandpass', 3000, 0.8, vol * 0.7);
+    } else if (kind === 'slowOut') {
+      thump(50, 200, 0.4);
+      burst('bandpass', 900, 0.35, vol * 0.5);
     }
     setTimeout(() => out.disconnect(), 2500);
   }

@@ -1,4 +1,4 @@
-import { HERO_COMBAT } from '../../config/combat';
+import { HERO_COMBAT, SPEED_FORCE, type Strike, type StrikeKind } from '../../config/combat';
 
 export interface CombatInput {
   /** Punch pressed this step (edge) and held. */
@@ -11,12 +11,15 @@ export interface CombatInput {
   freezeHeld?: boolean;
   /** Super Nova: hold to charge, release when full. */
   novaHeld?: boolean;
+  /** Speed Force on/off (edge). */
+  slowmoPressed?: boolean;
 }
 
 export type CombatEvent =
   | { type: 'punch'; side: 'left' | 'right'; combo: number }
   /** A strike of the current punch reaches full extension: resolve hits now. */
-  | { type: 'punchHit'; combo: number; heavy: boolean }
+  | { type: 'punchHit'; combo: number; heavy: boolean; kind: StrikeKind }
+  | { type: 'speedForce'; on: boolean }
   /** A charged power punch was released (0..1 extra charge beyond the hold threshold). */
   | { type: 'powerPunch'; side: 'left' | 'right'; charge: number }
   | { type: 'nova' }
@@ -44,7 +47,12 @@ export class HeroCombat {
   /** The current punch is a power punch. */
   powerPunching = false;
   /** Strikes (one per fist) of the current punch. */
-  strikes: { side: 'left' | 'right'; at: number; heavy?: boolean }[] = [];
+  strikes: Strike[] = [];
+  /** Speed Force: energy (0..capacity) and whether it's running. */
+  speedEnergy: number = SPEED_FORCE.capacity;
+  speedForce = false;
+  private sinceSpeed = Infinity;
+  private lastPattern = -1;
   private strikesHit = 0;
   /** Seconds since the last punch finished (combo window), and a tap made mid-punch, thrown next. */
   private sinceEnd = Infinity;
@@ -73,6 +81,7 @@ export class HeroCombat {
     this.combo = 0;
     this.holdTime = 0;
     this.novaCharge = 0;
+    this.speedForce = false;
     this.sinceDamage = Infinity;
     this.grace = HERO_COMBAT.respawnGrace;
   }
@@ -147,7 +156,7 @@ export class HeroCombat {
       // Each fist lands its own hit (a power punch's final knockout blow is resolved by the driver when the lunge arrives).
       while (this.strikesHit < this.strikes.length && this.punchTime >= this.strikes[this.strikesHit].at + p.hitAt) {
         const st = this.strikes[this.strikesHit++];
-        if (!(this.powerPunching && st.heavy)) events.push({ type: 'punchHit', combo: this.combo, heavy: !!st.heavy });
+        if (!(this.powerPunching && st.heavy)) events.push({ type: 'punchHit', combo: this.combo, heavy: !!st.heavy, kind: st.kind });
       }
       const last = this.strikes[this.strikes.length - 1];
       if (this.punchTime >= p.duration + (last?.at ?? 0)) {
@@ -162,7 +171,7 @@ export class HeroCombat {
       this.buffered = false;
       this.combo = this.sinceEnd <= p.comboWindow && this.combo < 3 ? this.combo + 1 : 1;
       this.side = this.combo % 2 === 1 ? 'right' : 'left';
-      this.strikes = this.combo >= 3 ? p.patterns.finisher : p.patterns.oneTwo;
+      this.strikes = this.pick(this.combo >= 3 ? p.finishers : p.combos);
       this.startPunch(false);
       events.push({ type: 'punch', side: this.side, combo: this.combo });
     }
@@ -173,11 +182,30 @@ export class HeroCombat {
         this.powerCharge = Math.min(1, (this.holdTime - pp.holdTime) / (pp.maxCharge - pp.holdTime));
         this.side = 'right';
         this.combo = 0;
-        this.strikes = p.patterns.power;
+        this.strikes = this.pick(p.powers);
         this.startPunch(true);
         events.push({ type: 'powerPunch', side: this.side, charge: this.powerCharge });
       }
       this.holdTime = 0;
+    }
+
+    // --- Speed Force -----------------------------------------------------------
+    const sf = SPEED_FORCE;
+    if (inp.slowmoPressed) {
+      if (this.speedForce) this.speedForce = false;
+      else if (this.speedEnergy >= sf.minToStart) this.speedForce = true;
+      events.push({ type: 'speedForce', on: this.speedForce });
+    }
+    if (this.speedForce) {
+      this.speedEnergy = Math.max(0, this.speedEnergy - sf.drainPerSecond * dt);
+      this.sinceSpeed = 0;
+      if (this.speedEnergy === 0) {
+        this.speedForce = false;
+        events.push({ type: 'speedForce', on: false });
+      }
+    } else {
+      this.sinceSpeed += dt;
+      if (this.sinceSpeed >= sf.rechargeDelay) this.speedEnergy = Math.min(sf.capacity, this.speedEnergy + sf.rechargePerSecond * dt);
     }
 
     // --- health ---------------------------------------------------------------
@@ -187,6 +215,17 @@ export class HeroCombat {
     }
     return events;
   }
+
+  /** A random combination, never the same one twice in a row. */
+  private pick(list: Strike[][]): Strike[] {
+    let i = Math.floor(this.rand() * list.length);
+    if (list.length > 1 && i === this.lastPattern) i = (i + 1) % list.length;
+    this.lastPattern = i;
+    return list[i];
+  }
+
+  /** Randomness source (replaceable in tests). */
+  rand: () => number = Math.random;
 
   private startPunch(power: boolean) {
     this.punchTime = 0;

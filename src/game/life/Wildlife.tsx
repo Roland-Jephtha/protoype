@@ -59,7 +59,7 @@ export function Herd({ def, seed, ground, walkable }: { def: HerdDef; seed: numb
 
   useFrame((_, rawDt) => {
     if (useApp.getState().paused) return;
-    const dt = Math.min(rawDt, 0.05);
+    const dt = Math.min(rawDt, 0.05) * runtime.timeScale;
     sim.animals.forEach((a, i) => {
       stepWanderer(a, dt, runtime.playerPosition, sim.opts);
       const h = refs.current[i];
@@ -86,7 +86,7 @@ export function Circlers({ birds, ground }: { birds: Circler[]; ground: (x: numb
   const groundAt = useMemo(() => birds.map((b) => ground(b.cx, b.cz)), [birds, ground]);
   useFrame((_, dt) => {
     if (useApp.getState().paused) return;
-    clock.current += Math.min(dt, 0.05);
+    clock.current += Math.min(dt, 0.05) * runtime.timeScale;
     birds.forEach((b, i) => {
       const h = refs.current[i];
       if (!h?.root) return;
@@ -120,7 +120,7 @@ export function RiverFish({ river, count, waterY, seed }: { river: [number, numb
   const away = useMemo(() => ({ x: 1e6, y: 0, z: 1e6 }), []);
   useFrame((_, rawDt) => {
     if (useApp.getState().paused) return;
-    const dt = Math.min(rawDt, 0.05);
+    const dt = Math.min(rawDt, 0.05) * runtime.timeScale;
     sim.forEach((f, i) => {
       stepPathWalker(f.walker, f.path, dt, away, { closed: false, rand });
       f.leap = (f.leap + dt) % f.period;

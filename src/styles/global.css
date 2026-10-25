@@ -683,6 +683,25 @@ input[type='range']::-moz-range-thumb {
   background: linear-gradient(90deg, #f2c14e, #fff3b0);
 }
 
+.hud-speedbar {
+  height: 5px;
+}
+
+.hud-speedbar .hud-bar-fill {
+  background: linear-gradient(90deg, #2a7bff, #9fe4ff);
+}
+
+/* Speed Force: cool blue vignette while the world crawls. */
+.hud-speedforce {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(120, 190, 255, 0) 45%, rgba(40, 110, 255, 0.34));
+  mix-blend-mode: screen;
+  transition: opacity 0.35s ease-out;
+}
+
 .hud-flash {
   position: absolute;
   inset: 0;

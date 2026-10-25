@@ -42,10 +42,10 @@ describe('hero combat', () => {
       combos.push(c.combo);
     }
     expect(combos).toEqual([1, 2, 3]);
-    expect(hits[0]).toHaveLength(2);
-    expect(c.strikes.map((s) => s.side)).toEqual(['left', 'right', 'left', 'right']);
-    expect(hits[2]).toHaveLength(4);
-    expect(hits[2].filter((e) => e.type === 'punchHit' && e.heavy)).toHaveLength(1);
+    // Every combination uses both hands; the finisher ends with at least one heavy blow.
+    expect(hits[0].length).toBeGreaterThanOrEqual(2);
+    expect(new Set(c.strikes.map((s) => s.side)).size).toBe(2);
+    expect(hits[2].filter((e) => e.type === 'punchHit' && e.heavy).length).toBeGreaterThanOrEqual(1);
     expect(c.punchStrength(true).damage).toBe(HERO_COMBAT.punch.finisherDamage);
     expect(c.punchStrength(false).damage).toBeLessThan(HERO_COMBAT.punch.damage);
     // After a pause the combo starts over.
@@ -148,6 +148,35 @@ describe('drones', () => {
     hits = 0;
     for (let t = 0; t < 1; t += DT) hits += stepBolts(b, DT, { x: 3, y: 0, z: 0 }, true, ground);
     expect(hits).toBe(0);
+  });
+});
+
+describe('punch variety', () => {
+  it('never throws the same combination twice in a row', () => {
+    const c = new HeroCombat();
+    let prev = '';
+    for (let i = 0; i < 12; i++) {
+      c.step({ attackPressed: true, aimHeld: false }, DT);
+      const key = c.strikes.map((s) => s.side + s.kind).join();
+      if (c.combo < 3) expect(key).not.toBe(prev);
+      prev = c.combo < 3 ? key : '';
+      run(c, 1.6);
+    }
+  });
+});
+
+describe('Speed Force', () => {
+  it('toggles on, drains while running, switches itself off when empty, then recharges', () => {
+    const c = new HeroCombat();
+    expect(c.step({ ...idle, slowmoPressed: true }, DT).some((e) => e.type === 'speedForce' && e.on)).toBe(true);
+    run(c, 5);
+    expect(c.speedForce).toBe(true);
+    expect(c.speedEnergy).toBeLessThan(80);
+    run(c, 20);
+    expect(c.speedForce).toBe(false);
+    const empty = c.speedEnergy;
+    run(c, 6);
+    expect(c.speedEnergy).toBeGreaterThan(empty + 10);
   });
 });
 

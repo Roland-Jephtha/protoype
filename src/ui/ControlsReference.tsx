@@ -12,6 +12,7 @@ const DESKTOP: [string, string][] = [
   ['R (hold)', 'Super breath — a gale that blows enemies away'],
   ['Q (hold)', 'Freeze breath — ices enemies; frozen drones fall'],
   ['X (hold, release)', 'Super Nova — charge, then blast everything around you'],
+  ['T', 'Speed Force — the world slows to a crawl while you move freely, until the blue meter runs out'],
   ['Esc / P', 'Pause'],
   ['F3', 'Diagnostics overlay'],
 ];
@@ -25,7 +26,7 @@ const TOUCH: [string, string][] = [
   ['▼ Down', 'Flying: down'],
   ['✊ Punch', 'Punch (tap quickly for a 3-hit combo)'],
   ['◉ Heat (hold)', 'Heat vision — slide your thumb on it to aim'],
-  ['Power + ⟳', 'Breath / Freeze / Nova (hold); ⟳ switches power'],
+  ['Power + ⟳', 'Breath / Freeze / Nova (hold), Speed (tap); ⟳ switches power'],
   ['❚❚ top-right', 'Pause'],
 ];
 

@@ -21,6 +21,7 @@ const POWERS: { action: Action; label: string; icon: string }[] = [
   { action: 'breath', label: 'Breath', icon: '≋' },
   { action: 'freeze', label: 'Freeze', icon: '❄' },
   { action: 'nova', label: 'Nova', icon: '✺' },
+  { action: 'slowmo', label: 'Speed', icon: '⌛' },
 ];
 
 export function TouchControls() {

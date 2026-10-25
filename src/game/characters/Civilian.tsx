@@ -4,6 +4,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'rea
 import { AnimationMixer, Box3, LoopRepeat, Vector3, type AnimationAction, type Group, type Mesh } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { HERO_MODELS } from '../../config/assets';
+import { runtime } from '../runtime';
 import { createOutfitMaterial, prepareOutfitSlots, randomPalette, type Palette } from './outfit';
 
 // Pedestrians and survivors share one model: fetch it once at startup.
@@ -106,7 +107,7 @@ export const Civilian = forwardRef<
     root.current.visible = d < visibleWithin;
     // Hidden: skip its whole skeleton in the per-frame matrix update.
     root.current.matrixWorldAutoUpdate = root.current.visible;
-    if (d < animateWithin) animRef.current.mixer.update(Math.min(dt, 0.05));
+    if (d < animateWithin) animRef.current.mixer.update(Math.min(dt, 0.05) * runtime.timeScale);
   });
 
   return (

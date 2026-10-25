@@ -21,6 +21,8 @@ export interface PunchPose {
   /** Torso turn into the punch and forward lean at full extension (rad). */
   twist: number;
   lean: number;
+  /** Straight (jab/cross), hook (wide arc from the side) or uppercut (rising from below). */
+  kind?: 'jab' | 'cross' | 'hook' | 'uppercut';
 }
 
 /** Fist extension over a punch (0..1 progress): snap out, short hold, back to guard. */
@@ -53,6 +55,19 @@ const ARM = {
   guardElbow: [0.04, 0.035, -0.15],
   strikeFist: [0.43, -0.065, -0.02],
   strikeElbow: [0.21, 0.012, -0.035],
+  // Hook: elbow up and out to the side, fist swinging across in front of the face.
+  hookFist: [0.3, -0.13, 0.0],
+  hookElbow: [0.12, 0.17, -0.01],
+  // Uppercut: elbow low and tucked, fist driving up past the chin.
+  upperFist: [0.24, -0.05, 0.13],
+  upperElbow: [0.1, 0.05, -0.12],
+} as const;
+
+const STRIKE_TARGETS = {
+  jab: { fist: ARM.strikeFist, elbow: ARM.strikeElbow },
+  cross: { fist: ARM.strikeFist, elbow: ARM.strikeElbow },
+  hook: { fist: ARM.hookFist, elbow: ARM.hookElbow },
+  uppercut: { fist: ARM.upperFist, elbow: ARM.upperElbow },
 } as const;
 
 /**
@@ -151,9 +166,10 @@ export class CombatPose {
       const shoulder = arm.upper.getWorldPosition(this.v.c);
       const elbow = this.bodyPoint(this.v.elbow, shoulder, forward, out, ARM.guardElbow, height);
       const fist = this.bodyPoint(this.v.fist, shoulder, forward, out, ARM.guardFist, height);
-      if (k > 0) {
-        elbow.lerp(this.bodyPoint(this.v.a, shoulder, forward, out, ARM.strikeElbow, height), k);
-        fist.lerp(this.bodyPoint(this.v.b, shoulder, forward, out, ARM.strikeFist, height), k);
+      if (k > 0 && punch) {
+        const t = STRIKE_TARGETS[punch.kind ?? 'jab'];
+        elbow.lerp(this.bodyPoint(this.v.a, shoulder, forward, out, t.elbow, height), k);
+        fist.lerp(this.bodyPoint(this.v.b, shoulder, forward, out, t.fist, height), k);
       }
       // Two-bone pose: upper arm to the elbow point, forearm to the fist.
       this.aim(arm.upper, arm.fore, elbow, weight);

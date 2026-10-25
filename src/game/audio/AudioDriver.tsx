@@ -23,7 +23,7 @@ export function AudioDriver() {
     };
   }, []);
 
-  const last = useRef({ launches: runtime.launches, impact: 0, drones: runtime.dronesDestroyed, villains: runtime.villainsDefeated, nova: runtime.novaFlash, health: runtime.combat.health, carrying: false, frozen: 0 });
+  const last = useRef({ launches: runtime.launches, impact: 0, drones: runtime.dronesDestroyed, villains: runtime.villainsDefeated, nova: runtime.novaFlash, health: runtime.combat.health, carrying: false, frozen: 0, speedForce: false });
 
   useFrame(() => {
     const paused = useApp.getState().paused;
@@ -66,6 +66,8 @@ export function AudioDriver() {
     l.carrying = carrying;
     if (runtime.heroFrozen > 0 && l.frozen <= 0) audio.play('freeze');
     l.frozen = runtime.heroFrozen;
+    if (runtime.speedForce !== l.speedForce) audio.play(runtime.speedForce ? 'slowIn' : 'slowOut');
+    l.speedForce = runtime.speedForce;
   });
   return null;
 }

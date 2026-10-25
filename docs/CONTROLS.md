@@ -22,6 +22,7 @@ Only controls that work today are listed as active. Bindings live in
 | R (hold) | Super breath (wind) | ✅ |
 | Q (hold) | Freeze breath | ✅ |
 | X (hold, release when charged) | Super Nova | ✅ |
+| T | Speed Force: the world slows down, you don't (toggle; blue meter) | ✅ |
 | E | Interact / rescue (story mode); lift a nearby vehicle; drop it | ✅ |
 | Left mouse while carrying | Throw the vehicle along the crosshair | ✅ |
 
@@ -49,7 +50,7 @@ the phone sideways. Toggle: Settings → *Always landscape on phones*.
 | ✊ Punch | Punch / combo | ✅ |
 | ◉ Heat (hold) | Heat vision; slide the thumb on the button to aim, strong aim assist | ✅ |
 | ✋ (contextual) | Interact when a prompt shows (story mode) | ✅ |
-| Power (≋ / ❄ / ✺) + ⟳ | Hold for Breath / Freeze / Nova; ⟳ cycles the power | ✅ |
+| Power (≋ / ❄ / ✺ / ⌛) + ⟳ | Hold for Breath / Freeze / Nova, tap Speed to toggle Speed Force; ⟳ cycles the power | ✅ |
 
 Flight: 60 km/h with a full stick, 150 km/h boosting; release everything to brake into a hover; touch any surface while not climbing to land (fast impacts play the heavy landing).
 

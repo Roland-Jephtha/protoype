@@ -12,7 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Group } from 'three';
 import { CAMERA, FLIGHT, PLAYER } from '../../config/gameConfig';
 import { crossedSide, oppositeSide, type Entry, type RegionDef } from '../../config/regions';
-import { HERO_COMBAT } from '../../config/combat';
+import { HERO_COMBAT, SPEED_FORCE } from '../../config/combat';
 import { VILLAIN_AI } from '../../config/villains';
 import { addImpact } from '../combat/impacts';
 import { input } from '../../input/InputManager';
@@ -155,7 +155,7 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
         flyHeld: input.isHeld('fly'),
         descendHeld: input.isHeld('descend'),
         faceYaw: runtime.combatFaceYaw ?? undefined,
-        speedScale: runtime.heroFrozen > 0 ? VILLAIN_AI.freezeSlow : 1,
+        speedScale: (runtime.heroFrozen > 0 ? VILLAIN_AI.freezeSlow : 1) * (runtime.speedForce ? SPEED_FORCE.heroSpeed : 1),
       },
       dt,
     );

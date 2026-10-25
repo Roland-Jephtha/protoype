@@ -3,6 +3,7 @@ import { advance, Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { DirectionalLight, Object3D } from 'three';
+import { HIT_STOP, SPEED_FORCE } from '../config/combat';
 import { CAMERA, GRAPHICS_PRESETS, PHYSICS } from '../config/gameConfig';
 import { OUTDOOR_DRAW_SCALE, REGIONS, type RegionLook } from '../config/regions';
 import { useApp } from '../state/appStore';
@@ -59,6 +60,16 @@ function Lighting({ look, shadows, mapSize }: { look: RegionLook; shadows: boole
       />
     </>
   );
+}
+
+/** Sets the world time scale each frame: Speed Force slow-motion and hit-stop. Runs before everything else. */
+function TimeControl() {
+  useFrame((_, dt) => {
+    runtime.hitStop = Math.max(0, runtime.hitStop - Math.min(dt, 0.05));
+    runtime.speedForce = runtime.combat.speedForce;
+    runtime.timeScale = runtime.hitStop > 0 ? HIT_STOP.scale : runtime.speedForce ? SPEED_FORCE.worldScale : 1;
+  }, -60);
+  return null;
 }
 
 /** Writes FPS / frame time / draw calls into runtime for the diagnostics overlay. */
@@ -201,6 +212,7 @@ export function GameCanvas() {
         onIncline={() => setDpr((d) => Math.min(preset.maxDpr, d * 1.1))}
         onFallback={() => setDpr(() => ADAPTIVE_MIN_DPR)}
       />
+      <TimeControl />
       <PerfProbe />
       <AudioDriver />
       <VsyncFrameLoop />

@@ -40,3 +40,10 @@
 
 Settings live in this browser's localStorage. Clearing site data resets them; they
 don't sync across devices. (Same will apply to IndexedDB saves in Phase 7.)
+
+## Speed Force / hit-stop
+
+World slow-motion scales traffic, life, drones, villains, the train, mission actors and
+their animation mixers. Not scaled yet: Rapier rigid bodies (thrown wrecks), particle
+effects and procedural audio pitch. Hook/uppercut poses are procedural (two-bone IK),
+not motion-captured.

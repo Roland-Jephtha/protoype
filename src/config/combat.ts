@@ -1,5 +1,14 @@
 import type { RegionId } from './regions';
 
+export type StrikeKind = 'jab' | 'cross' | 'hook' | 'uppercut';
+export interface Strike {
+  side: 'left' | 'right';
+  kind: StrikeKind;
+  at: number;
+  heavy?: boolean;
+}
+const S = (side: Strike['side'], kind: StrikeKind, at: number, heavy?: boolean): Strike => ({ side, kind, at, heavy });
+
 /** Hero combat tuning (m, s, damage points). */
 export const HERO_COMBAT = {
   maxHealth: 100,
@@ -33,28 +42,27 @@ export const HERO_COMBAT = {
     jab: { twist: 0.32, lean: 0.12 },
     cross: { twist: 0.5, lean: 0.22 },
     /**
-     * Both hands every time. Each tap throws a one-two; the third tap of a combo is a
-     * flurry ending in a heavy blow; the power punch is a fast flurry ending in the
-     * knockout cross. `at` = seconds after the press; `heavy` = full damage/knockback.
+     * Both hands, and never the same combo twice in a row: each tap picks a random
+     * combination; the third tap of a combo is a random finisher; the power punch
+     * is a flurry ending in a random knockout blow. `at` = seconds after the press;
+     * `heavy` = full damage/knockback. Uppercuts launch enemies up into the air.
      */
-    patterns: {
-      oneTwo: [
-        { side: 'left', at: 0 },
-        { side: 'right', at: 0.15 },
-      ],
-      finisher: [
-        { side: 'left', at: 0 },
-        { side: 'right', at: 0.12 },
-        { side: 'left', at: 0.24 },
-        { side: 'right', at: 0.38, heavy: true },
-      ],
-      power: [
-        { side: 'left', at: 0 },
-        { side: 'right', at: 0.1 },
-        { side: 'left', at: 0.2 },
-        { side: 'right', at: 0.34, heavy: true },
-      ],
-    } as Record<'oneTwo' | 'finisher' | 'power', { side: 'left' | 'right'; at: number; heavy?: boolean }[]>,
+    combos: [
+      [S('left', 'jab', 0), S('right', 'cross', 0.15)],
+      [S('left', 'hook', 0), S('right', 'uppercut', 0.17)],
+      [S('right', 'cross', 0), S('left', 'hook', 0.16)],
+      [S('left', 'jab', 0), S('left', 'jab', 0.11), S('right', 'cross', 0.24)],
+      [S('right', 'hook', 0), S('left', 'hook', 0.15)],
+    ],
+    finishers: [
+      [S('left', 'jab', 0), S('right', 'cross', 0.12), S('left', 'hook', 0.24), S('right', 'uppercut', 0.4, true)],
+      [S('right', 'cross', 0), S('left', 'hook', 0.13), S('right', 'hook', 0.26), S('left', 'cross', 0.4, true), S('right', 'cross', 0.4, true)],
+      [S('left', 'hook', 0), S('right', 'hook', 0.14), S('left', 'uppercut', 0.3, true)],
+    ],
+    powers: [
+      [S('left', 'jab', 0), S('right', 'cross', 0.09), S('left', 'hook', 0.18), S('right', 'cross', 0.34, true)],
+      [S('left', 'jab', 0), S('right', 'jab', 0.08), S('left', 'jab', 0.16), S('right', 'uppercut', 0.34, true)],
+    ],
     /** A light strike in a combo does this share of a punch's damage / knockback. */
     lightShare: 0.6,
     /** Fighting stance stays up this long after a punch, or while an enemy is this close (s, m). */
@@ -227,3 +235,21 @@ export const DRONE_PATROLS: Record<RegionId, DronePatrol[]> = {
 export const MISSION_RULES = {
   knockoutsToFail: 2,
 };
+
+/** Speed Force: the world slows to a crawl while the hero moves at full speed and faster. */
+export const SPEED_FORCE = {
+  /** World time runs at this fraction while active. */
+  worldScale: 0.15,
+  /** The hero's own speeds are multiplied by this. */
+  heroSpeed: 1.35,
+  capacity: 100,
+  /** Drains per real second while active (~16 s from full); recharges after a delay. */
+  drainPerSecond: 6,
+  rechargePerSecond: 4,
+  rechargeDelay: 1.5,
+  /** Can't switch on below this much energy. */
+  minToStart: 15,
+};
+
+/** A split-second world freeze on heavy hits, so they land with weight (s, world scale). */
+export const HIT_STOP = { heavy: 0.09, finisher: 0.13, scale: 0.04 };

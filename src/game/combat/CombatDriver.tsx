@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useBeforePhysicsStep, useRapier } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
 import { AdditiveBlending, CircleGeometry, CylinderGeometry, DoubleSide, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Quaternion, Vector3 } from 'three';
-import { HERO_COMBAT } from '../../config/combat';
+import { HERO_COMBAT, HIT_STOP } from '../../config/combat';
 import { input } from '../../input/InputManager';
 import { useApp } from '../../state/appStore';
 import { runtime } from '../runtime';
@@ -49,6 +49,7 @@ export function CombatDriver() {
         breathHeld: input.isHeld('breath'),
         freezeHeld: input.isHeld('freeze'),
         novaHeld: input.isHeld('nova'),
+        slowmoPressed: input.consumePressed('slowmo'),
       },
       dt,
     );
@@ -125,9 +126,18 @@ export function CombatDriver() {
       }
       else if (e.type === 'punchHit') {
         const { damage, knockback } = c.punchStrength(e.heavy);
+        let landed = false;
         for (const t of inCone(chest, facing(), reach, punch.coneHalfAngle, targets)) {
-          hit(t, damage, away(t, knockback, knockback * 0.25));
-          addImpact(t.position, 'punch');
+          // Uppercuts launch upward, hooks knock sideways-forward, straights drive straight back.
+          const knock = e.kind === 'uppercut' ? away(t, knockback * 0.35, knockback * 1.1) : away(t, knockback, knockback * (e.kind === 'hook' ? 0.35 : 0.25));
+          hit(t, damage, knock);
+          addImpact(t.position, e.heavy ? 'power' : 'punch');
+          landed = true;
+        }
+        // Big blows freeze the world for a split second.
+        if (landed && e.heavy) {
+          runtime.hitStop = Math.max(runtime.hitStop, HIT_STOP.finisher);
+          runtime.cameraShake = Math.max(runtime.cameraShake, 0.45);
         }
       } else if (e.type === 'powerPunch') {
         const pp = HERO_COMBAT.powerPunch;
@@ -176,6 +186,7 @@ export function CombatDriver() {
           hit(s, pp.damage * k, away(s, pp.knockback * k, pp.knockback * 0.35 * k));
           addImpact(s.position, 'power');
         }
+        if (struck.length) runtime.hitStop = Math.max(runtime.hitStop, HIT_STOP.finisher);
         runtime.cameraShake = Math.max(runtime.cameraShake, struck.length ? 0.5 : 0.15);
       }
     }

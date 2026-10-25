@@ -11,6 +11,8 @@ export const ACTIONS = [
   'freeze',
   /** Super Nova: hold to charge, release to blast. */
   'nova',
+  /** Speed Force: the world slows down (toggle). */
+  'slowmo',
   'pause',
   /** Toggle flight (take off / drop out of flight). */
   'fly',

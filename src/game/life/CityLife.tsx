@@ -79,7 +79,7 @@ export function CityLife() {
   const pets = useRef<(AnimalHandle | null)[]>([]);
   useFrame((_, rawDt) => {
     if (useApp.getState().paused) return;
-    const dt = Math.min(rawDt, 0.05);
+    const dt = Math.min(rawDt, 0.05) * runtime.timeScale;
     runtime.pedestriansWalking = sim.people.filter((p, i) => people.current[i]?.root && p.w.speed > 0.2).length;
     sim.people.forEach((p, i) => {
       stepPathWalker(p.w, p.path, dt, runtime.playerPosition, p.opts, sh);

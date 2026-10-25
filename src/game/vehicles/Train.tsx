@@ -102,7 +102,7 @@ export function Train({ rail, ground, railTop }: { rail: PathDef; ground: (x: nu
 
   useFrame((_, rawDt) => {
     if (useApp.getState().paused) return;
-    const dt = Math.min(rawDt, 0.05);
+    const dt = Math.min(rawDt, 0.05) * runtime.timeScale;
     front.current += TRAIN.speed * dt;
     if (front.current > path.length + cars.total + TRAIN.layover) front.current = 0;
     runtime.trainFront = front.current;
