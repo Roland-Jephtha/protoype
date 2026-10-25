@@ -67,6 +67,13 @@ export const OUTDOOR_DENSITY: Record<GraphicsQuality, number> = { low: 0.4, medi
 /** Fog/draw distance multiplier by quality for outdoor regions. */
 export const OUTDOOR_DRAW_SCALE: Record<GraphicsQuality, number> = { low: 0.55, medium: 0.8, high: 1 };
 
+/** Forest trees (playable area / scenery ring) per quality. Trees are most of the forest's cost. */
+export const FOREST_TREES: Record<GraphicsQuality, { inner: number; outer: number }> = {
+  low: { inner: 3500, outer: 900 },
+  medium: { inner: 6500, outer: 1600 },
+  high: { inner: 11000, outer: 3500 },
+};
+
 export const REGIONS: Record<RegionId, RegionDef> = {
   metropolis: {
     id: 'metropolis',
@@ -153,7 +160,7 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     size: 2400,
     look: {
       background: '#9fb3ad',
-      fog: { color: '#8fa39a', near: 60, far: 760 },
+      fog: { color: '#8fa39a', near: 50, far: 600 },
       sunOffset: [-90, 45, -60],
       sun: { color: '#ffd6a0', intensity: 2.3 },
       hemisphere: { sky: '#a9c4d6', ground: '#3d4a2c', intensity: 1.35 },

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { DoubleSide, MeshStandardMaterial } from 'three';
-import { OUTDOOR_DENSITY } from '../../../config/regions';
+import { FOREST_TREES, OUTDOOR_DENSITY, OUTDOOR_DRAW_SCALE } from '../../../config/regions';
 import { ROAD_TRAFFIC } from '../../../config/world';
 import { useSettings } from '../../../state/settings';
 import { mulberry32 } from '../cityLayout';
@@ -23,6 +23,7 @@ export function ForestContent() {
   const p = t.region.terrain as ForestParams;
   const quality = useSettings((s) => s.graphicsQuality);
   const density = OUTDOOR_DENSITY[quality];
+  const trees = FOREST_TREES[quality];
 
   const geo = useMemo(() => ({ conifer: coniferGeometry(), broadleaf: broadleafGeometry(), rock: rockGeometry(57) }), []);
   useEffect(() => () => Object.values(geo).forEach((g) => g.dispose()), [geo]);
@@ -38,7 +39,7 @@ export function ForestContent() {
       t.slope(x, z) < 0.35;
     // Woods are dense in patches (noise mask), with open meadows between.
     const wooded = (x: number, z: number) => forestMask(x / 350, z / 350) > -0.45 + rand() * 0.3;
-    const pts = scatter(rand, t.size - 40, Math.round(16000 * density), (x, z) => clear(x, z) && wooded(x, z), Math.round(16000 * density) * 6);
+    const pts = scatter(rand, t.size - 40, trees.inner, (x, z) => clear(x, z) && wooded(x, z), trees.inner * 6);
     const conifers: PropInstance[] = [];
     const broadleaves: PropInstance[] = [];
     for (const [x, z] of pts) {
@@ -54,12 +55,12 @@ export function ForestContent() {
     // Scenery trees beyond the playable edge (no colliders), so the forest doesn't
     // stop at a visible line when flying high.
     const half = t.size / 2;
-    const outer = scatter(rand, t.size + 900, Math.round(5000 * density), (x, z) => Math.max(Math.abs(x), Math.abs(z)) > half + 4 && wooded(x, z)).map(([x, z]) => {
+    const outer = scatter(rand, t.size + 900, trees.outer, (x, z) => Math.max(Math.abs(x), Math.abs(z)) > half + 4 && wooded(x, z)).map(([x, z]) => {
       const s = 1 + rand() * 0.9;
       return { x, y: t.height(x, z) - 0.8, z, scale: s, rotationY: rand() * 6.28, tint: rand() < 0.5 ? 0xffffff : 0xd0dfc0 };
     });
     return { conifers, broadleaves, rocks, outer };
-  }, [t, p, density]);
+  }, [t, p, density, trees]);
 
   // Trunks block the hero (thousands of static cylinders — fine for Rapier's BVH).
   useStaticColliders(
@@ -71,13 +72,14 @@ export function ForestContent() {
     [conifers, broadleaves],
   );
 
-  const draw = t.region.look.fog.far * 1.15;
+  // Trees fade into the fog: draw no further than the (quality-scaled) fog distance.
+  const draw = t.region.look.fog.far * OUTDOOR_DRAW_SCALE[quality] * 1.05;
   return (
     <group>
-      <InstancedProps geometry={geo.conifer} instances={conifers} maxDistance={draw} cellSize={600} />
-      <InstancedProps geometry={geo.broadleaf} instances={broadleaves} maxDistance={draw} cellSize={600} />
+      <InstancedProps geometry={geo.conifer} instances={conifers} maxDistance={draw} cellSize={250} />
+      <InstancedProps geometry={geo.broadleaf} instances={broadleaves} maxDistance={draw} cellSize={250} />
       <InstancedProps geometry={geo.rock} instances={rocks} maxDistance={draw * 0.7} />
-      <InstancedProps geometry={geo.conifer} instances={outer} maxDistance={draw} cellSize={900} castShadow={false} />
+      <InstancedProps geometry={geo.conifer} instances={outer} maxDistance={draw} cellSize={400} castShadow={false} />
       <River />
       <Railway />
       <Train rail={p.rail} ground={t.ground} railTop={0.56} />

@@ -41,7 +41,8 @@ export function defaultSettings(): Settings {
     touchControlOpacity: 0.75,
     touchControlScale: 1,
     forceLandscape: true,
-    graphicsQuality: 'medium',
+    // Phones start on Low (they can raise it in Settings); desktops on Medium.
+    graphicsQuality: typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches ? 'low' : 'medium',
     reducedMotion: typeof window !== 'undefined' && prefersReducedMotion(),
     showDebug: false,
   };

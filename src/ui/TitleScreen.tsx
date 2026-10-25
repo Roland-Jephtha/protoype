@@ -7,6 +7,7 @@ import { ControlsReference } from './ControlsReference';
 import { CreditsPanel } from './CreditsPanel';
 import { SettingsPanel } from './SettingsPanel';
 import { promptInstall, useInstallState } from './install';
+import { useSaves } from '../save/saveStore';
 
 type View = 'main' | 'settings' | 'controls' | 'credits' | 'chapters';
 
@@ -20,6 +21,8 @@ export function TitleScreen() {
   const startGame = useApp((s) => s.startGame);
   const touchDetected = useApp((s) => s.touchDetected);
   const install = useInstallState();
+  // Re-render when the save slots finish loading or change.
+  useSaves((s) => s.slots[s.active]);
 
   const completed = loadCompletedMissions();
   const next = nextMission();

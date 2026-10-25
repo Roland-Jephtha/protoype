@@ -2,9 +2,12 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles/global.css';
+import { useSaves } from './save/saveStore';
 import { watchInstall } from './ui/install';
 
 watchInstall();
+// Load save slots (IndexedDB) before anything reads progress.
+void useSaves.getState().init();
 // Installed-app support (offline start). Only in production builds: the dev server serves live modules.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
