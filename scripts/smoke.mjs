@@ -108,6 +108,13 @@ async function desktopRun(browser) {
 
   await page.goto(BASE);
   check('title screen renders', await page.getByText('Shadow over').isVisible());
+  const popup = page.getByRole('dialog', { name: 'Install the game' });
+  await popup.waitFor({ timeout: 4000 }).catch(() => {});
+  check('PWA: an install popup appears when the site opens', await popup.isVisible(), (await popup.isVisible()) ? ((await popup.textContent()) ?? '').slice(0, 80) : 'not shown');
+  await page.screenshot({ path: path.join(OUT, '00-install-popup.png') });
+  await popup.getByRole('button').last().click().catch(() => {});
+  await sleep(200);
+  check('PWA: the install popup closes', !(await popup.isVisible()));
   await page.screenshot({ path: path.join(OUT, '01-title.png') });
 
   await page.getByRole('button', { name: 'Free roam' }).click();

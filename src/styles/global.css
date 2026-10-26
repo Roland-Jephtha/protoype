@@ -1539,3 +1539,88 @@ input[type='range']::-moz-range-thumb {
   max-height: 100%;
   overflow-y: auto;
 }
+
+/* Install popup: slides up at the bottom of the title screen. */
+.install-popup {
+  position: absolute;
+  left: 50%;
+  bottom: calc(16px + var(--safe-b, 0px));
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  width: min(460px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(10, 14, 26, 0.94);
+  box-shadow: 0 0 0 1px rgba(242, 193, 78, 0.45), 0 12px 40px rgba(0, 0, 0, 0.55);
+  animation: install-in 0.35s ease-out;
+}
+
+.install-popup img {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  flex: none;
+}
+
+.install-popup-body strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.install-popup-body p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--c-text-dim);
+}
+
+.install-popup-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.install-popup-actions .menu-btn {
+  width: auto;
+  min-height: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+@keyframes install-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px);
+  }
+}
+
+/* Landscape phones: under the title, clear of the menu on the right. */
+@media (max-height: 480px) {
+  .install-popup {
+    left: calc(12px + var(--safe-l, 0px));
+    bottom: calc(8px + var(--safe-b, 0px));
+    transform: none;
+    width: min(380px, 46vw);
+    padding: 10px 12px;
+    gap: 10px;
+    animation-name: install-in-left;
+  }
+  .install-popup-body p {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .install-popup img {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@keyframes install-in-left {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}

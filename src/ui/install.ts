@@ -42,6 +42,18 @@ export function watchInstall() {
   });
 }
 
+/** Which manual install instructions fit this device (when the browser offers no install dialog). */
+export function installHelp(s: InstallState): 'ios' | 'inapp' | 'android' | 'desktop' | 'other' {
+  if (typeof navigator === 'undefined') return 'other';
+  const ua = navigator.userAgent;
+  // In-app browsers (WhatsApp, Instagram, Facebook, TikTok...) can't install web apps.
+  if (/FBAN|FBAV|Instagram|WhatsApp|Line\/|TikTok|Snapchat|; wv\)/.test(ua)) return 'inapp';
+  if (s === 'ios' || /iPhone|iPad|iPod/.test(ua)) return 'ios';
+  if (/Android/.test(ua)) return 'android';
+  if (/Chrome|Edg\//.test(ua)) return 'desktop';
+  return 'other';
+}
+
 /** Shows the browser's install dialog (Android Chrome, desktop Chrome / Edge). */
 export async function promptInstall() {
   if (!deferred) return;

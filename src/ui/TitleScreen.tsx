@@ -7,6 +7,7 @@ import { ControlsReference } from './ControlsReference';
 import { CreditsPanel } from './CreditsPanel';
 import { SettingsPanel } from './SettingsPanel';
 import { promptInstall, useInstallState } from './install';
+import { InstallPopup } from './InstallPopup';
 import { useSaves } from '../save/saveStore';
 
 type View = 'main' | 'settings' | 'controls' | 'credits' | 'chapters' | 'saves';
@@ -41,6 +42,7 @@ export function TitleScreen() {
     <div className="title-screen">
       <div className="title-skyline" aria-hidden="true" />
       <div className="title-vignette" aria-hidden="true" />
+      <InstallPopup />
       {view === 'main' && (
         <div className="title-content">
           <div className="title-head">
