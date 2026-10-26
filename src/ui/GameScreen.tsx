@@ -3,6 +3,7 @@ import { REGIONS } from '../config/regions';
 import { GameCanvas } from '../game/GameCanvas';
 import { audio } from '../game/audio/audioEngine';
 import { targets } from '../game/combat/targets';
+import { nearestLiftable } from '../game/combat/liftables';
 import { runtime } from '../game/runtime';
 import { input } from '../input/InputManager';
 import { attachKeyboardMouse } from '../input/keyboardMouse';
@@ -44,6 +45,7 @@ export function GameScreen() {
       app: useApp,
       targets,
       audio,
+      nearestLiftable,
       get ready() {
         return useApp.getState().regionReady;
       },

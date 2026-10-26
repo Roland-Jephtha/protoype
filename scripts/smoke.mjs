@@ -564,6 +564,50 @@ async function lifeRun(browser) {
   await context.close();
 }
 
+/** Lifting world props: a city street lamp and a forest tree come out of the ground and can be thrown. */
+async function propLiftRun(browser) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Free roam' }).click();
+  await waitForReady(page);
+  const press = async (action) => {
+    await page.evaluate((a) => window.__krypton.input.setButton('keyboard', a, true), action);
+    await page.evaluate((a) => window.__krypton.input.setButton('keyboard', a, false), action);
+    await sleep(300);
+  };
+  const liftNear = async (region, at, label) => {
+    await page.evaluate(([r, p]) => window.__krypton.app.getState().travelTo(r, { at: p }), [region, at]);
+    await sleep(500);
+    await waitForReady(page);
+    await sleep(800);
+    // Find the nearest liftable prop and stand next to it.
+    const c = await page.evaluate(([x, z, region]) => {
+      const p = window.__krypton.runtime.playerPosition;
+      const n = window.__krypton.nearestLiftable(x, p.y, z, region === 'forest' ? 80 : 30);
+      return n ? { type: n.type, x: n.x, z: n.z } : null;
+    }, [at.x, at.z, region]);
+    if (!c) return { found: false };
+    await page.evaluate(([r, c]) => window.__krypton.app.getState().travelTo(r, { at: { x: c.x + 1.4, z: c.z + 0.4, facing: 0 } }), [region, c]);
+    await sleep(500);
+    await waitForReady(page);
+    await sleep(800);
+    await press('interact');
+    const carrying = await page.evaluate(() => window.__krypton.runtime.carrying);
+    await press('attack');
+    const after = await page.evaluate(() => window.__krypton.runtime.carrying);
+    return { found: true, want: c.type, carrying: carrying?.type ?? null, thrown: !after, label };
+  };
+  const lamp = await liftNear('metropolis', { x: 39, z: 39, facing: 0 }, 'lamp');
+  check('lift: a street lamp is pulled up and thrown', lamp.found && lamp.carrying === 'streetLight' && lamp.thrown, JSON.stringify(lamp));
+  const tree = await liftNear('forest', { x: -300, z: 300, facing: 0 }, 'tree');
+  check('lift: a forest tree is uprooted and thrown', tree.found && (tree.carrying === 'conifer' || tree.carrying === 'broadleaf' || tree.carrying === 'rock') && tree.thrown, JSON.stringify(tree));
+  check('lift: no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await context.close();
+}
+
 /** Metropolis Bay: the hero swims when slow and runs on the water when sprinting. */
 async function bayRun(browser) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
@@ -1078,6 +1122,7 @@ try {
   await regionRun(browser);
   await lifeRun(browser);
   await bayRun(browser);
+  await propLiftRun(browser);
   await combatRun(browser);
   await villainRun(browser);
   await storyRun(browser);

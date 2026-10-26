@@ -60,9 +60,17 @@ export function DesertContent() {
   }, [t, p, density, base]);
 
   // Solid props: boulders, larger rocks and cactus trunks block the hero.
-  useStaticColliders(
+  const bigRock = (r: PropInstance) => (Array.isArray(r.scale) ? r.scale[1] : 1) > 1.6;
+  const { rocksA, rocksB, colliderIndex } = useMemo(() => {
+    // Collider index of each rock (big ones only), so a lifted rock switches its own off.
+    const index = new Map<PropInstance, number>();
+    let n = boulders.length;
+    for (const r of rocks) if (bigRock(r)) index.set(r, n++);
+    return { rocksA: rocks.filter((_, i) => i % 2 === 0), rocksB: rocks.filter((_, i) => i % 2 === 1), colliderIndex: index };
+  }, [rocks, boulders]);
+  const solids = useStaticColliders(
     (rapier) => [
-      ...[...boulders, ...rocks.filter((r) => (Array.isArray(r.scale) ? r.scale[1] : 1) > 1.6)].map((r) => {
+      ...[...boulders, ...rocks.filter(bigRock)].map((r) => {
         const s = Array.isArray(r.scale) ? r.scale : [1, 1, 1];
         return rapier.ColliderDesc.ball(Math.min(s[0], s[2]) * 0.85).setTranslation(r.x, r.y + s[1] * 0.25, r.z);
       }),
@@ -71,13 +79,14 @@ export function DesertContent() {
     [boulders, rocks, cacti],
   );
 
+  const solidOf = (i: number | undefined) => (i === undefined ? undefined : solids.current[i]);
   const draw = t.region.look.fog.far * 1.1;
   return (
     <group>
-      <InstancedProps geometry={geo.rockA} instances={rocks.filter((_, i) => i % 2 === 0)} maxDistance={draw} />
-      <InstancedProps geometry={geo.rockB} instances={rocks.filter((_, i) => i % 2 === 1)} maxDistance={draw} />
-      <InstancedProps geometry={geo.rockB} instances={boulders} maxDistance={draw * 1.5} />
-      <InstancedProps geometry={geo.cactus} instances={cacti} maxDistance={draw * 0.7} />
+      <InstancedProps geometry={geo.rockA} instances={rocksA} maxDistance={draw} lift={{ kind: 'rock', colliderOf: (i) => solidOf(colliderIndex.get(rocksA[i])) }} />
+      <InstancedProps geometry={geo.rockB} instances={rocksB} maxDistance={draw} lift={{ kind: 'rock', colliderOf: (i) => solidOf(colliderIndex.get(rocksB[i])) }} />
+      <InstancedProps geometry={geo.rockB} instances={boulders} maxDistance={draw * 1.5} lift={{ kind: 'boulder', colliderOf: (i) => solids.current[i] }} />
+      <InstancedProps geometry={geo.cactus} instances={cacti} maxDistance={draw * 0.7} lift={{ kind: 'cactus', colliderOf: (i) => solids.current[boulders.length + colliderIndex.size + i] }} />
       <InstancedProps geometry={geo.bush} instances={bushes} maxDistance={draw * 0.5} castShadow={false} />
       <Highway />
       <PrometheusBase x={base.x} z={base.z} />

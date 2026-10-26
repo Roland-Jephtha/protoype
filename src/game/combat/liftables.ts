@@ -1,11 +1,14 @@
 import type { VehicleType } from '../vehicles/vehicleGeometry';
+import type { LiftKind } from './liftShapes';
 
-/** A vehicle the hero could pick up right now. */
+/** Something the hero could pick up right now: a vehicle or a world prop. */
 export interface LiftCandidate {
   source: LiftSource;
   key: number;
-  type: VehicleType;
+  type: LiftKind;
   paint: string;
+  /** Size multiplier of the carried shape (props vary; vehicles are 1). */
+  scale?: number;
   x: number;
   y: number;
   z: number;
@@ -14,7 +17,7 @@ export interface LiftCandidate {
   distance: number;
 }
 
-/** Something that owns liftable things (a traffic layer). */
+/** Something that owns liftable things (a traffic layer, a field of props). */
 export interface LiftSource {
   nearest: (x: number, y: number, z: number, maxDistance: number) => LiftCandidate | null;
   /** Removes it from the world (the hero now holds it). */

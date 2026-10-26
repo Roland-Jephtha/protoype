@@ -66,7 +66,7 @@ export function ForestContent() {
   }, [t, p, density, trees]);
 
   // Trunks block the hero (thousands of static cylinders — fine for Rapier's BVH).
-  useStaticColliders(
+  const trunks = useStaticColliders(
     (rapier) =>
       [...conifers, ...broadleaves].map((tr) => {
         const s = (tr.scale as [number, number, number])[0];
@@ -79,9 +79,9 @@ export function ForestContent() {
   const draw = t.region.look.fog.far * OUTDOOR_DRAW_SCALE[quality] * 1.05;
   return (
     <group>
-      <InstancedProps geometry={geo.conifer} instances={conifers} maxDistance={draw} cellSize={250} />
-      <InstancedProps geometry={geo.broadleaf} instances={broadleaves} maxDistance={draw} cellSize={250} />
-      <InstancedProps geometry={geo.rock} instances={rocks} maxDistance={draw * 0.7} />
+      <InstancedProps geometry={geo.conifer} instances={conifers} maxDistance={draw} cellSize={250} lift={{ kind: 'conifer', colliderOf: (i) => trunks.current[i] }} />
+      <InstancedProps geometry={geo.broadleaf} instances={broadleaves} maxDistance={draw} cellSize={250} lift={{ kind: 'broadleaf', colliderOf: (i) => trunks.current[conifers.length + i] }} />
+      <InstancedProps geometry={geo.rock} instances={rocks} maxDistance={draw * 0.7} lift={{ kind: 'rock' }} />
       <InstancedProps geometry={geo.conifer} instances={outer} maxDistance={draw} cellSize={400} castShadow={false} />
       <River />
       <RiverWater />

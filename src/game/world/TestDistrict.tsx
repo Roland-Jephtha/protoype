@@ -5,6 +5,8 @@ import { createBuildingMaterial } from './buildingMaterial';
 import { generateCityLayout } from './cityLayout';
 import { InstancedBoxes, type BoxInstance } from './InstancedBoxes';
 import { TrainingPlaza } from './TrainingPlaza';
+import { InstancedProps, type PropInstance } from './InstancedProps';
+import { streetLampGeometry } from '../combat/liftShapes';
 import { METRO_BAY } from '../../config/world';
 
 /**
@@ -24,8 +26,6 @@ export function TestDistrict() {
       asphalt: new MeshStandardMaterial({ color: 0x4b4f56, roughness: 0.95 }),
       marking: new MeshStandardMaterial({ color: 0xd8d2b0, roughness: 0.8 }),
       roofUnit: new MeshStandardMaterial({ color: 0x7a7f86, roughness: 0.7, metalness: 0.3 }),
-      lampPole: new MeshStandardMaterial({ color: 0x33363b, roughness: 0.6, metalness: 0.6 }),
-      lampHead: new MeshStandardMaterial({ color: 0xfff1d0, emissive: 0xffd9a0, emissiveIntensity: 2.2 }),
     };
   }, []);
 
@@ -84,10 +84,11 @@ export function TestDistrict() {
     return out;
   }, [layout]);
 
-  // Street lamps on block corners.
-  const { poles, heads } = useMemo(() => {
-    const poles: BoxInstance[] = [];
-    const heads: BoxInstance[] = [];
+  // Street lamps on block corners, arms out over the street. The hero can pull them up.
+  const lampGeo = useMemo(() => streetLampGeometry(), []);
+  useEffect(() => () => lampGeo.dispose(), [lampGeo]);
+  const lamps: PropInstance[] = useMemo(() => {
+    const out: PropInstance[] = [];
     for (const b of layout.blocks) {
       const o = b.size / 2 - 1;
       for (const [sx, sz] of [
@@ -96,13 +97,10 @@ export function TestDistrict() {
         [1, -1],
         [-1, -1],
       ]) {
-        const x = b.x + sx * o;
-        const z = b.z + sz * o;
-        poles.push({ position: [x, sh + 3, z], size: [0.18, 6, 0.18] });
-        heads.push({ position: [x, sh + 6.1, z], size: [0.5, 0.25, 0.5] });
+        out.push({ x: b.x + sx * o, y: sh, z: b.z + sz * o, rotationY: Math.atan2(sx, sz) });
       }
     }
-    return { poles, heads };
+    return out;
   }, [layout, sh]);
 
   const landmark = layout.landmark;
@@ -142,8 +140,7 @@ export function TestDistrict() {
       <InstancedBoxes items={buildings} material={materials.building} />
       <InstancedBoxes items={roofUnits} material={materials.roofUnit} />
       <InstancedBoxes items={dashes} material={materials.marking} castShadow={false} />
-      <InstancedBoxes items={poles} material={materials.lampPole} />
-      <InstancedBoxes items={heads} material={materials.lampHead} castShadow={false} />
+      <InstancedProps geometry={lampGeo} instances={lamps} lift={{ kind: 'streetLight' }} roughness={0.6} />
 
       {landmark && (
         <group position={[landmark.x, sh + landmark.height, landmark.z]}>

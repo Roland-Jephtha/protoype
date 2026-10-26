@@ -22,6 +22,7 @@ Only controls that work today are listed as active. Bindings live in
 | R (hold) | Super breath (wind) | ✅ |
 | Q (hold) | Freeze breath | ✅ |
 | X (hold, release when charged) | Super Nova | ✅ |
+| E near a car, street lamp, tree, rock or cactus | Lift it (click throws, E drops) | ✅ |
 | T | Speed Force: the world slows down, you don't (toggle; blue meter) | ✅ |
 | E | Interact / rescue (story mode); lift a nearby vehicle; drop it | ✅ |
 | Left mouse while carrying | Throw the vehicle along the crosshair | ✅ |

@@ -1,8 +1,8 @@
+import type { LiftKind } from './combat/liftShapes';
 import type { RapierRigidBody } from '@react-three/rapier';
 import type { RegionId } from '../config/regions';
 import { Vector3 } from 'three';
 import { HeroCombat } from './combat/heroCombat';
-import type { VehicleType } from './vehicles/vehicleGeometry';
 import type { MoveMode, PlayerMoveState } from './player/groundMovement';
 
 /**
@@ -66,7 +66,7 @@ export const runtime = {
   /** True while the hero is dashing. */
   heroDashing: false,
   /** The vehicle the hero is holding overhead. */
-  carrying: null as { type: VehicleType; paint: string } | null,
+  carrying: null as { type: LiftKind; paint: string; scale: number } | null,
   /** Breath blowing this step (from the mouth along the crosshair), for effects. */
   breath: { kind: 'none' as 'none' | 'wind' | 'freeze', from: new Vector3(), dir: new Vector3(0, 0, -1) },
   /** Incremented on each Super Nova (the HUD flashes). */
