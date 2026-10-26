@@ -2,7 +2,7 @@ import { PerformanceMonitor, Sky } from '@react-three/drei';
 import { advance, Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { DirectionalLight, Object3D } from 'three';
+import { BackSide, BufferAttribute, Color, DirectionalLight, Mesh, MeshBasicMaterial, Object3D, SphereGeometry } from 'three';
 import { HIT_STOP, SPEED_FORCE } from '../config/combat';
 import { BOSS_FIGHT } from '../config/villains';
 import { CAMERA, GRAPHICS_PRESETS, PHYSICS } from '../config/gameConfig';
@@ -12,6 +12,34 @@ import { useSettings } from '../state/settings';
 import { runtime } from './runtime';
 import { AudioDriver } from './audio/AudioDriver';
 import { RegionWorld } from './world/RegionWorld';
+
+/** A gradient sky for other worlds: `horizon` colour at the horizon fading to `top` overhead. Follows the camera. */
+function SkyDome({ top, horizon }: { top: string; horizon: string }) {
+  const mesh = useRef<Mesh>(null);
+  const assets = useMemo(() => {
+    const geo = new SphereGeometry(1800, 32, 16);
+    const pos = geo.getAttribute('position');
+    const colors = new Float32Array(pos.count * 3);
+    const a = new Color(horizon);
+    const b = new Color(top);
+    const c = new Color();
+    for (let i = 0; i < pos.count; i++) {
+      c.copy(a).lerp(b, Math.min(1, Math.max(0, pos.getY(i) / 1800)) ** 0.6);
+      colors.set([c.r, c.g, c.b], i * 3);
+    }
+    geo.setAttribute('color', new BufferAttribute(colors, 3));
+    return { geo, mat: new MeshBasicMaterial({ vertexColors: true, side: BackSide, fog: false, depthWrite: false }) };
+  }, [top, horizon]);
+  useEffect(
+    () => () => {
+      assets.geo.dispose();
+      assets.mat.dispose();
+    },
+    [assets],
+  );
+  useFrame(({ camera }) => mesh.current?.position.copy(camera.position));
+  return <mesh ref={mesh} geometry={assets.geo} material={assets.mat} renderOrder={-1} frustumCulled={false} />;
+}
 
 /**
  * Region lighting. The shadow-casting sun follows the player so a small, sharp
@@ -199,7 +227,7 @@ export function GameCanvas() {
     >
       <color attach="background" args={[look.background]} />
       <fog attach="fog" args={[look.fog.color, look.fog.near, fogFar]} />
-      <Sky distance={2000} sunPosition={look.sunOffset} {...look.sky} />
+      {look.dome ? <SkyDome top={look.dome.top} horizon={look.dome.horizon} /> : <Sky distance={2000} sunPosition={look.sunOffset} {...look.sky} />}
       <Lighting look={look} shadows={preset.shadows} mapSize={preset.shadowMapSize} />
       <Suspense fallback={null}>
         {/* Keyed by region: travelling disposes the old world, colliders and player entirely. */}

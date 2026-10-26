@@ -145,7 +145,24 @@ export interface ForestParams {
   flats: FlatArea[];
 }
 
-export type TerrainParams = DesertParams | ForestParams;
+/** Other worlds (Apokolips, Warworld): jagged ridged ground, craters, flat sites; low ground may hold lava. */
+export interface AlienParams {
+  kind: 'alien';
+  seed: number;
+  /** Ridge height (m) and horizontal scale (m). */
+  amplitude: number;
+  scale: number;
+  /** Bowls blended down to `floor` (m) at the centre, with a raised rim. */
+  craters: { x: number; z: number; radius: number; floor: number }[];
+  flats: FlatArea[];
+  /** Ground colours: two base tones, steep rock, and the colour of ground below `lowLevel` (lava shores, arena sand). */
+  colors: { ground: string; ground2: string; rock: string; low: string };
+  lowLevel: number;
+  /** Lava surface height (m); ground below it is a lava lake. */
+  lavaLevel?: number;
+}
+
+export type TerrainParams = DesertParams | ForestParams | AlienParams;
 
 /** Builds the height function for a region. Returns metres above y = 0. */
 export function createHeightFunction(params: TerrainParams): (x: number, z: number) => number {
@@ -156,7 +173,22 @@ export function createHeightFunction(params: TerrainParams): (x: number, z: numb
   const desertBase = params.kind === 'desert' ? (x: number, z: number) => 20 + fbm(noise, x / 700, z / 700, 4) * params.baseAmplitude : () => 0;
 
   const natural =
-    params.kind === 'desert'
+    params.kind === 'alien'
+      ? (x: number, z: number) => {
+          // Ridged noise: sharp crests and broad basins.
+          const r = 1 - Math.abs(fbm(noise, x / params.scale, z / params.scale, 4));
+          const ridges = r * r * params.amplitude;
+          const detail = noiseB(x / 38, z / 38) * 1.8;
+          let h = 12 + ridges + detail;
+          for (const c of params.craters) {
+            const d = Math.hypot(x - c.x, z - c.z) / c.radius;
+            // Bowl with a raised rim.
+            if (d < 1) h += (c.floor - h) * smoothstep(0, 1, 1 - d * d);
+            else if (d < 1.4) h += 6 * Math.sin(((d - 1) / 0.4) * Math.PI);
+          }
+          return h;
+        }
+      : params.kind === 'desert'
       ? (x: number, z: number) => {
           const base = desertBase(x, z);
           // Dunes: sharp crests perpendicular to the wind, wavelength wobbled by noise,
@@ -190,7 +222,9 @@ export function createHeightFunction(params: TerrainParams): (x: number, z: numb
   // Carved channels and flattened bands, applied on top of the natural shape.
   return (x: number, z: number) => {
     let h = natural(x, z);
-    if (params.kind === 'desert') {
+    if (params.kind === 'alien') {
+      // No carved channels.
+    } else if (params.kind === 'desert') {
       const c = distanceToPath(params.canyon, x, z);
       const floor = canyonFloor;
       // Steep walls with a narrow transition; flat floor.

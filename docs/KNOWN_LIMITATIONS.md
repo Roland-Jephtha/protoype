@@ -53,3 +53,10 @@ not motion-captured.
 The sea and river are flat surfaces (no waves, reflections or underwater view). Wading
 uses the normal walk/run clips — there's no swim animation. Being knocked down is a
 procedural whole-body tilt with the airborne clip, not a motion-captured fall.
+
+## Other worlds (Apokolips, Warworld)
+
+Reached only from Pause → Travel (no edge exits). Free roam only — no story missions
+there yet, and no wildlife or traffic. Structures (palace, arena) are simple blocks.
+Lava behaves like water (run across it, wade in it) and does no damage. Performance of
+these regions has not been measured on a phone.

@@ -17,6 +17,7 @@ import { MetropolisBay, WaterBody } from './Water';
 import { oceanLevel } from './waterLevel';
 import { DesertContent } from './desert/DesertContent';
 import { ForestContent } from './forest/ForestContent';
+import { AlienContent } from './alien/AlienContent';
 import { Terrain } from './Terrain';
 import { useTerrain } from './terrainContext';
 import { TestDistrict } from './TestDistrict';
@@ -51,8 +52,8 @@ export const RegionWorld = memo(function RegionWorld({ regionId }: { regionId: R
   }
   return (
     <Terrain region={region}>
-      {region.terrain.kind === 'desert' ? <DesertContent /> : <ForestContent />}
-      <TerrainLife />
+      {region.terrain.kind === 'desert' ? <DesertContent /> : region.terrain.kind === 'forest' ? <ForestContent /> : <AlienContent regionId={regionId} />}
+      {region.terrain.kind !== 'alien' && <TerrainLife />}
       <TerrainPlayer region={region} />
       <ThirdPersonCamera />
       <TerrainMissions regionId={regionId} />

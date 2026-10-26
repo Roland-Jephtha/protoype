@@ -133,6 +133,11 @@ export const VILLAIN_LAIRS: Record<RegionId, { id: VillainId; x: number; z: numb
     { id: 'zod', x: 550, z: -470 }, // ranger station
     { id: 'clone', x: -760, z: -560 }, // cabins
   ],
+  apokolips: [{ id: 'darkseid', x: 0, z: -360 }], // before his palace
+  warworld: [
+    { id: 'doomsday', x: -40, z: 0 }, // arena champions
+    { id: 'clone', x: 40, z: 0 },
+  ],
 };
 
 /** Villain behaviour tuning shared by all bosses (m, s, damage). */

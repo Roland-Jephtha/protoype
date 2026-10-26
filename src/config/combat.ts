@@ -229,6 +229,11 @@ export const DRONE_PATROLS: Record<RegionId, DronePatrol[]> = {
     { x: -500, z: 300, radius: 80, count: 2 }, // over the highway
   ],
   forest: [{ x: 300, z: 0, radius: 90, count: 3 }], // the dam (Chapter 3 lab)
+  apokolips: [
+    { x: 0, z: -420, radius: 160, count: 4 }, // palace guard
+    { x: -420, z: 260, radius: 120, count: 2 },
+  ],
+  warworld: [{ x: 0, z: 0, radius: 200, count: 3 }], // over the arena
 };
 
 /** Story missions: how many knockouts fail the mission (each earlier one returns you to the checkpoint). */

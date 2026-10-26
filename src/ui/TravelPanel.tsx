@@ -1,4 +1,4 @@
-import { REGION_ORDER, REGIONS } from '../config/regions';
+import { OFF_WORLD, REGION_ORDER, REGIONS } from '../config/regions';
 import { useApp } from '../state/appStore';
 
 /** Pause-menu world map: jump to any region (arrives at its spawn). */
@@ -16,6 +16,7 @@ export function TravelPanel({ onBack }: { onBack: () => void }) {
             <button key={id} type="button" className="menu-btn travel-btn" disabled={here} onClick={() => travelTo(id)}>
               <span className="travel-name">
                 {r.name}
+                {OFF_WORLD.includes(id) && <em> · Boom Tube</em>}
                 {here && <em> · you are here</em>}
               </span>
               <span className="travel-desc">{r.description}</span>
@@ -23,7 +24,7 @@ export function TravelPanel({ onBack }: { onBack: () => void }) {
           );
         })}
       </nav>
-      <p className="settings-note">You can also fly or run off the edge of a region toward a neighbouring one.</p>
+      <p className="settings-note">You can also fly or run off the edge of a region toward a neighbouring one. Other worlds are reached only by Boom Tube from here.</p>
       <div className="panel-actions">
         <button type="button" className="menu-btn" onClick={onBack} autoFocus>
           Back

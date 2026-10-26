@@ -21,6 +21,7 @@ export function TerrainLife() {
     (x: number, z: number) => {
       if (Math.abs(x) > half || Math.abs(z) > half || t.slope(x, z) > 0.5) return false;
       if (terrain.kind === 'desert') return !nearPath(terrain.highway, x, z, terrain.highway.width / 2 + 3);
+      if (terrain.kind !== 'forest') return true;
       return !nearPath(terrain.river, x, z, terrain.river.width / 2 + 6) && !nearPath(terrain.road, x, z, terrain.road.width / 2 + 2) && !nearPath(terrain.rail, x, z, terrain.rail.width / 2 + 1);
     },
     [t, terrain, half],

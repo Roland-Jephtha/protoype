@@ -217,6 +217,19 @@ function createGroundColorizer(info: TerrainInfo) {
   const mix = (a: Color, b: Color, f: number) => a.lerp(b, Math.min(1, Math.max(0, f)));
   const tmp = new Color();
 
+  if (t.kind === 'alien') {
+    const a = new Color(t.colors.ground);
+    const b = new Color(t.colors.ground2);
+    const rock = new Color(t.colors.rock);
+    const low = new Color(t.colors.low);
+    return (x: number, y: number, z: number, slope: number, out: Color) => {
+      out.copy(a);
+      mix(out, b, 0.5 + 0.7 * noise(x / 60, z / 60));
+      mix(out, rock, smoothstep(0.18, 0.4, slope));
+      mix(out, low, 1 - smoothstep(t.lowLevel - 1, t.lowLevel + 2.5, y));
+    };
+  }
+
   if (t.kind === 'desert') {
     const sandA = new Color('#c99459');
     const sandB = new Color('#e0b47b');
@@ -265,7 +278,7 @@ function createGroundColorizer(info: TerrainInfo) {
  * Standard lit material with vertex colours plus a cheap world-space detail
  * noise, so large flat areas don't look like smooth plastic.
  */
-function createTerrainMaterial(kind: 'desert' | 'forest') {
+function createTerrainMaterial(kind: 'desert' | 'forest' | 'alien') {
   // Double-sided so the edge skirt hides seams from either side.
   const material = new MeshStandardMaterial({ vertexColors: true, roughness: kind === 'desert' ? 0.93 : 0.97, metalness: 0, side: DoubleSide });
   material.onBeforeCompile = (shader) => {

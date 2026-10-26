@@ -243,6 +243,8 @@ export const useApp = create<AppState>((set, get) => ({
   },
   travelTo: (id, arrival = {}) => {
     if (get().pendingRegion) return; // already travelling
+    // A point without a facing would leave the camera yaw undefined (NaN): face north.
+    if (arrival.at && !Number.isFinite(arrival.at.facing)) arrival = { ...arrival, at: { ...arrival.at, facing: Math.PI } };
     input.releaseAll();
     set({ pendingRegion: id, regionReady: false, paused: false, pauseView: 'main' });
     setTimeout(() => set((s) => ({ regionId: id, pendingRegion: null, arrival, flying: false, travelCount: s.travelCount + 1 })), TRAVEL_PAINT_DELAY_MS);

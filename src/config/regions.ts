@@ -1,4 +1,4 @@
-import type { DesertParams, ForestParams } from '../game/world/terrainNoise';
+import type { AlienParams, DesertParams, ForestParams } from '../game/world/terrainNoise';
 import type { GraphicsQuality } from './gameConfig';
 
 /**
@@ -10,7 +10,7 @@ import type { GraphicsQuality } from './gameConfig';
  *   (edge)  Metropolis  ── east ▶  Red Mesa Desert
  */
 
-export type RegionId = 'metropolis' | 'desert' | 'forest';
+export type RegionId = 'metropolis' | 'desert' | 'forest' | 'apokolips' | 'warworld';
 export type Side = 'north' | 'south' | 'east' | 'west';
 
 export interface Entry {
@@ -28,6 +28,8 @@ export interface RegionLook {
   sun: { color: string; intensity: number };
   hemisphere: { sky: string; ground: string; intensity: number };
   sky: { turbidity: number; rayleigh: number; mieCoefficient: number; mieDirectionalG: number };
+  /** Other worlds: a plain gradient sky dome instead of the (Earth) atmosphere. */
+  dome?: { top: string; horizon: string };
 }
 
 interface RegionBase {
@@ -50,7 +52,7 @@ export interface TerrainRegion extends RegionBase {
   kind: 'terrain';
   /** Square map side (m), centred on the origin. */
   size: number;
-  terrain: DesertParams | ForestParams;
+  terrain: DesertParams | ForestParams | AlienParams;
 }
 
 export type RegionDef = CityRegion | TerrainRegion;
@@ -216,9 +218,87 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     entries: { south: { x: 0, z: 1050, facing: FACE_NORTH } },
     spawn: { x: 0, z: 1050, facing: FACE_NORTH },
   },
+
+  apokolips: {
+    id: 'apokolips',
+    kind: 'terrain',
+    name: 'Apokolips',
+    description: 'Darkseid’s burning world: fire pits, lava lakes and the palace of the Lord of Apokolips.',
+    size: 2000,
+    look: {
+      background: '#5a2414',
+      fog: { color: '#6a2c18', near: 80, far: 750 },
+      sunOffset: [60, 70, -80],
+      sun: { color: '#ff9a5a', intensity: 2.6 },
+      hemisphere: { sky: '#d0603a', ground: '#4a2418', intensity: 1.8 },
+      sky: { turbidity: 20, rayleigh: 4, mieCoefficient: 0.05, mieDirectionalG: 0.95 },
+      dome: { top: '#1a0806', horizon: '#a8401c' },
+    },
+    terrain: {
+      kind: 'alien',
+      seed: 6666,
+      amplitude: 40,
+      scale: 300,
+      craters: [
+        { x: -420, z: 260, radius: 160, floor: 2 },
+        { x: 380, z: 420, radius: 120, floor: 2 },
+        { x: 520, z: -380, radius: 140, floor: 2 },
+        { x: -600, z: -500, radius: 110, floor: 2 },
+      ],
+      flats: [
+        { x: 0, z: 760, radius: 45, falloff: 40, height: 30 }, // boom tube arrival
+        { x: 0, z: -420, radius: 150, falloff: 60, height: 30 }, // Darkseid's palace
+      ],
+      colors: { ground: '#5a3a30', ground2: '#74483a', rock: '#2e2420', low: '#ff6a1a' },
+      lowLevel: 15,
+      lavaLevel: 14,
+    },
+    exits: {},
+    entries: {},
+    spawn: { x: 0, z: 760, facing: FACE_NORTH },
+  },
+
+  warworld: {
+    id: 'warworld',
+    kind: 'terrain',
+    name: 'Warworld',
+    description: 'A planet built for war: metal plateaus under a red sky and the great arena, where champions fight.',
+    size: 2000,
+    look: {
+      background: '#5a2a24',
+      fog: { color: '#7a3a2c', near: 80, far: 900 },
+      sunOffset: [-80, 50, 40],
+      sun: { color: '#ffb48a', intensity: 2.4 },
+      hemisphere: { sky: '#c2604a', ground: '#3a2a24', intensity: 1.35 },
+      sky: { turbidity: 14, rayleigh: 3.2, mieCoefficient: 0.02, mieDirectionalG: 0.9 },
+      dome: { top: '#2a0e0c', horizon: '#c0583c' },
+    },
+    terrain: {
+      kind: 'alien',
+      seed: 9090,
+      amplitude: 55,
+      scale: 420,
+      craters: [
+        { x: 620, z: 500, radius: 180, floor: 0 },
+        { x: -650, z: -300, radius: 150, floor: 0 },
+      ],
+      flats: [
+        { x: 0, z: 760, radius: 45, falloff: 40, height: 26 }, // arrival pad
+        { x: 0, z: 0, radius: 170, falloff: 80, height: 14 }, // the arena
+      ],
+      colors: { ground: '#6a4a3a', ground2: '#7d5e48', rock: '#3f3a3a', low: '#a8865a' },
+      lowLevel: 15,
+    },
+    exits: {},
+    entries: {},
+    spawn: { x: 0, z: 760, facing: FACE_NORTH },
+  },
 };
 
-export const REGION_ORDER: RegionId[] = ['metropolis', 'desert', 'forest'];
+export const REGION_ORDER: RegionId[] = ['metropolis', 'desert', 'forest', 'apokolips', 'warworld'];
+
+/** Other worlds are reached only through the Travel menu (a Boom Tube / jump), not by flying off an edge. */
+export const OFF_WORLD: RegionId[] = ['apokolips', 'warworld'];
 
 /** The edge on the destination you arrive through when leaving a region via `side`. */
 export function oppositeSide(side: Side): Side {

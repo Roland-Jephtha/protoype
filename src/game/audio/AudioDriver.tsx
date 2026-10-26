@@ -41,7 +41,7 @@ export function AudioDriver() {
     audio.setLoop('breath', br === 'none' ? 0 : 1, { freq: br === 'freeze' ? 2600 : 800 });
     const charge = runtime.combat.novaCharge;
     audio.setLoop('nova', charge > 0 ? 0.4 + charge * 0.6 : 0, { pitch: 110 + charge * 330 });
-    audio.setLoop('ambience', 1, { freq: runtime.regionId === 'desert' ? 700 : runtime.regionId === 'forest' ? 450 : 300 });
+    audio.setLoop('ambience', 1, { freq: runtime.regionId === 'desert' ? 700 : runtime.regionId === 'forest' ? 450 : runtime.regionId === 'apokolips' ? 160 : runtime.regionId === 'warworld' ? 240 : 300 });
     audio.setLoop('hum', runtime.boss ? 1 : 0);
 
     const l = last.current;

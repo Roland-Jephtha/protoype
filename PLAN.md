@@ -20,6 +20,7 @@ Roadmap (approved 2026-10-24, owner wants most action outside the city):
 | # | Milestone | Status |
 |---|---|---|
 | 1 | Region system + desert + forest | ✅ v1 done (2026-10-24) |
+| 2c | Other worlds (Pause → Travel, "Boom Tube"): **Apokolips** (lava lakes you can sprint across, fire spires, Darkseid's palace with Darkseid, drones) and **Warworld** (red-sky metal planet, the great arena with Doomsday and Subject Zero, drones) | ✅ v1 (2026-10-26) — no missions there yet |
 | 2b | Water: Metropolis Bay (sea around the city to 1.4 km, quay walls, pier, lighthouse island, freighter); run on water (bay + forest river) when running/sprinting, wade/swim when slow | ✅ v1 (2026-10-26) |
 | 2 | City life: pedestrians, traffic + lights, street props; wildlife/convoys outdoors | ✅ v1 done (2026-10-24) — street props still to add |
 | 3 | Combat: heat vision, punches, lift/throw, health, enemy AI (drones, soldiers) | 🔶 Heat vision, punch combo, homing power punch, super breath, freeze breath, Super Nova, solar meter, drones, lifting/throwing traffic vehicles, **street lamps, trees, rocks, boulders and cacti** (they grow back / are replaced after 40 s) done. **Speed Force** (T / touch Speed): world slows to 4% while the hero moves 1.35× faster, ~16 s meter. Punches: random two-handed combos (jab, cross, hook, uppercut), never the same twice in a row, random finishers; uppercuts launch enemies; hit-stop on heavy blows |

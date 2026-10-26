@@ -564,6 +564,40 @@ async function lifeRun(browser) {
   await context.close();
 }
 
+/** Other worlds: Apokolips and Warworld load from the Travel menu, the hero lands on solid ground, a boss waits. */
+async function worldsRun(browser) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Free roam' }).click();
+  await waitForReady(page);
+  for (const [id, boss, at] of [
+    ['apokolips', 'Darkseid', { x: 0, z: -250 }],
+    ['warworld', 'Doomsday', { x: 0, z: 60 }],
+  ]) {
+    await page.evaluate((r) => window.__krypton.app.getState().travelTo(r), id);
+    await sleep(500);
+    const s = await waitForReady(page, 60000);
+    check(`worlds: ${id} loads and the hero stands on its ground`, s?.region === id && s.ready && s.grounded, s ? `region=${s.region} y=${s.pos.y.toFixed(1)}` : 'no state');
+    await page.screenshot({ path: path.join(OUT, `20-${id}.png`) });
+    await page.evaluate(([r, p]) => window.__krypton.app.getState().travelTo(r, { at: p }), [id, at]);
+    await sleep(500);
+    await waitForReady(page, 60000);
+    let b = null;
+    for (let i = 0; i < 24 && !b; i++) {
+      await sleep(250);
+      b = await page.evaluate(() => window.__krypton.runtime.boss);
+    }
+    check(`worlds: ${boss} waits on ${id}`, b?.name === boss || (id === 'warworld' && b?.name === 'Subject Zero'), `boss=${b?.name}`);
+    await page.screenshot({ path: path.join(OUT, `21-${id}-boss.png`) });
+  }
+  check('worlds: no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await context.close();
+}
+
 /** Lifting world props: a city street lamp and a forest tree come out of the ground and can be thrown. */
 async function propLiftRun(browser) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
@@ -1123,6 +1157,7 @@ try {
   await lifeRun(browser);
   await bayRun(browser);
   await propLiftRun(browser);
+  await worldsRun(browser);
   await combatRun(browser);
   await villainRun(browser);
   await storyRun(browser);
