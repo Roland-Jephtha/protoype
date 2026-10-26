@@ -47,3 +47,9 @@ World slow-motion scales traffic, life, drones, villains, the train, mission act
 their animation mixers. Not scaled yet: Rapier rigid bodies (thrown wrecks), particle
 effects and procedural audio pitch. Hook/uppercut poses are procedural (two-bone IK),
 not motion-captured.
+
+## Water and hit reactions
+
+The sea and river are flat surfaces (no waves, reflections or underwater view). Wading
+uses the normal walk/run clips — there's no swim animation. Being knocked down is a
+procedural whole-body tilt with the airborne clip, not a motion-captured fall.

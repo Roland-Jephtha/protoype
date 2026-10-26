@@ -79,7 +79,7 @@ export const REGIONS: Record<RegionId, RegionDef> = {
     id: 'metropolis',
     kind: 'city',
     name: 'Metropolis',
-    description: 'Downtown blocks, the landmark tower and the training plaza.',
+    description: 'Downtown blocks, the landmark tower and Metropolis Bay — run across the water to the lighthouse.',
     look: {
       background: '#9fb0c4',
       fog: { color: '#9fb0c4', near: 90, far: 900 },

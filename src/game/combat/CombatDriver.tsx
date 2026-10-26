@@ -43,7 +43,8 @@ export function CombatDriver() {
     const events = c.step(
       {
         // While carrying a vehicle, punch throws it instead (handled by Lifting).
-        attackPressed: !runtime.carrying && input.consumePressed('attack'),
+        // No punching while carrying (punch throws, handled by Lifting) or while knocked down.
+        attackPressed: !runtime.carrying && input.consumePressed('attack') && !(runtime.heroHit.t >= 0 && runtime.heroHit.kind === 'knockdown'),
         attackHeld: !runtime.carrying && input.isHeld('attack'),
         aimHeld,
         breathHeld: input.isHeld('breath'),

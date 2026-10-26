@@ -18,6 +18,8 @@ import { addImpact } from '../combat/impacts';
 import { input } from '../../input/InputManager';
 import { useApp } from '../../state/appStore';
 import { runtime } from '../runtime';
+import { waterFeet } from '../world/waterLevel';
+import { WATER } from '../../config/world';
 import { GroundMotor } from './groundMovement';
 import { CAPSULE_REST_HEIGHT, settleOnGround } from './groundSnap';
 import { HeroVisual } from './HeroVisual';
@@ -134,6 +136,7 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
       runtime.heroControlLoss = 0;
     }
     runtime.heroFrozen = Math.max(0, runtime.heroFrozen - dt);
+    if (runtime.heroHit.t >= 0) runtime.heroHit.t += dt;
     if (runtime.heroDash) {
       const d = runtime.heroDash;
       motor.dash(d.x, d.y, d.z, HERO_COMBAT.powerPunch.lungeTime);
@@ -155,7 +158,7 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
         flyHeld: input.isHeld('fly'),
         descendHeld: input.isHeld('descend'),
         faceYaw: runtime.combatFaceYaw ?? undefined,
-        speedScale: (runtime.heroFrozen > 0 ? VILLAIN_AI.freezeSlow : 1) * (runtime.speedForce ? SPEED_FORCE.heroSpeed : 1),
+        speedScale: (runtime.heroFrozen > 0 ? VILLAIN_AI.freezeSlow : 1) * (runtime.speedForce ? SPEED_FORCE.heroSpeed : 1) * (runtime.heroOnWater === 'wade' ? WATER.swimSpeed : 1),
       },
       dt,
     );
@@ -199,11 +202,23 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
     // no brief falls off curbs while sprinting.
     const settled = settleOnGround(w, rapier, nx, p.y + actual.y, nz, c, motor.grounded, motor.velocity.y);
     let ny = settled.y;
+    // Water: fast enough and he runs on the surface; slower, he wades / swims.
+    let onWater = false;
+    runtime.heroOnWater = null;
+    if (!flying && runtime.waterLevel) {
+      const v = motor.velocity;
+      const wf = waterFeet(runtime.waterLevel(nx, nz), ny - CAPSULE_REST_HEIGHT, Math.hypot(v.x, v.z), v.y, runtime.speedForce, dt);
+      if (wf) {
+        ny = wf.feetY + CAPSULE_REST_HEIGHT;
+        onWater = wf.on !== null;
+        runtime.heroOnWater = wf.on;
+      }
+    }
     if (ny > FLIGHT.maxAltitude) {
       ny = FLIGHT.maxAltitude;
       motor.clampAltitude();
     }
-    motor.resolve(desired, { x: nx - p.x, y: ny - p.y, z: nz - p.z }, settled.onGround || (controller.computedGrounded() && motor.velocity.y <= 0), dt);
+    motor.resolve(desired, { x: nx - p.x, y: ny - p.y, z: nz - p.z }, onWater || settled.onGround || (controller.computedGrounded() && motor.velocity.y <= 0), dt);
     if (ny < PLAYER.killPlaneY) {
       respawn();
       return;

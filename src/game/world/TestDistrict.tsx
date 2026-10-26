@@ -5,6 +5,7 @@ import { createBuildingMaterial } from './buildingMaterial';
 import { generateCityLayout } from './cityLayout';
 import { InstancedBoxes, type BoxInstance } from './InstancedBoxes';
 import { TrainingPlaza } from './TrainingPlaza';
+import { METRO_BAY } from '../../config/world';
 
 /**
  * Phase 1 test district: a 5×5 block grid with streets, sidewalks, varied
@@ -105,16 +106,16 @@ export function TestDistrict() {
   }, [layout, sh]);
 
   const landmark = layout.landmark;
-  const ext = layout.halfExtent;
 
   return (
     <group>
       {/* Ground: large asphalt plane; collider is a thick slab so nothing falls through. */}
+      {/* The land ends at the quay walls of Metropolis Bay. */}
       <mesh rotation-x={-Math.PI / 2} receiveShadow material={materials.asphalt}>
-        <planeGeometry args={[ext * 6, ext * 6]} />
+        <planeGeometry args={[METRO_BAY.landHalf * 2, METRO_BAY.landHalf * 2]} />
       </mesh>
       <RigidBody type="fixed" colliders={false}>
-        <CuboidCollider args={[ext * 3, 1, ext * 3]} position={[0, -1, 0]} />
+        <CuboidCollider args={[METRO_BAY.landHalf, 1, METRO_BAY.landHalf]} position={[0, -1, 0]} />
         {/* Sidewalk blocks: top at `sh`, extended 1 m into the ground. A 15 cm-thin slab made the
             character controller settle ~3 cm into it; a thick one is resolved precisely. */}
         {layout.blocks.map((b, i) => (

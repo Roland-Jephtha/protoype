@@ -26,6 +26,7 @@ import { useApp } from '../../state/appStore';
 import { canonicalBoneName, MIXAMO_FROM_UAL } from './boneNames';
 import { PLAYER } from '../../config/gameConfig';
 import { runtime } from '../runtime';
+import { hitPose } from '../combat/heroActions';
 import { ClothCape, type CapsuleCollider } from './clothCape';
 import { FootSoles, nextFootLift } from './footGrounding';
 import type { GroundMotor } from './groundMovement';
@@ -226,6 +227,11 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     const v = motor.velocity;
     const hSpeed = Math.hypot(v.x, v.z);
     let role = roleForState(motor.state, motor.stateTime, anim.jumpStartDuration);
+    // Knocked off his feet: limbs loose (airborne clip) while falling and lying.
+    const hh = runtime.heroHit;
+    const hit = hh.t >= 0 ? hitPose(hh.kind, hh.t, hh.forward) : null;
+    if (!hit && hh.t >= 0) hh.t = -1;
+    if (hit && hh.kind === 'knockdown' && hit.drop > 0.3 && anim.actions.airborne) role = 'airborne';
     if (!anim.actions[role]) role = role === 'hardLand' && anim.actions.land ? 'land' : role === 'jumpStart' ? 'airborne' : role;
     const next = anim.actions[role] ?? anim.actions.idle;
 
@@ -271,8 +277,9 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     fl.pitch += (targetPitch - fl.pitch) * (1 - Math.exp(-6 * dt));
     fl.bob += dt;
     if (pitchGroup.current) {
-      pitchGroup.current.rotation.x = fl.pitch;
-      pitchGroup.current.position.y = pivotY + (role === 'hover' ? Math.sin(fl.bob * 2.2) * 0.04 : 0);
+      // Hit reaction on top of the flight pitch: pivoting at the hips, so lying down also drops them to the ground.
+      pitchGroup.current.rotation.x = fl.pitch + (hit?.pitch ?? 0);
+      pitchGroup.current.position.y = pivotY + (role === 'hover' ? Math.sin(fl.bob * 2.2) * 0.04 : 0) - (hit ? hit.drop * (pivotY - 0.18) : 0);
     }
     // Bones were just posed by the mixer; refresh world matrices before sampling them.
     f.updateWorldMatrix(true, true);
@@ -305,7 +312,7 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       const c = runtime.combat;
       // Fighting stance near enemies (on foot or hovering, not while flying fast or carrying).
       const speed = Math.hypot(v.x, v.y, v.z);
-      const wantGuard = runtime.combatReady && !runtime.carrying && speed < 9 ? 1 : 0;
+      const wantGuard = runtime.combatReady && !runtime.carrying && speed < 9 && !(hit && hh.kind !== 'stagger') ? 1 : 0;
       ct.guard += (wantGuard - ct.guard) * Math.min(1, dt * 8);
       if (runtime.carrying) built.pose.applyLift(ct.forward, def.heightMeters, 1);
       else {

@@ -1,4 +1,7 @@
 import { useEffect, useMemo } from 'react';
+import { WATER } from '../../../config/world';
+import { riverLevel } from '../waterLevel';
+import { WaterBody } from '../Water';
 import { DoubleSide, MeshStandardMaterial } from 'three';
 import { FOREST_TREES, OUTDOOR_DENSITY, OUTDOOR_DRAW_SCALE } from '../../../config/regions';
 import { ROAD_TRAFFIC } from '../../../config/world';
@@ -81,6 +84,7 @@ export function ForestContent() {
       <InstancedProps geometry={geo.rock} instances={rocks} maxDistance={draw * 0.7} />
       <InstancedProps geometry={geo.conifer} instances={outer} maxDistance={draw} cellSize={400} castShadow={false} />
       <River />
+      <RiverWater />
       <Railway />
       <Train rail={p.rail} ground={t.ground} railTop={0.56} />
       <ForestRoad />
@@ -90,14 +94,22 @@ export function ForestContent() {
   );
 }
 
+/** The river holds the hero up when he runs across it. */
+function RiverWater() {
+  const t = useTerrain();
+  const p = t.region.terrain as ForestParams;
+  const level = useMemo(() => riverLevel(p.river, t.ground, p.river.width / 2 + WATER.riverExtraHalfWidth, WATER.riverDepth), [t, p]);
+  return <WaterBody level={level} />;
+}
+
 /** Water surface following the carved river bed. */
 function River() {
   const t = useTerrain();
   const p = t.region.terrain as ForestParams;
   const geo = useMemo(() => {
     // Water level: bed height at the centre line + 2.2 m, flat across the channel.
-    const waterAt = (x: number, z: number) => t.ground(x, z) + 2.2;
-    return ribbonGeometry(p.river, p.river.width + 18, waterAt, 0, 6, true);
+    const waterAt = (x: number, z: number) => t.ground(x, z) + WATER.riverDepth;
+    return ribbonGeometry(p.river, p.river.width + WATER.riverExtraHalfWidth * 2, waterAt, 0, 6, true);
   }, [t, p]);
   const material = useMemo(() => new MeshStandardMaterial({ color: '#2b5662', roughness: 0.08, metalness: 0.15, transparent: true, opacity: 0.85, side: DoubleSide }), []);
   useEffect(

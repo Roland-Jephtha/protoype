@@ -239,7 +239,7 @@ export const MISSION_RULES = {
 /** Speed Force: the world slows to a crawl while the hero moves at full speed and faster. */
 export const SPEED_FORCE = {
   /** World time runs at this fraction while active. */
-  worldScale: 0.15,
+  worldScale: 0.04,
   /** The hero's own speeds are multiplied by this. */
   heroSpeed: 1.35,
   capacity: 100,
@@ -249,6 +249,24 @@ export const SPEED_FORCE = {
   rechargeDelay: 1.5,
   /** Can't switch on below this much energy. */
   minToStart: 15,
+};
+
+/**
+ * How the hero reacts to being hit: every knock rocks him back; heavy blows
+ * (control loss at least `knockdownAt` s) knock him off his feet — he falls,
+ * lies there a moment and gets up — or send him tumbling in flight.
+ */
+export const HERO_HIT = {
+  knockdownAt: 0.6,
+  /** Fall, lie and get-up phases (s), and the total. */
+  fall: 0.35,
+  lie: 0.55,
+  getUp: 0.5,
+  /** In flight: one full somersault over this long (s). */
+  tumble: 0.7,
+  /** Light hits: lean back this far (rad) for this long (s). */
+  staggerLean: 0.35,
+  stagger: 0.35,
 };
 
 /** A split-second world freeze on heavy hits, so they land with weight (s, world scale). */

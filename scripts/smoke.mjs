@@ -220,8 +220,12 @@ async function desktopRun(browser) {
   await page.screenshot({ path: path.join(OUT, '04d-boost.png') });
   await page.keyboard.up('ShiftLeft');
   await page.keyboard.up('KeyA');
-  await sleep(2400);
-  const hover = await state(page);
+  // Braking from full boost over the open bay (the city edge used to stop him dead).
+  let hover = await state(page);
+  for (let i = 0; i < 24 && !(hover.state === 'hover' && speed3(hover) < 2); i++) {
+    await sleep(250);
+    hover = await state(page);
+  }
   check('releasing controls brakes to a hover in the air', hover.state === 'hover' && speed3(hover) < 2 && hover.pos.y > 3, `${speed3(hover).toFixed(1)} km/h, y=${hover.pos.y.toFixed(1)}, state=${hover.state}, region=${hover.region}, x=${hover.pos.x.toFixed(0)} z=${hover.pos.z.toFixed(0)}`);
   await page.screenshot({ path: path.join(OUT, '04e-hover.png') });
   await page.keyboard.down('KeyC');
@@ -557,6 +561,36 @@ async function lifeRun(browser) {
   await page.screenshot({ path: path.join(OUT, '12-train-race.png') });
 
   check('no page errors (life)', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await context.close();
+}
+
+/** Metropolis Bay: the hero swims when slow and runs on the water when sprinting. */
+async function bayRun(browser) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Free roam' }).click();
+  await waitForReady(page);
+  await page.evaluate(() => window.__krypton.app.getState().travelTo('metropolis', { at: { x: 0, z: 320, facing: 0 } }));
+  await sleep(500);
+  await waitForReady(page);
+  await sleep(2500);
+  const feet = () => page.evaluate(() => ({ y: window.__krypton.runtime.playerPosition.y - 1.0, on: window.__krypton.runtime.heroOnWater, z: window.__krypton.runtime.playerPosition.z }));
+  const wading = await feet();
+  check('bay: standing in the sea, the hero wades (does not sink to the seabed)', wading.on === 'wade' && wading.y > -3 && wading.y < -0.5, `on=${wading.on} feet≈${wading.y.toFixed(2)}`);
+  await page.keyboard.down('KeyW');
+  await page.keyboard.down('ShiftLeft');
+  let running = wading;
+  for (let i = 0; i < 16; i++) {
+    await sleep(250);
+    running = await feet();
+    if (running.on === 'run') break;
+  }
+  await sleep(500);
+  running = await feet();
+  await page.keyboard.up('ShiftLeft');
+  await page.keyboard.up('KeyW');
+  check('bay: sprinting, the hero runs on the water', running.on === 'run' && running.y > -0.9, `on=${running.on} feet≈${running.y.toFixed(2)} z=${running.z.toFixed(0)}`);
   await context.close();
 }
 
@@ -1043,6 +1077,7 @@ try {
   await portraitRun(browser);
   await regionRun(browser);
   await lifeRun(browser);
+  await bayRun(browser);
   await combatRun(browser);
   await villainRun(browser);
   await storyRun(browser);

@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo } from 'react';
+import { memo, useEffect } from 'react';
 import { REGIONS, type RegionId, type TerrainRegion } from '../../config/regions';
 import { ThirdPersonCamera } from '../camera/ThirdPersonCamera';
 import { MissionDirector } from '../missions/MissionDirector';
@@ -12,7 +12,9 @@ import { TerrainLife } from '../life/TerrainLife';
 import { CityTraffic } from '../vehicles/CityTraffic';
 import { Player } from '../player/Player';
 import { runtime } from '../runtime';
-import { generateCityLayout } from './cityLayout';
+import { METRO_BAY } from '../../config/world';
+import { MetropolisBay, WaterBody } from './Water';
+import { oceanLevel } from './waterLevel';
 import { DesertContent } from './desert/DesertContent';
 import { ForestContent } from './forest/ForestContent';
 import { Terrain } from './Terrain';
@@ -29,15 +31,16 @@ export const RegionWorld = memo(function RegionWorld({ regionId }: { regionId: R
   useEffect(() => {
     runtime.regionId = regionId;
   }, [regionId]);
-  const cityHalf = useMemo(() => generateCityLayout().halfExtent, []);
 
   if (region.kind === 'city') {
     return (
       <>
         <TestDistrict />
+        <MetropolisBay />
+        <WaterBody level={bayWater} />
         <CityTraffic />
         <CityLife />
-        <Player region={region} half={cityHalf} />
+        <Player region={region} half={METRO_BAY.half} />
         <ThirdPersonCamera />
         <MissionDirector regionId={regionId} ground={cityGround} />
         <CinematicCamera regionId={regionId} ground={cityGround} />
@@ -59,6 +62,7 @@ export const RegionWorld = memo(function RegionWorld({ regionId }: { regionId: R
 });
 
 const cityGround = () => 0;
+const bayWater = oceanLevel(METRO_BAY.landHalf, METRO_BAY.waterLevel);
 
 function TerrainCombat({ regionId }: { regionId: RegionId }) {
   const { ground } = useTerrain();

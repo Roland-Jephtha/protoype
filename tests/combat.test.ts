@@ -232,3 +232,17 @@ describe('freezing', () => {
     expect(d.mode).toBe('wreck');
   });
 });
+
+describe('hit reactions', () => {
+  it('a heavy blow knocks the hero flat (back or face down), then he gets up; light hits only rock him', async () => {
+    const { hitPose } = await import('../src/game/combat/heroActions');
+    const { HERO_HIT } = await import('../src/config/combat');
+    const lying = hitPose('knockdown', HERO_HIT.fall + 0.1, false)!;
+    expect(lying.pitch).toBeLessThan(-1.3);
+    expect(lying.drop).toBe(1);
+    expect(hitPose('knockdown', HERO_HIT.fall + 0.1, true)!.pitch).toBeGreaterThan(1.3);
+    expect(hitPose('knockdown', HERO_HIT.fall + HERO_HIT.lie + HERO_HIT.getUp + 0.01, false)).toBeNull();
+    expect(Math.abs(hitPose('stagger', HERO_HIT.stagger / 2, false)!.pitch)).toBeLessThanOrEqual(HERO_HIT.staggerLean);
+    expect(hitPose('stagger', HERO_HIT.stagger / 2, false)!.drop).toBe(0);
+  });
+});

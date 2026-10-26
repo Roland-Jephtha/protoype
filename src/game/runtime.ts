@@ -56,6 +56,11 @@ export const runtime = {
   /** Knockback for the hero, applied (and cleared) at the next physics step, with its loss of control (s). */
   heroImpulse: new Vector3(),
   heroControlLoss: 0,
+  /** This region's water surface (null: none), and whether the hero is running on it / wading in it. */
+  waterLevel: null as ((x: number, z: number) => number | null) | null,
+  heroOnWater: null as 'run' | 'wade' | null,
+  /** Hit reaction: seconds into it (counting up; -1 = none), its kind, and whether he falls forward. */
+  heroHit: { t: -1, kind: 'stagger' as 'stagger' | 'knockdown' | 'tumble', forward: false },
   /** Speed dash requested by combat (velocity m/s), applied at the next physics step. */
   heroDash: null as { x: number; y: number; z: number } | null,
   /** True while the hero is dashing. */

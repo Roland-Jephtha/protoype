@@ -64,3 +64,30 @@ export const LIFE = {
   birds: { low: 1, medium: 1, high: 2 } as Record<GraphicsQuality, number>,
   birdSpeed: 12,
 };
+
+/**
+ * Water: running at `runSpeed` (m/s) or faster keeps the hero on the surface;
+ * slower, he sinks to `wadeDepth` (m) and swims at `swimSpeed` × speed.
+ */
+export const WATER = {
+  runSpeed: 4.5,
+  wadeDepth: 1.3,
+  swimSpeed: 0.55,
+  riseRate: 6,
+  /** Forest river: water this far above the carved bed's centre line, across this half-width (m). */
+  riverDepth: 2.2,
+  riverExtraHalfWidth: 9,
+};
+
+/** Metropolis Bay: the city stands on land surrounded by open sea out to the region edge (m). */
+export const METRO_BAY = {
+  landHalf: 210,
+  half: 1400,
+  waterLevel: -0.25,
+  seabed: -14,
+  /** Lighthouse island and a moored freighter out in the bay. */
+  island: { x: -520, z: 640, radius: 45, height: 4 },
+  freighter: { x: 760, z: 520, length: 150, width: 24, height: 14, yaw: 0.5 },
+  /** A pier off the south waterfront. */
+  pier: { x: 40, length: 160, width: 10 },
+};
