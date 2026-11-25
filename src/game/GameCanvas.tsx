@@ -11,7 +11,6 @@ import { useApp } from '../state/appStore';
 import { useSettings } from '../state/settings';
 import { runtime } from './runtime';
 import { AudioDriver } from './audio/AudioDriver';
-import { SpeedTrail } from './player/SpeedTrail';
 import { RegionWorld } from './world/RegionWorld';
 
 /** A gradient sky for other worlds: `horizon` colour at the horizon fading to `top` overhead. Follows the camera. */
@@ -247,7 +246,6 @@ export function GameCanvas() {
         onFallback={() => setDpr(() => ADAPTIVE_MIN_DPR)}
       />
       <TimeControl />
-      <SpeedTrail />
       <PerfProbe />
       <AudioDriver />
       <VsyncFrameLoop />

@@ -96,6 +96,34 @@ export const UAL_TO_RIGIFY: BonePair[] = [
   ...rigifyLimbs((s, p) => `${UAL_PART[p]}${s}`),
 ];
 
+/** Body parts shared by humanoid rigs, with the child that gives each its direction. */
+const PARTS = ['hips', 'spine', 'spine1', 'spine2', 'neck', 'head', 'shoulderL', 'armL', 'foreL', 'handL', 'thighL', 'shinL', 'footL', 'shoulderR', 'armR', 'foreR', 'handR', 'thighR', 'shinR', 'footR'] as const;
+type Part = (typeof PARTS)[number];
+const CHILD: Partial<Record<Part, Part>> = { spine: 'spine1', spine1: 'spine2', spine2: 'neck', neck: 'head', shoulderL: 'armL', armL: 'foreL', foreL: 'handL', thighL: 'shinL', shinL: 'footL', shoulderR: 'armR', armR: 'foreR', foreR: 'handR', thighR: 'shinR', shinR: 'footR' };
+
+/** Canonical bone names per rig. */
+export const RIG_NAMES: Record<'mixamo' | 'ual' | 'injustice', Record<Part, string>> = {
+  mixamo: { hips: 'Hips', spine: 'Spine', spine1: 'Spine1', spine2: 'Spine2', neck: 'Neck', head: 'Head', shoulderL: 'LeftShoulder', armL: 'LeftArm', foreL: 'LeftForeArm', handL: 'LeftHand', thighL: 'LeftUpLeg', shinL: 'LeftLeg', footL: 'LeftFoot', shoulderR: 'RightShoulder', armR: 'RightArm', foreR: 'RightForeArm', handR: 'RightHand', thighR: 'RightUpLeg', shinR: 'RightLeg', footR: 'RightFoot' },
+  ual: { hips: 'hips', spine: 'spine001', spine1: 'spine002', spine2: 'spine003', neck: 'neck', head: 'head', shoulderL: 'shoulderL', armL: 'upper_armL', foreL: 'forearmL', handL: 'handL', thighL: 'thighL', shinL: 'shinL', footL: 'footL', shoulderR: 'shoulderR', armR: 'upper_armR', foreR: 'forearmR', handR: 'handR', thighR: 'thighR', shinR: 'shinR', footR: 'footR' },
+  // Injustice 2 rigs (the DCEU collection): "arm left shoulder 2" is the upper arm. glTF loading turns the spaces in their names into underscores.
+  injustice: { hips: 'root_hips', spine: 'spine_lower', spine1: 'spine_middle', spine2: 'spine_upper', neck: 'head_neck_lower', head: 'head_neck_upper', shoulderL: 'arm_left_shoulder_1', armL: 'arm_left_shoulder_2', foreL: 'arm_left_elbow', handL: 'arm_left_wrist', thighL: 'leg_left_thigh', shinL: 'leg_left_knee', footL: 'leg_left_ankle', shoulderR: 'arm_right_shoulder_1', armR: 'arm_right_shoulder_2', foreR: 'arm_right_elbow', handR: 'arm_right_wrist', thighR: 'leg_right_thigh', shinR: 'leg_right_knee', footR: 'leg_right_ankle' },
+};
+
+/** Bone pairs to retarget clips from one rig naming to another. */
+export function rigPairs(from: keyof typeof RIG_NAMES, to: keyof typeof RIG_NAMES): BonePair[] {
+  const s = RIG_NAMES[from];
+  const t = RIG_NAMES[to];
+  return PARTS.map((p) => {
+    const c = CHILD[p];
+    return c ? { source: s[p], target: t[p], sourceChild: s[c], targetChild: t[c] } : { source: s[p], target: t[p] };
+  });
+}
+
+/** Mixamo bone names → another rig's, for the pose helpers (CombatPose). */
+export function mixamoAliases(to: keyof typeof RIG_NAMES): Record<string, string> {
+  return Object.fromEntries(PARTS.map((p) => [RIG_NAMES.mixamo[p], RIG_NAMES[to][p]]));
+}
+
 /**
  * Stands a model upright facing +Z when it was exported lying down or turned:
  * rotates its root so hips→head points up and the left shoulder is at +X.

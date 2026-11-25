@@ -3,6 +3,11 @@ import { canonicalBoneName } from './boneNames';
 
 /** Foot/toe bones in Mixamo and Quaternius naming (canonical form). */
 const FOOT_BONES = new Set([
+  // Injustice 2 rigs.
+  'leg_left_ankle',
+  'leg_left_toes',
+  'leg_right_ankle',
+  'leg_right_toes',
   'LeftFoot',
   'LeftToeBase',
   'LeftToe_End',

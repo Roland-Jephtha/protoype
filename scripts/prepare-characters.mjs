@@ -16,6 +16,13 @@ import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const SOURCES = {
+  // Superman (BvS suit) from kanimator's Injustice 2 | DCEU collection (CC BY 4.0): only his meshes are kept.
+  'superman-injustice': {
+    folder: 'injustice-collection',
+    keep: [],
+    extract: /SMBVS/,
+    licence: 'Injustice 2 | DCEU | 3D Model Collection Rigged by kanimator — https://sketchfab.com/3d-models/injustice-2-dceu-3d-model-collection-rigged-e27284b707ec42aab42416ed39911d28 — CC BY 4.0 (Attribution). Original models credited to DatKofGuy and Carinhaqualquer. Superman (BvS) extracted.',
+  },
   // DC Legends Darkseid by 3dworldz (CC BY 4.0): its own fighting animations.
   'darkseid-legends': {
     folder: 'darkseid-3dworldz',
@@ -49,10 +56,23 @@ for (const [id, s] of Object.entries(SOURCES)) {
   const doc = await io.read(file);
   const root = doc.getRoot();
   for (const a of root.listAnimations()) if (!s.keep.includes(a.getName())) a.dispose();
+  if (s.extract) {
+    // One character out of a collection: drop every other mesh and skin.
+    let skin = null;
+    for (const n of root.listNodes()) {
+      if (!n.getMesh()) continue;
+      if (s.extract.test(n.getMesh().getName())) skin = n.getSkin();
+      else {
+        n.getMesh().dispose();
+        n.setSkin(null);
+      }
+    }
+    for (const k of root.listSkins()) if (k !== skin) k.dispose();
+  }
   const missing = s.keep.filter((n) => !root.listAnimations().some((a) => a.getName() === n));
   if (missing.length) console.warn(`${id}: missing clips ${missing.join(', ')}`);
   doc.createExtension(EXTMeshoptCompression).setRequired(true);
-  await doc.transform(resample(), dedup(), prune(), meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
+  await doc.transform(resample(), dedup(), prune({ keepLeaves: false }), meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
   const out = path.join(outDir, `${id}.glb`);
   await io.write(out, doc);
   writeFileSync(path.join(outDir, `${id}-license.txt`), `${s.licence}\n`);

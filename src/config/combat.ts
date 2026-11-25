@@ -246,25 +246,24 @@ export const MISSION_RULES = {
 export const SPEED_FORCE = {
   /** World time runs at this fraction while active: people and cars still drift, in slow motion. */
   worldScale: 0.12,
-  /** The hero's own speeds are multiplied by this, and he runs at sprint pace without holding sprint. */
+  /** He runs at sprint pace without holding sprint, × this. */
   heroSpeed: 2.2,
+  /** Holding sprint (boost in flight) in Speed Force: faster still. */
+  sprintBoost: 1.6,
+  /** Afterimages: see-through copies of the hero in the suit's colours, left behind every `interval` s, fading over `life` s. */
+  afterimages: {
+    count: { low: 4, medium: 6, high: 8 } as Record<'low' | 'medium' | 'high', number>,
+    interval: 0.04,
+    life: 0.36,
+    opacity: 0.8,
+    blue: '#6f9bff',
+    red: '#ff2230',
+  },
   /** Camera FOV widens by this much (deg) while active. */
   fovBoost: 12,
   /** Speedometer count-up sharpness (1/s). */
   readoutSharpness: 3,
-  /** Afterimage trail: samples (frames), ribbon half-width (m), heights above the feet (m), colours, lightning. */
-  trail: {
-    samples: 26,
-    width: 0.22,
-    heights: [1.65, 1.25, 0.85],
-    core: '#ffffff',
-    edge: '#3a8cff',
-    brightness: 1.6,
-    minSpeed: 2,
-    bolts: 3,
-    boltSegments: 5,
-    boltEvery: 0.07,
-  },
+
   capacity: 100,
   /** Drains per real second while active (~16 s from full); recharges after a delay. */
   drainPerSecond: 6,

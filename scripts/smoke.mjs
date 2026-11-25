@@ -127,7 +127,7 @@ async function desktopRun(browser) {
     await sleep(250);
     hero = (await state(page)).hero;
   }
-  check('rigged hero model loaded (not the placeholder)', hero === 'ual' || hero === 'hatch', `hero=${hero}`);
+  check('rigged hero model loaded (not the placeholder)', hero === 'injustice' || hero === 'ual' || hero === 'hatch', `hero=${hero}`);
   await sleep(800);
   await page.screenshot({ path: path.join(OUT, '02-game.png') });
 

@@ -16,6 +16,7 @@ export function CreditsPanel({ onBack }: { onBack: () => void }) {
         </ul>
         <h3 className="settings-group">Villains</h3>
         <ul className="credits-list">
+          <li>Superman (Injustice 2, BvS suit) from the Injustice 2 | DCEU collection by kanimator (sketchfab.com/kanimator), original models by DatKofGuy and Carinhaqualquer — CC BY 4.0</li>
           <li>General Zod model by DavidA3D (sketchfab.com/DavidA3D) — CC BY-NC 4.0</li>
           <li>Darkseid (DC Legends, rigged and animated) by 3dworldz (sketchfab.com/3dworldz) — CC BY 4.0</li>
           <li>Doomsday by 3dmanx888 (sketchfab.com/3dmanx888) — CC BY 4.0</li>

@@ -151,7 +151,7 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
         cameraYaw: runtime.cameraYaw,
         // Level flight at the camera's default framing; look up/down to climb/dive.
         cameraPitch: runtime.cameraPitch - CAMERA.defaultPitch,
-        // Speed Force: always at full pace.
+        // Speed Force: full pace without sprint; sprint adds a further burst (speedScale).
         sprintHeld: input.isHeld('sprint') || runtime.speedForce,
         jumpPressed: input.consumePressed('jump'),
         jumpHeld: input.isHeld('jump'),
@@ -159,7 +159,7 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
         flyHeld: input.isHeld('fly'),
         descendHeld: input.isHeld('descend'),
         faceYaw: runtime.combatFaceYaw ?? undefined,
-        speedScale: (runtime.heroFrozen > 0 ? VILLAIN_AI.freezeSlow : 1) * (runtime.speedForce ? SPEED_FORCE.heroSpeed : 1) * (runtime.heroOnWater === 'wade' ? WATER.swimSpeed : 1),
+        speedScale: (runtime.heroFrozen > 0 ? VILLAIN_AI.freezeSlow : 1) * (runtime.speedForce ? SPEED_FORCE.heroSpeed * (input.isHeld('sprint') ? SPEED_FORCE.sprintBoost : 1) : 1) * (runtime.heroOnWater === 'wade' ? WATER.swimSpeed : 1),
       },
       dt,
     );

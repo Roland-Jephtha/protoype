@@ -105,7 +105,7 @@ export const VILLAINS: Record<VillainId, VillainDef> = {
       rig: {
         type: 'native',
         clips: { idle: 'IDLE002', walk: 'MOVE001', run: 'APPROACH001_2', fall: 'DAMAGE002', taunt: 'SKILL001_1', hit: 'DAMAGE001', stun: 'STUN001', die: 'DIE001', attack: 'ATTACK001', attack2: 'ATTACK002', attack3: 'ATTACK003' },
-        aliases: { Hips: 'Bip001 Pelvis', Spine: 'Bip001 Spine', Spine1: 'Bip001 Spine1', Spine2: 'Bip001 Spine1', Neck: 'Bip001 Neck', Head: 'Bip001 Head', LeftShoulder: 'Bip001 L Clavicle', LeftArm: 'Bip001 L UpperArm', LeftForeArm: 'Bip001 L Forearm', LeftHand: 'Bip001 L Hand', RightShoulder: 'Bip001 R Clavicle', RightArm: 'Bip001 R UpperArm', RightForeArm: 'Bip001 R Forearm', RightHand: 'Bip001 R Hand', LeftUpLeg: 'Bip001 L Thigh', LeftLeg: 'Bip001 L Calf', LeftFoot: 'Bip001 L Foot', RightUpLeg: 'Bip001 R Thigh', RightLeg: 'Bip001 R Calf', RightFoot: 'Bip001 R Foot' },
+        aliases: { Hips: 'Bip001_Pelvis', Spine: 'Bip001_Spine', Spine1: 'Bip001_Spine1', Spine2: 'Bip001_Spine1', Neck: 'Bip001_Neck', Head: 'Bip001_Head', LeftShoulder: 'Bip001_L_Clavicle', LeftArm: 'Bip001_L_UpperArm', LeftForeArm: 'Bip001_L_Forearm', LeftHand: 'Bip001_L_Hand', RightShoulder: 'Bip001_R_Clavicle', RightArm: 'Bip001_R_UpperArm', RightForeArm: 'Bip001_R_Forearm', RightHand: 'Bip001_R_Hand', LeftUpLeg: 'Bip001_L_Thigh', LeftLeg: 'Bip001_L_Calf', LeftFoot: 'Bip001_L_Foot', RightUpLeg: 'Bip001_R_Thigh', RightLeg: 'Bip001_R_Calf', RightFoot: 'Bip001_R_Foot' },
       },
     },
     heightMeters: 2.5,

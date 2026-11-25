@@ -22,7 +22,11 @@ import {
 } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { HERO_MODELS, type HeroAnim, type HeroModelDef } from '../../config/assets';
-import { retargetClip, UAL_TO_MIXAMO } from '../characters/retarget';
+import { mixamoAliases, retargetClip, rigPairs, UAL_TO_MIXAMO, RIG_NAMES } from '../characters/retarget';
+import { CapeBones } from './capeBones';
+import { AfterimageTrail } from './afterimages';
+import { SPEED_FORCE } from '../../config/combat';
+import { useSettings } from '../../state/settings';
 import { useApp } from '../../state/appStore';
 import { canonicalBoneName, MIXAMO_FROM_UAL } from './boneNames';
 import { PLAYER } from '../../config/gameConfig';
@@ -49,18 +53,41 @@ function syncPhase(next: AnimationAction, prev: AnimationAction) {
 /** Strike clips baked onto each hero rig (retargeted once per model). */
 const strikeCache = new WeakMap<Object3D, Partial<Record<StrikeKind, AnimationClip>>>();
 
-function strikeClips(heroScene: Object3D, ualScene: Object3D, ualClips: AnimationClip[], sameRig: boolean) {
+function strikeClips(heroScene: Object3D, ualScene: Object3D, ualClips: AnimationClip[], def: HeroModelDef) {
   let out = strikeCache.get(heroScene);
   if (out) return out;
   out = {};
+  const sameRig = def.id === 'ual';
   const src = sameRig ? null : cloneSkinned(ualScene);
   const tgt = sameRig ? null : cloneSkinned(heroScene);
+  const rig = def.retarget?.rig;
+  const pairs = rig ? rigPairs('ual', rig) : UAL_TO_MIXAMO;
+  const hips = { source: 'hips', target: rig ? RIG_NAMES[rig].hips : 'Hips' };
   for (const [kind, name] of Object.entries(STRIKE_CLIPS) as [StrikeKind, string][]) {
     const clip = ualClips.find((c) => c.name === name);
     if (!clip) continue;
-    out[kind] = sameRig || !src || !tgt ? clip : retargetClip(src, tgt, clip, UAL_TO_MIXAMO, 30, { source: 'hips', target: 'Hips' });
+    out[kind] = sameRig || !src || !tgt ? clip : retargetClip(src, tgt, clip, pairs, 30, hips);
   }
   strikeCache.set(heroScene, out);
+  return out;
+}
+
+/** Locomotion clips for a model without its own: another hero's clips retargeted onto its rig (once per model). */
+const roleCache = new WeakMap<Object3D, AnimationClip[]>();
+
+function retargetedClips(heroScene: Object3D, source: { scene: Object3D; animations: AnimationClip[] }, def: HeroModelDef): AnimationClip[] {
+  const rig = def.retarget?.rig;
+  if (!rig) return [];
+  let out = roleCache.get(heroScene);
+  if (out) return out;
+  const src = cloneSkinned(source.scene);
+  const tgt = cloneSkinned(heroScene);
+  const pairs = rigPairs('mixamo', rig);
+  const hips = { source: 'Hips', target: RIG_NAMES[rig].hips };
+  // Only the clips the roles use.
+  const wanted = new Set(Object.values(resolveClips(source.animations, def.clips)));
+  out = [...wanted].filter(Boolean).map((c) => retargetClip(src, tgt, c as AnimationClip, pairs, 30, hips));
+  roleCache.set(heroScene, out);
   return out;
 }
 
@@ -178,9 +205,11 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     }
 
     const soles = new FootSoles(model);
-    const pose = new CombatPose(model);
+    const pose = new CombatPose(model, def.retarget ? mixamoAliases(def.retarget.rig) : undefined);
+    // A model's own skinned cape (Injustice rigs) is driven procedurally.
+    const capeBones = new CapeBones(model);
 
-    return { model, scale, minY: m.minY, centerX: m.centerX, cape, capeAnchor, soles, pose, ownedMaterials, ownedGeometries };
+    return { model, scale, minY: m.minY, centerX: m.centerX, cape, capeAnchor, soles, pose, capeBones, ownedMaterials, ownedGeometries };
   }, [gltf, def]);
 
   useEffect(
@@ -195,6 +224,16 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
 
   // The cloth lives in world space, so its mesh is a direct child of the scene.
   const scene = useThree((s) => s.scene);
+  // Speed Force afterimages: ghost copies of this model, in world space.
+  const quality = useSettings((s) => s.graphicsQuality);
+  const ghosts = useMemo(() => new AfterimageTrail(built.model, SPEED_FORCE.afterimages.count[quality]), [built, quality]);
+  useEffect(() => {
+    ghosts.addTo(scene);
+    return () => {
+      ghosts.removeFrom(scene);
+      ghosts.dispose();
+    };
+  }, [scene, ghosts]);
   useEffect(() => {
     const mesh = built.cape?.mesh;
     if (!mesh) return;
@@ -219,12 +258,14 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
   const combatTmp = useRef({ q: new Quaternion(), forward: new Vector3(), up: new Vector3(), guard: 0 });
 
   const ual = useGLTF(HERO_MODELS.ual.url);
+  // Models without their own clips borrow the Hatch hero's (always committed).
+  const clipSource = useGLTF(HERO_MODELS.hatch.url);
   const anim = useMemo(() => {
     const mixer = new AnimationMixer(built.model);
-    const clips = resolveClips(gltf.animations, def.clips);
+    const clips = resolveClips(def.retarget ? retargetedClips(gltf.scene, clipSource, def) : gltf.animations, def.clips);
     // Punches: real strike clips, played over everything while a punch is thrown.
     const strikes: Partial<Record<StrikeKind, AnimationAction>> = {};
-    for (const [kind, clip] of Object.entries(strikeClips(gltf.scene, ual.scene, ual.animations, def.id === 'ual')) as [StrikeKind, AnimationClip][]) {
+    for (const [kind, clip] of Object.entries(strikeClips(gltf.scene, ual.scene, ual.animations, def)) as [StrikeKind, AnimationClip][]) {
       const a = mixer.clipAction(clip);
       a.setLoop(LoopOnce, 1);
       a.clampWhenFinished = true;
@@ -239,7 +280,7 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     }
     const jumpStartDuration = clips.jumpStart ? clips.jumpStart.duration * 0.6 : 0;
     return { mixer, actions, strikes, jumpStartDuration };
-  }, [built, gltf, def, ual]);
+  }, [built, gltf, def, ual, clipSource]);
 
   useEffect(
     () => () => {
@@ -250,6 +291,10 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
   );
 
   const currentRole = useRef<string | null>(null);
+  const ghostsRef = useRef(ghosts);
+  useEffect(() => {
+    ghostsRef.current = ghosts;
+  }, [ghosts]);
   const currentAction = useRef<AnimationAction | null>(null);
   // Three.js objects are mutated per frame by design; keep them behind a ref.
   const animRef = useRef(anim);
@@ -337,6 +382,14 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     // Bones were just posed by the mixer; refresh world matrices before sampling them.
     f.updateWorldMatrix(true, true);
 
+    // The model's own cape swings back with speed and streams behind in flight.
+    if (built.capeBones.available && pitchGroup.current) {
+      const ct = combatTmp.current;
+      pitchGroup.current.getWorldQuaternion(ct.q);
+      ct.up.set(1, 0, 0).applyQuaternion(ct.q); // the body's left (model faces +Z)
+      built.capeBones.update(dt, Math.hypot(hSpeed, v.y), role === 'fly', ct.up);
+    }
+
     if (built.soles.available && liftGroup.current) {
       f.getWorldPosition(tmpPos);
       groundRay.current ??= new rapier.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 });
@@ -392,6 +445,10 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       }
       runtime.heroEyesValid = built.pose.eyes(runtime.heroEyes, ct.forward, ct.up, def.heightMeters);
     }
+
+    // Afterimages copy the final pose (after combat overlays), every few frames while Speed Force runs.
+    built.model.updateWorldMatrix(true, true);
+    ghostsRef.current.update(dt, runtime.speedForce && Math.hypot(v.x, v.y, v.z) > 2 && !useApp.getState().paused);
 
     if (built.cape && built.capeAnchor && !useApp.getState().paused) {
       built.cape.update(built.capeAnchor, dt, stillAir, 2 + hSpeed * 1.4);

@@ -24,6 +24,11 @@ export interface HeroModelDef {
   addCape: boolean;
   /** Ordered name patterns per role; the first clip whose name matches wins. */
   clips: Record<HeroAnim, RegExp[]>;
+  /**
+   * A model without its own clips: animated by retargeting another hero model's
+   * clips onto its rig (`rig` = its bone naming), and the strike clips likewise.
+   */
+  retarget?: { fromModel: 'hatch'; rig: 'injustice' };
   /** Ground speed (m/s) at which each locomotion clip plays at 1× (feet match the ground). */
   clipSpeeds: { walk: number; run: number; sprint: number };
   credit: string;
@@ -94,5 +99,24 @@ export const HERO_MODELS = {
   },
 } satisfies Record<string, HeroModelDef>;
 
+/**
+ * Superman (Batman v Superman suit) from the Injustice 2 | DCEU collection by
+ * kanimator (CC BY 4.0), extracted by scripts/prepare-characters.mjs. Has its
+ * own skinned cape (driven procedurally); animated with the Hatch hero's clips.
+ */
+export const INJUSTICE_HERO: HeroModelDef = {
+  id: 'injustice',
+  label: 'Superman (Injustice 2, BvS suit)',
+  url: `${base}models/characters/superman-injustice.glb`,
+  heightMeters: 1.9,
+  yawOffset: 0,
+  styling: 'textured',
+  addCape: false,
+  clips: HERO_MODELS.hatch.clips,
+  retarget: { fromModel: 'hatch', rig: 'injustice' },
+  clipSpeeds: HERO_MODELS.hatch.clipSpeeds,
+  credit: 'Injustice 2 | DCEU | 3D Model Collection Rigged by kanimator — https://sketchfab.com/3d-models/injustice-2-dceu-3d-model-collection-rigged-e27284b707ec42aab42416ed39911d28 — CC BY 4.0 (original models credited to DatKofGuy and Carinhaqualquer)',
+};
+
 /** Preference order: first model whose file is actually present is used. */
-export const HERO_MODEL_PRIORITY: HeroModelDef[] = [HERO_MODELS.hatch, HERO_MODELS.ual];
+export const HERO_MODEL_PRIORITY: HeroModelDef[] = [INJUSTICE_HERO, HERO_MODELS.hatch, HERO_MODELS.ual];
