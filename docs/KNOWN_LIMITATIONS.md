@@ -60,3 +60,13 @@ Reached only from Pause → Travel (no edge exits). Free roam only — no story 
 there yet, and no wildlife or traffic. Structures (palace, arena) are simple blocks.
 Lava behaves like water (run across it, wade in it) and does no damage. Performance of
 these regions has not been measured on a phone.
+
+## Combat overhaul (2026-11-25)
+
+Only jab and cross use real strike clips (retargeted from the CC0 library); hook,
+uppercut and the finisher still use the procedural arm pose until the Mixamo clips
+arrive. Soldiers avoid city buildings with a simple footprint push-out (no pathfinding)
+and walk through trees/rocks outside the city. Counters and dodges are not in yet —
+the red gem over a soldier's head is only a warning for now. Soldiers appear in free
+roam only. The smoke test runs in Edge because Chrome 158 fails to launch under the
+pinned playwright-core.

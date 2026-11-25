@@ -24,7 +24,7 @@ const PARTICLE_LIFE = 0.7;
 const EMIT_PER_SECOND = 260;
 const IMPACT_MESHES = 16;
 /** Flash size and duration per impact kind (m, s). The Nova's flash is small: its ring carries the blast. */
-const IMPACT_LOOK = { punch: { size: 0.9, time: 0.16 }, power: { size: 3, time: 0.3 }, nova: { size: 9, time: 0.35 }, launch: { size: 2.5, time: 0.25 } };
+const IMPACT_LOOK = { punch: { size: 0.45, time: 0.12 }, power: { size: 1.4, time: 0.22 }, nova: { size: 9, time: 0.35 }, launch: { size: 1.2, time: 0.2 } };
 /** Ground shockwave ring radius per kind (m). */
 const RING_RADIUS = { nova: HERO_COMBAT.nova.radius, launch: 10 };
 const NOVA_RING_TIME = 0.7;
@@ -172,7 +172,7 @@ export function SkillFx() {
     }
 
     // --- hit flashes and the Nova ring ------------------------------------------------------------
-    const now = performance.now() / 1000;
+    const now = runtime.worldClock;
     flashes.current.forEach((m, i) => {
       if (!m) return;
       const imp = impacts[i];

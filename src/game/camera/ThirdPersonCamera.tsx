@@ -7,6 +7,7 @@ import { input } from '../../input/InputManager';
 import { useApp } from '../../state/appStore';
 import { useSettings } from '../../state/settings';
 import { runtime } from '../runtime';
+import { SPEED_FORCE } from '../../config/combat';
 import { clampPitch, damp, nextCameraDistance, orbitOffset } from './cameraMath';
 
 /**
@@ -78,7 +79,7 @@ export function ThirdPersonCamera() {
     s.modeDistance += (modeDistance - s.modeDistance) * damp(CAMERA.distanceSharpness, dt);
     const desiredDistance = s.modeDistance + carrying * CAMERA.carryDistanceBoost;
     const boost = aiming ? CAMERA.aimFovBoost : st === 'flyBoost' ? CAMERA.boostFovBoost : st === 'sprint' ? CAMERA.sprintFovBoost : st === 'fly' ? CAMERA.flyFovBoost : 0;
-    const fovBoost = boost * (settings.reducedMotion ? 0.3 : 1);
+    const fovBoost = (boost + (runtime.speedForce ? SPEED_FORCE.fovBoost : 0)) * (settings.reducedMotion ? 0.3 : 1);
     s.fov += (CAMERA.fov + fovBoost - s.fov) * damp(CAMERA.fovSharpness, dt);
     if (Math.abs(camera.fov - s.fov) > 0.01) {
       camera.fov = s.fov;

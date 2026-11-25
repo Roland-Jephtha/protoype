@@ -14,6 +14,8 @@ import { Player } from '../player/Player';
 import { runtime } from '../runtime';
 import { METRO_BAY } from '../../config/world';
 import { MetropolisBay, WaterBody } from './Water';
+import { generateCityLayout } from './cityLayout';
+import { Soldiers } from '../enemies/Soldiers';
 import { oceanLevel } from './waterLevel';
 import { DesertContent } from './desert/DesertContent';
 import { ForestContent } from './forest/ForestContent';
@@ -47,6 +49,7 @@ export const RegionWorld = memo(function RegionWorld({ regionId }: { regionId: R
         <CinematicCamera regionId={regionId} ground={cityGround} />
         <CombatDriver />
         <Lifting />
+        <Soldiers regionId={regionId} ground={cityGround} resolve={cityResolve} />
       </>
     );
   }
@@ -63,6 +66,24 @@ export const RegionWorld = memo(function RegionWorld({ regionId }: { regionId: R
 });
 
 const cityGround = () => 0;
+const cityBuildings = generateCityLayout().buildings;
+/** Keeps walkers in the city out of buildings and on dry land. */
+function cityResolve(x: number, z: number, r: number) {
+  const edge = METRO_BAY.landHalf - 2;
+  x = Math.max(-edge, Math.min(edge, x));
+  z = Math.max(-edge, Math.min(edge, z));
+  for (const b of cityBuildings) {
+    const hx = b.width / 2 + r;
+    const hz = b.depth / 2 + r;
+    const dx = x - b.x;
+    const dz = z - b.z;
+    if (Math.abs(dx) >= hx || Math.abs(dz) >= hz) continue;
+    // Out through the nearest side.
+    if (hx - Math.abs(dx) < hz - Math.abs(dz)) x = b.x + Math.sign(dx || 1) * hx;
+    else z = b.z + Math.sign(dz || 1) * hz;
+  }
+  return { x, z };
+}
 const bayWater = oceanLevel(METRO_BAY.landHalf, METRO_BAY.waterLevel);
 
 function TerrainCombat({ regionId }: { regionId: RegionId }) {
@@ -72,6 +93,7 @@ function TerrainCombat({ regionId }: { regionId: RegionId }) {
       <CombatDriver />
       <Lifting />
       <Drones regionId={regionId} ground={ground} />
+      <Soldiers regionId={regionId} ground={ground} />
       <Villains regionId={regionId} ground={ground} />
     </>
   );

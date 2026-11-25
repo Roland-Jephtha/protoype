@@ -34,6 +34,31 @@ export const MIXAMO_TO_DAVIDA3D: BonePair[] = [
   }),
 ];
 
+/**
+ * Quaternius UAL (the CC0 mannequin, whose library has the punch / hit / roll
+ * clips) → Mixamo (the textured hero). Canonical names.
+ */
+export const UAL_TO_MIXAMO: BonePair[] = [
+  { source: 'hips', target: 'Hips' },
+  { source: 'spine001', target: 'Spine', sourceChild: 'spine002', targetChild: 'Spine1' },
+  { source: 'spine002', target: 'Spine1', sourceChild: 'spine003', targetChild: 'Spine2' },
+  { source: 'spine003', target: 'Spine2', sourceChild: 'neck', targetChild: 'Neck' },
+  { source: 'neck', target: 'Neck', sourceChild: 'head', targetChild: 'Head' },
+  { source: 'head', target: 'Head' },
+  ...(['L', 'R'] as const).flatMap((s) => {
+    const S = s === 'L' ? 'Left' : 'Right';
+    return [
+      { source: `shoulder${s}`, target: `${S}Shoulder`, sourceChild: `upper_arm${s}`, targetChild: `${S}Arm` },
+      { source: `upper_arm${s}`, target: `${S}Arm`, sourceChild: `forearm${s}`, targetChild: `${S}ForeArm` },
+      { source: `forearm${s}`, target: `${S}ForeArm`, sourceChild: `hand${s}`, targetChild: `${S}Hand` },
+      { source: `hand${s}`, target: `${S}Hand` },
+      { source: `thigh${s}`, target: `${S}UpLeg`, sourceChild: `shin${s}`, targetChild: `${S}Leg` },
+      { source: `shin${s}`, target: `${S}Leg`, sourceChild: `foot${s}`, targetChild: `${S}Foot` },
+      { source: `foot${s}`, target: `${S}Foot` },
+    ];
+  }),
+];
+
 function bonesByCanon(root: Object3D) {
   const map = new Map<string, Bone>();
   root.traverse((o) => {
@@ -75,7 +100,14 @@ function depth(o: Object3D) {
  * change from each rig's rest pose (after lining the rests up); the hips'
  * vertical bob is scaled by the ratio of hip heights.
  */
-export function retargetClip(source: Object3D, target: Object3D, clip: AnimationClip, pairs: BonePair[], fps = 30): AnimationClip {
+export function retargetClip(
+  source: Object3D,
+  target: Object3D,
+  clip: AnimationClip,
+  pairs: BonePair[],
+  fps = 30,
+  hips: { source: string; target: string } = { source: 'Hips', target: 'Hip' },
+): AnimationClip {
   const sBones = bonesByCanon(source);
   const tBones = bonesByCanon(target);
   source.updateMatrixWorld(true);
@@ -100,8 +132,8 @@ export function retargetClip(source: Object3D, target: Object3D, clip: Animation
   // Parents first, so each bone's parent already has its frame pose.
   resolved.sort((a, b) => depth(a.tgt) - depth(b.tgt));
 
-  const hipsSrc = sBones.get('Hips');
-  const hipsTgt = tBones.get('Hip');
+  const hipsSrc = sBones.get(hips.source);
+  const hipsTgt = tBones.get(hips.target);
   const srcHipRest = hipsSrc ? hipsSrc.getWorldPosition(new Vector3()) : new Vector3();
   const tgtHipRestLocal = hipsTgt ? hipsTgt.position.clone() : new Vector3();
   const tgtHipRestWorld = hipsTgt ? hipsTgt.getWorldPosition(new Vector3()) : new Vector3();

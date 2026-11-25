@@ -30,28 +30,44 @@ describe('hero combat', () => {
     expect(c.heat).toBeGreaterThan(HERO_COMBAT.heat.capacity * 0.9);
   });
 
-  it('every tap is a two-handed one-two; the third tap is a flurry ending in a heavy blow', () => {
+  it('each tap throws one strike in a learnable order, ending in a heavy finisher', () => {
     const c = new HeroCombat();
-    const combos: number[] = [];
-    const hits: CombatEvent[][] = [];
-    for (let i = 0; i < 3; i++) {
+    const kinds: string[] = [];
+    const sides: string[] = [];
+    let heavy = 0;
+    for (let i = 0; i < 5; i++) {
       const events = c.step({ attackPressed: true, aimHeld: false }, DT);
-      // Hold until this punch's last fist is done, then tap again within the combo window.
-      events.push(...run(c, HERO_COMBAT.punch.duration + c.strikes[c.strikes.length - 1].at + 0.05));
-      hits.push(events.filter((e) => e.type === 'punchHit'));
-      combos.push(c.combo);
+      kinds.push(c.strikes[0].kind);
+      sides.push(c.strikes[0].side);
+      events.push(...run(c, c.strikeLength + 0.05));
+      heavy += events.filter((e) => e.type === 'punchHit' && e.heavy).length;
+      expect(events.filter((e) => e.type === 'punchHit')).toHaveLength(1);
     }
-    expect(combos).toEqual([1, 2, 3]);
-    // Every combination uses both hands; the finisher ends with at least one heavy blow.
-    expect(hits[0].length).toBeGreaterThanOrEqual(2);
-    expect(new Set(c.strikes.map((s) => s.side)).size).toBe(2);
-    expect(hits[2].filter((e) => e.type === 'punchHit' && e.heavy).length).toBeGreaterThanOrEqual(1);
+    expect(kinds.slice(0, 4)).toEqual(['jab', 'cross', 'hook', 'uppercut']);
+    expect(sides.slice(0, 4)).toEqual(['left', 'right', 'left', 'right']);
+    expect(c.combo).toBe(5);
+    expect(heavy).toBe(1); // only the finisher
     expect(c.punchStrength(true).damage).toBe(HERO_COMBAT.punch.finisherDamage);
     expect(c.punchStrength(false).damage).toBeLessThan(HERO_COMBAT.punch.damage);
-    // After a pause the combo starts over.
+    // After the finisher, or after a pause, it starts again with the jab.
+    c.step({ attackPressed: true, aimHeld: false }, DT);
+    expect(c.strikes[0].kind).toBe('jab');
     run(c, 1.5);
     c.step({ attackPressed: true, aimHeld: false }, DT);
     expect(c.combo).toBe(1);
+  });
+
+  it('landed hits build the combo counter; every fifth is a super hit; getting hit or a pause resets it', () => {
+    const c = new HeroCombat();
+    const supers = Array.from({ length: 10 }, () => c.landed());
+    expect(c.chain).toBe(10);
+    expect(supers.filter(Boolean)).toHaveLength(2);
+    expect(supers[4]).toBe(true);
+    run(c, HERO_COMBAT.punch.chainTimeout + 0.1);
+    expect(c.chain).toBe(0);
+    c.landed();
+    c.takeDamage(5);
+    expect(c.chain).toBe(0);
   });
 
   it('takes damage, regenerates after a delay, and reports a knockout', () => {
@@ -151,17 +167,17 @@ describe('drones', () => {
   });
 });
 
-describe('punch variety', () => {
-  it('never throws the same combination twice in a row', () => {
-    const c = new HeroCombat();
-    let prev = '';
-    for (let i = 0; i < 12; i++) {
-      c.step({ attackPressed: true, aimHeld: false }, DT);
-      const key = c.strikes.map((s) => s.side + s.kind).join();
-      if (c.combo < 3) expect(key).not.toBe(prev);
-      prev = c.combo < 3 ? key : '';
-      run(c, 1.6);
-    }
+describe('melee lock-on', () => {
+  it('picks the enemy closest to the aim direction, ignoring traffic and anything out of range', async () => {
+    const { pickMeleeTarget } = await import('../src/game/combat/targets');
+    const ahead = target(0, 1, -6);
+    const side = target(5, 1, -2);
+    const car = { ...target(0, 1, -3), kind: 'vehicle' as const };
+    const far = target(0, 1, -30);
+    const origin = { x: 0, y: 1, z: 0 };
+    expect(pickMeleeTarget(origin, { x: 0, y: 0, z: -1 }, 12, 1.2, [side, car, far, ahead])).toBe(ahead);
+    expect(pickMeleeTarget(origin, { x: 1, y: 0, z: 0 }, 12, 1.2, [side, car, far, ahead])).toBe(side);
+    expect(pickMeleeTarget(origin, { x: 0, y: 0, z: 1 }, 12, 1.2, [side, ahead])).toBeNull();
   });
 });
 

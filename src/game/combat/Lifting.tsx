@@ -65,8 +65,12 @@ class LiftLooks {
 /** Thrown and dropped vehicles: real rigid bodies that hurt what they hit while moving fast. */
 class ThrownSet {
   readonly items: Thrown[] = [];
+  /** World time scale currently applied to the bodies (Speed Force, hit-stop). */
+  private scale = 1;
 
   add(world: RAPIER.World, item: Thrown) {
+    // Spawned during slow motion: start out slowed too.
+    if (this.scale !== 1) this.rescale(item.body, this.scale);
     this.items.push(item);
     while (this.items.length > LIFT.maxThrown) this.remove(world, 0);
   }
@@ -74,6 +78,23 @@ class ThrownSet {
   remove(world: RAPIER.World, index: number) {
     const [t] = this.items.splice(index, 1);
     if (t && world.getRigidBody(t.body.handle)) world.removeRigidBody(t.body);
+  }
+
+  /** Scales a body's motion by `k` and its gravity to the current time scale. */
+  private rescale(body: RAPIER.RigidBody, k: number) {
+    const v = body.linvel();
+    const w = body.angvel();
+    body.setLinvel({ x: v.x * k, y: v.y * k, z: v.z * k }, true);
+    body.setAngvel({ x: w.x * k, y: w.y * k, z: w.z * k }, true);
+    body.setGravityScale(this.scale * this.scale, true);
+  }
+
+  /** Follows the world time scale: slow motion slows thrown things too (velocity × s, gravity × s²). */
+  setTimeScale(s: number) {
+    if (s === this.scale) return;
+    const k = s / this.scale;
+    this.scale = s;
+    for (const t of this.items) this.rescale(t.body, k);
   }
 
   step(world: RAPIER.World, dt: number) {
@@ -85,7 +106,8 @@ class ThrownSet {
         continue;
       }
       const v = t.body.linvel();
-      const speed = Math.hypot(v.x, v.y, v.z);
+      // Real (unslowed) speed decides whether it hurts.
+      const speed = Math.hypot(v.x, v.y, v.z) / this.scale;
       if (speed < LIFT.minHitSpeed) continue;
       const p = t.body.translation();
       const reach = Math.max(t.half.x, t.half.z);
@@ -94,7 +116,7 @@ class ThrownSet {
         const d = Math.hypot(target.position.x - p.x, target.position.y - (p.y + t.half.y), target.position.z - p.z);
         if (d > target.radius + reach) continue;
         t.hit.add(target);
-        const k = LIFT.knockback / speed;
+        const k = LIFT.knockback / speed / this.scale;
         target.damage(LIFT.damage, { x: v.x * k, y: Math.max(6, v.y * k + 6), z: v.z * k });
         runtime.combat.dealtDamage(LIFT.damage);
         addImpact(target.position, 'power');
@@ -189,7 +211,8 @@ export function Lifting() {
         release({ x: 0, y: 0, z: 0 }, 3);
       }
     }
-    thrown.step(w, w.timestep);
+    thrown.setTimeScale(runtime.timeScale);
+    thrown.step(w, w.timestep * runtime.timeScale);
   });
 
   // Meshes: the carried vehicle overhead, and every thrown / dropped one.

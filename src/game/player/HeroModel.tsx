@@ -21,7 +21,8 @@ import {
   type Material,
 } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
-import type { HeroAnim, HeroModelDef } from '../../config/assets';
+import { HERO_MODELS, type HeroAnim, type HeroModelDef } from '../../config/assets';
+import { retargetClip, UAL_TO_MIXAMO } from '../characters/retarget';
 import { useApp } from '../../state/appStore';
 import { canonicalBoneName, MIXAMO_FROM_UAL } from './boneNames';
 import { PLAYER } from '../../config/gameConfig';
@@ -33,7 +34,35 @@ import type { GroundMotor } from './groundMovement';
 import { LOCOMOTION, LOOPING, resolveClips, roleForState } from './heroAnimation';
 import { applySuperSuit, measureModel } from './superSuit';
 import { CombatPose, type PunchPose } from './combatPose';
-import { HERO_COMBAT } from '../../config/combat';
+import { HERO_COMBAT, type StrikeKind } from '../../config/combat';
+
+/** Real strike clips from the CC0 mannequin's animation library (others still use the procedural arm pose). */
+const STRIKE_CLIPS: Partial<Record<StrikeKind, string>> = { jab: 'Punch_Jab', cross: 'Punch_Cross' };
+/** Strike clips are played this much longer than the strike itself, so their follow-through blends out. */
+const STRIKE_TAIL = 1.35;
+
+/** Starts `next` at the same point of its cycle as `prev` (keeps foot phase between locomotion loops). */
+function syncPhase(next: AnimationAction, prev: AnimationAction) {
+  next.time = (prev.time / prev.getClip().duration) * next.getClip().duration;
+}
+
+/** Strike clips baked onto each hero rig (retargeted once per model). */
+const strikeCache = new WeakMap<Object3D, Partial<Record<StrikeKind, AnimationClip>>>();
+
+function strikeClips(heroScene: Object3D, ualScene: Object3D, ualClips: AnimationClip[], sameRig: boolean) {
+  let out = strikeCache.get(heroScene);
+  if (out) return out;
+  out = {};
+  const src = sameRig ? null : cloneSkinned(ualScene);
+  const tgt = sameRig ? null : cloneSkinned(heroScene);
+  for (const [kind, name] of Object.entries(STRIKE_CLIPS) as [StrikeKind, string][]) {
+    const clip = ualClips.find((c) => c.name === name);
+    if (!clip) continue;
+    out[kind] = sameRig || !src || !tgt ? clip : retargetClip(src, tgt, clip, UAL_TO_MIXAMO, 30, { source: 'hips', target: 'Hips' });
+  }
+  strikeCache.set(heroScene, out);
+  return out;
+}
 
 /** Diagnostics: `?nofootfix` disables foot grounding to compare before/after. */
 const FOOT_FIX_ENABLED = typeof window === 'undefined' || !new URLSearchParams(window.location.search).has('nofootfix');
@@ -189,9 +218,18 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
   const tmpPos = useMemo(() => new Vector3(), []);
   const combatTmp = useRef({ q: new Quaternion(), forward: new Vector3(), up: new Vector3(), guard: 0 });
 
+  const ual = useGLTF(HERO_MODELS.ual.url);
   const anim = useMemo(() => {
     const mixer = new AnimationMixer(built.model);
     const clips = resolveClips(gltf.animations, def.clips);
+    // Punches: real strike clips, played over everything while a punch is thrown.
+    const strikes: Partial<Record<StrikeKind, AnimationAction>> = {};
+    for (const [kind, clip] of Object.entries(strikeClips(gltf.scene, ual.scene, ual.animations, def.id === 'ual')) as [StrikeKind, AnimationClip][]) {
+      const a = mixer.clipAction(clip);
+      a.setLoop(LoopOnce, 1);
+      a.clampWhenFinished = true;
+      strikes[kind] = a;
+    }
     const actions: Partial<Record<HeroAnim, AnimationAction>> = {};
     for (const [role, clip] of Object.entries(clips) as [HeroAnim, AnimationClip][]) {
       const a = mixer.clipAction(clip);
@@ -200,8 +238,8 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       actions[role] = a;
     }
     const jumpStartDuration = clips.jumpStart ? clips.jumpStart.duration * 0.6 : 0;
-    return { mixer, actions, jumpStartDuration };
-  }, [built, gltf, def]);
+    return { mixer, actions, strikes, jumpStartDuration };
+  }, [built, gltf, def, ual]);
 
   useEffect(
     () => () => {
@@ -211,7 +249,8 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     [anim, built],
   );
 
-  const currentRole = useRef<HeroAnim | null>(null);
+  const currentRole = useRef<string | null>(null);
+  const currentAction = useRef<AnimationAction | null>(null);
   // Three.js objects are mutated per frame by design; keep them behind a ref.
   const animRef = useRef(anim);
   useEffect(() => {
@@ -233,37 +272,51 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     if (!hit && hh.t >= 0) hh.t = -1;
     if (hit && hh.kind === 'knockdown' && hit.drop > 0.3 && anim.actions.airborne) role = 'airborne';
     if (!anim.actions[role]) role = role === 'hardLand' && anim.actions.land ? 'land' : role === 'jumpStart' ? 'airborne' : role;
-    const next = anim.actions[role] ?? anim.actions.idle;
+    let next = anim.actions[role] ?? anim.actions.idle;
+    let key: string = role;
+    // A punch with a real strike clip takes over the whole body for its duration.
+    const cb = runtime.combat;
+    const strikeKind = cb.punching && !cb.powerPunching && !runtime.carrying ? cb.strikes[0]?.kind : undefined;
+    const strikeAction = strikeKind ? anim.strikes[strikeKind] : undefined;
+    const striking = !!strikeAction && cb.punchTime < cb.strikeLength * STRIKE_TAIL;
+    if (striking && strikeAction) {
+      next = strikeAction;
+      key = `strike:${strikeKind}:${cb.combo}:${cb.sinceLastPunch < 0.05 ? 'new' : ''}`;
+      // A new punch of the same kind restarts the clip.
+      if (currentRole.current?.startsWith(`strike:${strikeKind}:${cb.combo}`)) key = currentRole.current;
+    }
 
     const prevRole = currentRole.current;
-    const prev = prevRole ? anim.actions[prevRole] : undefined;
-    if (role !== prevRole && next === prev) {
+    const prev = currentAction.current ?? undefined;
+    if (key !== prevRole && next === prev && !striking) {
       // Different role, same clip (run ↔ sprint both use the run clip): keep playing it.
       // Cross-fading an action into itself would fade it out and drop the hero into
       // his rest pose — the "gliding with arms out" look.
-      currentRole.current = role;
-    } else if (role !== prevRole && next) {
-      const fade = role === 'airborne' || role === 'jumpStart' || role === 'land' ? 0.1 : 0.2;
+      currentRole.current = key;
+    } else if (key !== prevRole && next) {
+      const fade = striking ? 0.06 : prevRole?.startsWith('strike') ? 0.14 : role === 'airborne' || role === 'jumpStart' || role === 'land' ? 0.1 : 0.2;
       next.reset();
       // Keep foot phase when blending between locomotion loops.
-      if (prev && prevRole && LOCOMOTION.includes(prevRole) && LOCOMOTION.includes(role)) {
-        next.time = (prev.time / prev.getClip().duration) * next.getClip().duration;
+      if (prev && prevRole && LOCOMOTION.includes(prevRole as HeroAnim) && LOCOMOTION.includes(role)) {
+        syncPhase(next, prev);
       }
       next.setEffectiveWeight(1).fadeIn(fade).play();
-      prev?.fadeOut(fade);
-      currentRole.current = role;
+      if (prev && prev !== next) prev.fadeOut(fade);
+      currentRole.current = key;
+      currentAction.current = next;
     }
 
     // Locomotion playback rate follows ground speed.
     const sp = def.clipSpeeds;
     const rate = (ref: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, hSpeed / ref));
-    if (role === 'walk') next?.setEffectiveTimeScale(rate(sp.walk, 0.5, 2.2));
+    if (striking && next) next.setEffectiveTimeScale(next.getClip().duration / (cb.strikeLength * STRIKE_TAIL));
+    else if (role === 'walk') next?.setEffectiveTimeScale(rate(sp.walk, 0.5, 2.2));
     // Run and sprint: one rule. Playback follows ground speed (up to ~5.5× at 90 km/h)
     // so the feet keep pace with the ground instead of sliding.
     else if (role === 'run' || role === 'sprint') next?.setEffectiveTimeScale(rate(role === 'run' ? sp.run : sp.sprint, 0.6, 7.5));
     else next?.setEffectiveTimeScale(1);
     // Total weight of all playing clips; below 1 means the pose is blending toward the rest pose.
-    runtime.heroAnimWeight = [...new Set(Object.values(anim.actions))].reduce((sum, a) => sum + (a?.isRunning() ? a.getEffectiveWeight() : 0), 0);
+    runtime.heroAnimWeight = [...new Set([...Object.values(anim.actions), ...Object.values(anim.strikes)])].reduce((sum, a) => sum + (a?.isRunning() ? a.getEffectiveWeight() : 0), 0);
 
     anim.mixer.update(dt);
     const f = facing.current;
@@ -312,18 +365,18 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       const c = runtime.combat;
       // Fighting stance near enemies (on foot or hovering, not while flying fast or carrying).
       const speed = Math.hypot(v.x, v.y, v.z);
-      const wantGuard = runtime.combatReady && !runtime.carrying && speed < 9 && !(hit && hh.kind !== 'stagger') ? 1 : 0;
+      const wantGuard = runtime.combatReady && !runtime.carrying && speed < 9 && !striking && !(hit && hh.kind !== 'stagger') ? 1 : 0;
       ct.guard += (wantGuard - ct.guard) * Math.min(1, dt * 8);
       if (runtime.carrying) built.pose.applyLift(ct.forward, def.heightMeters, 1);
       else {
         const P = HERO_COMBAT.punch;
         const d = P.duration;
         // Every strike of the current punch (both hands, in turn); heavy blows put the whole body in.
-        const punches: PunchPose[] = c.punching
+        const punches: PunchPose[] = c.punching && !striking
           ? c.strikes.map((st) => ({
               side: st.side,
               kind: st.kind,
-              progress: (c.punchTime - st.at) / d,
+              progress: (c.punchTime - st.at) / (c.powerPunching ? d : c.strikeLength),
               ...(st.heavy
                 ? { twist: P.cross.twist * 1.2, lean: c.powerPunching ? HERO_COMBAT.powerPunch.lean : P.cross.lean * 1.5 }
                 : st.kind === 'hook'

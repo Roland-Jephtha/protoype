@@ -1,7 +1,7 @@
 import { useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
-import { AnimationMixer, Box3, LoopRepeat, Vector3, type AnimationAction, type Group, type Mesh } from 'three';
+import { AnimationMixer, Box3, LoopOnce, LoopRepeat, Vector3, type AnimationAction, type Group, type Mesh } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { HERO_MODELS } from '../../config/assets';
 import { runtime } from '../runtime';
@@ -13,8 +13,8 @@ useGLTF.preload(HERO_MODELS.ual.url);
 export interface CivilianHandle {
   /** The root you move/rotate (feet at y = 0, facing +Z). */
   root: Group | null;
-  /** Cross-fade to a clip by exact name (e.g. 'Walk_Loop'); speed scales playback. */
-  play: (clip: string, speed?: number) => void;
+  /** Cross-fade to a clip by exact name (e.g. 'Walk_Loop'); speed scales playback; `once` plays it a single time and holds the last frame. */
+  play: (clip: string, speed?: number, once?: boolean) => void;
 }
 
 /**
@@ -79,13 +79,18 @@ export const Civilian = forwardRef<
     animRef.current = anim;
   }, [anim]);
 
-  const play = (name: string, speed = 1) => {
+  const play = (name: string, speed = 1, once = false) => {
     const a = animRef.current;
     const next = a.actions.get(name) ?? a.actions.get('Idle_Loop');
     if (!next) return;
     next.setEffectiveTimeScale(speed);
     if (next === a.current) return;
-    next.reset().setLoop(LoopRepeat, Infinity).fadeIn(0.25).play();
+    next.reset();
+    if (once) {
+      next.setLoop(LoopOnce, 1);
+      next.clampWhenFinished = true;
+    } else next.setLoop(LoopRepeat, Infinity);
+    next.fadeIn(once ? 0.1 : 0.25).play();
     a.current?.fadeOut(0.25);
     a.current = next;
   };

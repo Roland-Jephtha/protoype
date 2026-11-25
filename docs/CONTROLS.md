@@ -16,7 +16,7 @@ Only controls that work today are listed as active. Bindings live in
 | Mouse (in flight) | Look up/down to climb/dive; flight follows the camera | ✅ |
 | Esc / P | Pause / back out of a pause sub-page | ✅ |
 | F3 | Diagnostics overlay | ✅ |
-| Left mouse | Punch; quick taps chain a 3-hit combo, the third knocks enemies flying | ✅ |
+| Left mouse | Punch. Locks onto the enemy you aim at (stick/WASD direction, else where the camera looks — white ring), dashes to it and strikes. Taps chain jab → cross → hook → uppercut → heavy finisher; landed hits build the combo counter (every 5th is a super hit) | ✅ |
 | Right mouse (hold) | Heat vision through the crosshair (closer camera, meter overheats) | ✅ |
 | Hold left mouse, release | Power punch (sends enemies flying) | ✅ |
 | R (hold) | Super breath (wind) | ✅ |

@@ -66,6 +66,34 @@ export function pickAlongRay(origin: Vec3, dir: Vec3, maxDistance: number, assis
 }
 
 /** Targets within `range` of `origin` and within `halfAngle` of the horizontal-or-3D `forward` direction. */
+/**
+ * Melee lock-on: the live enemy (not traffic) within `range` whose direction is
+ * closest to `dir` (horizontal), within `maxAngle`; near ones are preferred.
+ */
+export function pickMeleeTarget(origin: Vec3, dir: Vec3, range: number, maxAngle: number, list: Iterable<Target>): Target | null {
+  const dl = Math.hypot(dir.x, dir.z) || 1;
+  let best: Target | null = null;
+  let bestScore = Infinity;
+  for (const t of list) {
+    if (!t.alive || t.kind === 'vehicle') continue;
+    const dx = t.position.x - origin.x;
+    const dz = t.position.z - origin.z;
+    const d = Math.hypot(dx, dz);
+    const surface = d - t.radius;
+    if (surface > range) continue;
+    const cos = d < 0.01 ? 1 : (dx * dir.x + dz * dir.z) / (d * dl);
+    const angle = Math.acos(Math.max(-1, Math.min(1, cos)));
+    if (angle > maxAngle) continue;
+    // Angle matters most; distance breaks ties (1 rad ≈ 8 m).
+    const score = angle * 8 + Math.max(0, surface);
+    if (score < bestScore) {
+      bestScore = score;
+      best = t;
+    }
+  }
+  return best;
+}
+
 export function inCone(origin: Vec3, forward: Vec3, range: number, halfAngle: number, candidates: Iterable<Target>): Target[] {
   const out: Target[] = [];
   const cosMax = Math.cos(halfAngle);

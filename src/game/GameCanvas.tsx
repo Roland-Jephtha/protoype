@@ -11,6 +11,7 @@ import { useApp } from '../state/appStore';
 import { useSettings } from '../state/settings';
 import { runtime } from './runtime';
 import { AudioDriver } from './audio/AudioDriver';
+import { SpeedTrail } from './player/SpeedTrail';
 import { RegionWorld } from './world/RegionWorld';
 
 /** A gradient sky for other worlds: `horizon` colour at the horizon fading to `top` overhead. Follows the camera. */
@@ -100,6 +101,7 @@ function TimeControl() {
     if (f && !useApp.getState().paused && (f.time -= step) <= 0) runtime.finisher = null;
     runtime.speedForce = runtime.combat.speedForce;
     runtime.timeScale = runtime.hitStop > 0 ? HIT_STOP.scale : runtime.finisher ? BOSS_FIGHT.finisherScale : runtime.speedForce ? SPEED_FORCE.worldScale : 1;
+    if (!useApp.getState().paused) runtime.worldClock += step * runtime.timeScale;
   }, -60);
   return null;
 }
@@ -245,6 +247,7 @@ export function GameCanvas() {
         onFallback={() => setDpr(() => ADAPTIVE_MIN_DPR)}
       />
       <TimeControl />
+      <SpeedTrail />
       <PerfProbe />
       <AudioDriver />
       <VsyncFrameLoop />

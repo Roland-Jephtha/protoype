@@ -16,7 +16,7 @@ export interface CombatInput {
 }
 
 export type CombatEvent =
-  | { type: 'punch'; side: 'left' | 'right'; combo: number }
+  | { type: 'punch'; side: 'left' | 'right'; combo: number; kind: StrikeKind }
   /** A strike of the current punch reaches full extension: resolve hits now. */
   | { type: 'punchHit'; combo: number; heavy: boolean; kind: StrikeKind }
   | { type: 'speedForce'; on: boolean }
@@ -48,6 +48,12 @@ export class HeroCombat {
   powerPunching = false;
   /** Strikes (one per fist) of the current punch. */
   strikes: Strike[] = [];
+  /** Length (s) of each strike of the current punch and when its blow lands. */
+  strikeLength: number = HERO_COMBAT.punch.duration;
+  private hitAt: number = HERO_COMBAT.punch.hitAt;
+  /** Landed hits in a row (the combo counter) and time since the last one. */
+  chain = 0;
+  private sinceChainHit = Infinity;
   /** Speed Force: energy (0..capacity) and whether it's running. */
   speedEnergy: number = SPEED_FORCE.capacity;
   speedForce = false;
@@ -82,6 +88,7 @@ export class HeroCombat {
     this.holdTime = 0;
     this.novaCharge = 0;
     this.speedForce = false;
+    this.chain = 0;
     this.sinceDamage = Infinity;
     this.grace = HERO_COMBAT.respawnGrace;
   }
@@ -154,12 +161,12 @@ export class HeroCombat {
     if (this.punchTime >= 0) {
       this.punchTime += dt;
       // Each fist lands its own hit (a power punch's final knockout blow is resolved by the driver when the lunge arrives).
-      while (this.strikesHit < this.strikes.length && this.punchTime >= this.strikes[this.strikesHit].at + p.hitAt) {
+      while (this.strikesHit < this.strikes.length && this.punchTime >= this.strikes[this.strikesHit].at + this.hitAt) {
         const st = this.strikes[this.strikesHit++];
         if (!(this.powerPunching && st.heavy)) events.push({ type: 'punchHit', combo: this.combo, heavy: !!st.heavy, kind: st.kind });
       }
       const last = this.strikes[this.strikes.length - 1];
-      if (this.punchTime >= p.duration + (last?.at ?? 0)) {
+      if (this.punchTime >= this.strikeLength + (last?.at ?? 0)) {
         this.punchTime = -1;
         this.sinceEnd = 0;
         this.powerPunching = false;
@@ -169,11 +176,15 @@ export class HeroCombat {
     if (inp.attackPressed && this.punchTime >= 0) this.buffered = true;
     if ((inp.attackPressed || this.buffered) && this.punchTime < 0) {
       this.buffered = false;
-      this.combo = this.sinceEnd <= p.comboWindow && this.combo < 3 ? this.combo + 1 : 1;
-      this.side = this.combo % 2 === 1 ? 'right' : 'left';
-      this.strikes = this.pick(this.combo >= 3 ? p.finishers : p.combos);
+      // One strike per tap, in order; the fifth is a heavy finisher, then it starts over.
+      this.combo = this.sinceEnd <= p.comboWindow && this.combo < 5 ? this.combo + 1 : 1;
+      const strike = this.combo <= p.sequence.length ? p.sequence[this.combo - 1] : this.pick(p.finishers);
+      this.strikes = [strike];
+      this.side = strike.side;
+      this.strikeLength = p.strikeTime[strike.kind];
+      this.hitAt = this.strikeLength * p.hitFraction;
       this.startPunch(false);
-      events.push({ type: 'punch', side: this.side, combo: this.combo });
+      events.push({ type: 'punch', side: this.side, combo: this.combo, kind: strike.kind });
     }
     // Holding the button charges a power punch; releasing throws it.
     if (inp.attackHeld) this.holdTime += dt;
@@ -183,6 +194,8 @@ export class HeroCombat {
         this.side = 'right';
         this.combo = 0;
         this.strikes = this.pick(p.powers);
+        this.strikeLength = p.duration;
+        this.hitAt = p.hitAt;
         this.startPunch(true);
         events.push({ type: 'powerPunch', side: this.side, charge: this.powerCharge });
       }
@@ -208,6 +221,10 @@ export class HeroCombat {
       if (this.sinceSpeed >= sf.rechargeDelay) this.speedEnergy = Math.min(sf.capacity, this.speedEnergy + sf.rechargePerSecond * dt);
     }
 
+    // --- combo counter ---------------------------------------------------------
+    this.sinceChainHit += dt;
+    if (this.sinceChainHit > p.chainTimeout) this.chain = 0;
+
     // --- health ---------------------------------------------------------------
     this.sinceDamage += dt;
     if (this.health > 0 && this.sinceDamage >= HERO_COMBAT.regenDelay) {
@@ -217,7 +234,7 @@ export class HeroCombat {
   }
 
   /** A random combination, never the same one twice in a row. */
-  private pick(list: Strike[][]): Strike[] {
+  private pick<T>(list: T[]): T {
     let i = Math.floor(this.rand() * list.length);
     if (list.length > 1 && i === this.lastPattern) i = (i + 1) % list.length;
     this.lastPattern = i;
@@ -234,11 +251,19 @@ export class HeroCombat {
     this.powerPunching = power;
   }
 
-  /** Applies damage; returns true if this knocked the hero out. */
+  /** A strike landed on something: the combo counter goes up. Returns true for a super hit (every `superEvery`-th). */
+  landed(): boolean {
+    this.chain++;
+    this.sinceChainHit = 0;
+    return this.chain % HERO_COMBAT.punch.superEvery === 0;
+  }
+
+  /** Applies damage; returns true if this knocked the hero out. Getting hit breaks the combo. */
   takeDamage(amount: number): boolean {
     if (this.health <= 0 || this.grace > 0) return false;
     this.health = Math.max(0, this.health - amount);
     this.sinceDamage = 0;
+    this.chain = 0;
     return this.health === 0;
   }
 

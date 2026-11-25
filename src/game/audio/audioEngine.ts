@@ -139,7 +139,7 @@ class AudioEngine {
   }
 
   /** One-shot effects. `strength` 0..1 scales loudness. */
-  play(kind: 'punch' | 'power' | 'explosion' | 'zap' | 'hurt' | 'boom' | 'throw' | 'freeze' | 'slowIn' | 'slowOut', strength = 1) {
+  play(kind: 'punch' | 'power' | 'explosion' | 'zap' | 'hurt' | 'boom' | 'throw' | 'freeze' | 'slowIn' | 'slowOut' | 'beat', strength = 1) {
     const ctx = this.ctx;
     if (!ctx || !this.master || ctx.state !== 'running') return;
     const t = ctx.currentTime;
@@ -206,6 +206,20 @@ class AudioEngine {
       // Time winding down: a falling whoosh over a deep drop.
       thump(260, 40, 0.9);
       burst('bandpass', 3000, 0.8, vol * 0.7);
+    } else if (kind === 'beat') {
+      // Lub-dub.
+      thump(70, 38, 0.22);
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(62, t + 0.2);
+      o.frequency.exponentialRampToValueAtTime(34, t + 0.42);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t + 0.2);
+      g.gain.exponentialRampToValueAtTime(vol * 0.7, t + 0.205);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+      o.connect(g).connect(out);
+      o.start(t + 0.2);
+      o.stop(t + 0.5);
     } else if (kind === 'slowOut') {
       thump(50, 200, 0.4);
       burst('bandpass', 900, 0.35, vol * 0.5);

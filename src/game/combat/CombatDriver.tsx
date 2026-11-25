@@ -8,7 +8,9 @@ import { useApp } from '../../state/appStore';
 import { runtime } from '../runtime';
 import { heroFeetY } from './heroActions';
 import { SkillFx } from './SkillFx';
-import { inCone, targets, type Target, type Vec3 } from './targets';
+import { inCone, pickMeleeTarget, targets, type Target, type Vec3 } from './targets';
+import { cameraRelativeDirection } from '../player/groundMovement';
+import { TargetMarker } from './TargetMarker';
 import { addImpact } from './impacts';
 
 const CHEST_HEIGHT = 1.25;
@@ -87,6 +89,20 @@ export function CombatDriver() {
       const len = Math.hypot(dx, dz) || 1;
       return { x: (dx / len) * push, y: lift, z: (dz / len) * push };
     };
+    /** Where the player is aiming a punch: the stick direction, else where the camera looks. */
+    const aimDir = () => {
+      const m = input.getMove();
+      if (Math.hypot(m.x, m.y) > 0.2) {
+        const d = cameraRelativeDirection(m.x, m.y, runtime.cameraYaw);
+        return { x: d.x, y: 0, z: d.z };
+      }
+      return { x: fwd.x, y: 0, z: fwd.z };
+    };
+    const aimTarget = (range: number, angle: number) => pickMeleeTarget(chest, aimDir(), range, angle, targets);
+    // The marker shows who the next tap would hit.
+    runtime.combatCandidate = runtime.combatReady ? aimTarget(punch.lockRange, punch.lockAngle) : null;
+    if (runtime.combatTarget && (!runtime.combatTarget.alive || c.sinceLastPunch > 1.5)) runtime.combatTarget = null;
+
     /** Turns toward the nearest enemy within `range` for `seconds`. */
     const faceNearest = (range: number, seconds: number) => {
       let nearest: Target | null = null;
@@ -107,38 +123,46 @@ export function CombatDriver() {
 
     for (const e of events) {
       if (e.type === 'punch') {
-        const t = faceNearest(reach + punch.magnetRange, punch.duration);
-        // Push off into the punch.
-        const f = facing();
-        runtime.heroImpulse.x += f.x * punch.stepSpeed;
-        runtime.heroImpulse.z += f.z * punch.stepSpeed;
-        runtime.heroControlLoss = Math.max(runtime.heroControlLoss, 0.1);
-        // Just out of reach: step into the punch.
+        // Lock on: the enemy nearest where the stick points (or the camera looks), then lunge at it.
+        const t = aimTarget(punch.lockRange, punch.lockAngle) ?? aimTarget(reach + 1, Math.PI);
+        runtime.combatTarget = t;
         if (t) {
-          const dx = t.position.x - chest.x;
-          const dz = t.position.z - chest.z;
-          const d = Math.hypot(dx, dz) - t.radius;
-          if (d > reach * 0.7) {
-            runtime.heroImpulse.x += (dx / (d + t.radius)) * punch.magnetSpeed;
-            runtime.heroImpulse.z += (dz / (d + t.radius)) * punch.magnetSpeed;
-            runtime.heroControlLoss = Math.max(runtime.heroControlLoss, 0.12);
+          runtime.combatFaceYaw = Math.atan2(t.position.x - chest.x, t.position.z - chest.z);
+          faceTimer.current = c.strikeLength + 0.25;
+          const dir = tmp.dir.set(t.position.x - chest.x, runtime.moveMode === 'flight' ? t.position.y - chest.y : 0, t.position.z - chest.z);
+          const surface = dir.length() - t.radius;
+          if (surface > reach * 0.75) {
+            dir.normalize();
+            const lunge = HERO_COMBAT.powerPunch.lungeTime;
+            const speed = Math.min(punch.lungeSpeed, (surface - punch.lungeStop) / lunge);
+            runtime.heroDash = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
           }
+        } else {
+          // Nothing to hit: a step into the punch.
+          const f = facing();
+          runtime.heroImpulse.x += f.x * punch.stepSpeed;
+          runtime.heroImpulse.z += f.z * punch.stepSpeed;
+          runtime.heroControlLoss = Math.max(runtime.heroControlLoss, 0.1);
         }
       }
       else if (e.type === 'punchHit') {
-        const { damage, knockback } = c.punchStrength(e.heavy);
-        let landed = false;
-        for (const t of inCone(chest, facing(), reach, punch.coneHalfAngle, targets)) {
+        // The locked target (if it's in reach) plus anyone else right in front.
+        const lock = runtime.combatTarget;
+        const struck = inCone(chest, facing(), reach, punch.coneHalfAngle, targets);
+        if (lock && lock.alive && !struck.includes(lock) && Math.hypot(lock.position.x - chest.x, lock.position.z - chest.z) - lock.radius <= reach + 0.8) struck.unshift(lock);
+        const superHit = struck.length > 0 && c.landed();
+        const heavy = e.heavy || superHit;
+        const { damage, knockback } = c.punchStrength(heavy);
+        for (const t of struck) {
           // Uppercuts launch upward, hooks knock sideways-forward, straights drive straight back.
           const knock = e.kind === 'uppercut' ? away(t, knockback * 0.35, knockback * 1.1) : away(t, knockback, knockback * (e.kind === 'hook' ? 0.35 : 0.25));
           hit(t, damage, knock);
-          addImpact(t.position, e.heavy ? 'power' : 'punch');
-          landed = true;
+          addImpact(t.position, heavy ? 'power' : 'punch');
         }
-        // Big blows freeze the world for a split second.
-        if (landed && e.heavy) {
-          runtime.hitStop = Math.max(runtime.hitStop, HIT_STOP.finisher);
-          runtime.cameraShake = Math.max(runtime.cameraShake, 0.45);
+        // Every blow that lands bites (a tiny hit-stop); big ones freeze the world for a split second.
+        if (struck.length) {
+          runtime.hitStop = Math.max(runtime.hitStop, heavy ? HIT_STOP.finisher : HIT_STOP.light);
+          runtime.cameraShake = Math.max(runtime.cameraShake, heavy ? 0.45 : 0.12);
         }
       } else if (e.type === 'powerPunch') {
         const pp = HERO_COMBAT.powerPunch;
@@ -288,6 +312,7 @@ export function CombatDriver() {
   return (
     <>
       <HeatBeamFx />
+      <TargetMarker />
       <SkillFx />
     </>
   );

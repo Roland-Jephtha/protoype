@@ -42,23 +42,24 @@ export const HERO_COMBAT = {
     jab: { twist: 0.32, lean: 0.12 },
     cross: { twist: 0.5, lean: 0.22 },
     /**
-     * Both hands, and never the same combo twice in a row: each tap picks a random
-     * combination; the third tap of a combo is a random finisher; the power punch
-     * is a flurry ending in a random knockout blow. `at` = seconds after the press;
-     * `heavy` = full damage/knockback. Uppercuts launch enemies up into the air.
+     * Every tap throws ONE strike, in a learnable order: left jab, right cross,
+     * left hook, right uppercut, then a heavy finisher (one of several). A tap
+     * within `comboWindow` of the last strike continues the sequence.
      */
-    combos: [
-      [S('left', 'jab', 0), S('right', 'cross', 0.15)],
-      [S('left', 'hook', 0), S('right', 'uppercut', 0.17)],
-      [S('right', 'cross', 0), S('left', 'hook', 0.16)],
-      [S('left', 'jab', 0), S('left', 'jab', 0.11), S('right', 'cross', 0.24)],
-      [S('right', 'hook', 0), S('left', 'hook', 0.15)],
-    ],
-    finishers: [
-      [S('left', 'jab', 0), S('right', 'cross', 0.12), S('left', 'hook', 0.24), S('right', 'uppercut', 0.4, true)],
-      [S('right', 'cross', 0), S('left', 'hook', 0.13), S('right', 'hook', 0.26), S('left', 'cross', 0.4, true), S('right', 'cross', 0.4, true)],
-      [S('left', 'hook', 0), S('right', 'hook', 0.14), S('left', 'uppercut', 0.3, true)],
-    ],
+    sequence: [S('left', 'jab', 0), S('right', 'cross', 0), S('left', 'hook', 0), S('right', 'uppercut', 0)],
+    finishers: [S('right', 'cross', 0, true), S('right', 'uppercut', 0, true), S('left', 'hook', 0, true)],
+    /** Length of each strike (s); the blow lands at `hitFraction` of it. */
+    strikeTime: { jab: 0.3, cross: 0.36, hook: 0.38, uppercut: 0.4 } as Record<StrikeKind, number>,
+    hitFraction: 0.45,
+    /** Lock-on: the enemy nearest the aim direction within this range (m) and angle (rad) is the target. */
+    lockRange: 12,
+    lockAngle: 1.2,
+    /** He dashes at the target to land the blow (m/s), stopping this far short of its surface (m). */
+    lungeSpeed: 34,
+    lungeStop: 0.9,
+    /** Landed hits in a row (no gap longer than `chainTimeout`, s) build the combo counter; every `superEvery`-th hit is a super hit. */
+    chainTimeout: 2.5,
+    superEvery: 5,
     powers: [
       [S('left', 'jab', 0), S('right', 'cross', 0.09), S('left', 'hook', 0.18), S('right', 'cross', 0.34, true)],
       [S('left', 'jab', 0), S('right', 'jab', 0.08), S('left', 'jab', 0.16), S('right', 'uppercut', 0.34, true)],
@@ -243,10 +244,27 @@ export const MISSION_RULES = {
 
 /** Speed Force: the world slows to a crawl while the hero moves at full speed and faster. */
 export const SPEED_FORCE = {
-  /** World time runs at this fraction while active. */
-  worldScale: 0.04,
-  /** The hero's own speeds are multiplied by this. */
-  heroSpeed: 1.35,
+  /** World time runs at this fraction while active: people and cars still drift, in slow motion. */
+  worldScale: 0.12,
+  /** The hero's own speeds are multiplied by this, and he runs at sprint pace without holding sprint. */
+  heroSpeed: 2.2,
+  /** Camera FOV widens by this much (deg) while active. */
+  fovBoost: 12,
+  /** Speedometer count-up sharpness (1/s). */
+  readoutSharpness: 3,
+  /** Afterimage trail: samples (frames), ribbon half-width (m), heights above the feet (m), colours, lightning. */
+  trail: {
+    samples: 26,
+    width: 0.22,
+    heights: [1.65, 1.25, 0.85],
+    core: '#ffffff',
+    edge: '#3a8cff',
+    brightness: 1.6,
+    minSpeed: 2,
+    bolts: 3,
+    boltSegments: 5,
+    boltEvery: 0.07,
+  },
   capacity: 100,
   /** Drains per real second while active (~16 s from full); recharges after a delay. */
   drainPerSecond: 6,
@@ -275,4 +293,4 @@ export const HERO_HIT = {
 };
 
 /** A split-second world freeze on heavy hits, so they land with weight (s, world scale). */
-export const HIT_STOP = { heavy: 0.09, finisher: 0.13, scale: 0.04 };
+export const HIT_STOP = { light: 0.035, heavy: 0.09, finisher: 0.13, scale: 0.04 };

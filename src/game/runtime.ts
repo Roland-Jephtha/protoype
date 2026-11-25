@@ -1,3 +1,4 @@
+import type { Target } from './combat/targets';
 import type { LiftKind } from './combat/liftShapes';
 import type { RapierRigidBody } from '@react-three/rapier';
 import type { RegionId } from '../config/regions';
@@ -48,6 +49,12 @@ export const runtime = {
   heroEyesValid: false,
   /** Combat asks the motor to face this way (aiming, punching a target); null = free. */
   combatFaceYaw: null as number | null,
+  /** Melee lock-on: the enemy the current punch is aimed at, and the one the next tap would pick (marker). */
+  combatTarget: null as Target | null,
+  /** LexCorp soldiers standing / knocked out since load. */
+  soldiersAlive: 0,
+  soldiersOut: 0,
+  combatCandidate: null as Target | null,
   aiming: false,
   /** Fighting stance wanted (an enemy is close or the hero just punched). */
   combatReady: false,
@@ -89,6 +96,8 @@ export const runtime = {
   launchPower: 0,
   /** World time scale (Speed Force slow-motion, hit-stop); the hero always runs at real time. */
   timeScale: 1,
+  /** World clock (s): advances at `timeScale`, so effects age in slow motion. */
+  worldClock: 0,
   /** Seconds of hit-stop left (real time). */
   hitStop: 0,
   speedForce: false,

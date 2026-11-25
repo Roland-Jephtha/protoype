@@ -1,3 +1,4 @@
+import { runtime } from '../runtime';
 import type { Vec3 } from './targets';
 
 export type ImpactKind = 'punch' | 'power' | 'nova' | 'launch';
@@ -7,7 +8,7 @@ export interface Impact {
   y: number;
   z: number;
   kind: ImpactKind;
-  /** performance.now() / 1000 when it happened. */
+  /** runtime.worldClock when it happened (effects age in slow motion). */
   born: number;
 }
 
@@ -17,6 +18,6 @@ const MAX_IMPACTS = 16;
 export const impacts: Impact[] = [];
 
 export function addImpact(p: Vec3, kind: ImpactKind) {
-  impacts.push({ x: p.x, y: p.y, z: p.z, kind, born: performance.now() / 1000 });
+  impacts.push({ x: p.x, y: p.y, z: p.z, kind, born: runtime.worldClock });
   if (impacts.length > MAX_IMPACTS) impacts.shift();
 }

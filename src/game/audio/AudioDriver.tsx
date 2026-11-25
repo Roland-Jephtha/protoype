@@ -23,7 +23,7 @@ export function AudioDriver() {
     };
   }, []);
 
-  const last = useRef({ launches: runtime.launches, impact: 0, drones: runtime.dronesDestroyed, villains: runtime.villainsDefeated, nova: runtime.novaFlash, health: runtime.combat.health, carrying: false, frozen: 0, speedForce: false, enraged: runtime.bossEnraged, finisher: false });
+  const last = useRef({ launches: runtime.launches, impact: 0, drones: runtime.dronesDestroyed, villains: runtime.villainsDefeated, nova: runtime.novaFlash, health: runtime.combat.health, carrying: false, frozen: 0, speedForce: false, enraged: runtime.bossEnraged, finisher: false, beat: 0 });
 
   useFrame(() => {
     const paused = useApp.getState().paused;
@@ -68,6 +68,14 @@ export function AudioDriver() {
     l.frozen = runtime.heroFrozen;
     if (runtime.speedForce !== l.speedForce) audio.play(runtime.speedForce ? 'slowIn' : 'slowOut');
     l.speedForce = runtime.speedForce;
+    // Heartbeat while time crawls.
+    if (runtime.speedForce) {
+      l.beat -= 1 / 60;
+      if (l.beat <= 0) {
+        audio.play('beat');
+        l.beat = 0.95;
+      }
+    } else l.beat = 0;
     if (runtime.bossEnraged !== l.enraged) audio.play('boom', 0.8);
     l.enraged = runtime.bossEnraged;
     if (runtime.finisher && !l.finisher) audio.play('slowIn');

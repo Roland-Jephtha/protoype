@@ -1,6 +1,6 @@
 # PLAN — Project Krypton: Shadow over Metropolis
 
-_Last updated: 2026-10-25_
+_Last updated: 2026-11-25_
 
 ## Where we are
 
@@ -23,7 +23,7 @@ Roadmap (approved 2026-10-24, owner wants most action outside the city):
 | 2c | Other worlds (Pause → Travel, "Boom Tube"): **Apokolips** (lava lakes you can sprint across, fire spires, Darkseid's palace with Darkseid, drones) and **Warworld** (red-sky metal planet, the great arena with Doomsday and Subject Zero, drones) | ✅ v1 (2026-10-26) — no missions there yet |
 | 2b | Water: Metropolis Bay (sea around the city to 1.4 km, quay walls, pier, lighthouse island, freighter); run on water (bay + forest river) when running/sprinting, wade/swim when slow | ✅ v1 (2026-10-26) |
 | 2 | City life: pedestrians, traffic + lights, street props; wildlife/convoys outdoors | ✅ v1 done (2026-10-24) — street props still to add |
-| 3 | Combat: heat vision, punches, lift/throw, health, enemy AI (drones, soldiers) | 🔶 Heat vision, punch combo, homing power punch, super breath, freeze breath, Super Nova, solar meter, drones, lifting/throwing traffic vehicles, **street lamps, trees, rocks, boulders and cacti** (they grow back / are replaced after 40 s) done. **Speed Force** (T / touch Speed): world slows to 4% while the hero moves 1.35× faster, ~16 s meter. Punches: random two-handed combos (jab, cross, hook, uppercut), never the same twice in a row, random finishers; uppercuts launch enemies; hit-stop on heavy blows |
+| 3 | Combat: heat vision, punches, lift/throw, health, enemy AI (drones, soldiers) | 🔶 Heat vision, homing power punch, breaths, Super Nova, solar meter, drones, lifting/throwing vehicles and props done. **2026-11-25 overhaul (approved plan, phase 0–1a):** Speed Force feels like speed (world 12 %, hero 2.2×, relative speedometer in the thousands of km/h, light-ribbon trail + lightning, edge blur/streaks, FOV, heartbeat; thrown objects and effects slow too). Readable punches: one strike per tap in a fixed order (jab, cross, hook, uppercut, finisher), lock-on ring + lunge to the target, real jab/cross clips retargeted from the CC0 library, combo counter with super hits, light hit-stop on every landed blow. **LexCorp soldiers** (brutes + riflemen, squads per region, warning gem before attacks, stagger/launch/knockout). Next: Mixamo clips (hook, uppercut, kicks, dodge, hit reactions), counters, dodges, grab-and-throw |
 | 4 | Villains: DC models the owner downloads (licence-checked) + original henchmen, boss AI | 🔶 v1 — Doomsday, Zod, Darkseid, Subject Zero (clone) with powers and boss AI. **Boss phases**: at half health (no blow skips it) the boss roars (shockwave), then is faster with new moves (flurries, double Omega beams); light hits make bosses flinch; the defeating blow plays in slow motion with an orbiting camera and letterbox |
 | 5 | Missions + IndexedDB saves (3 slots, autosave, versioned) | 🔶 Campaign of 6 missions with progress in localStorage; save slots still to do |
 | 6 | Campaign levels (prologue → chapter 5, side missions) — mostly desert/forest | ☐ |

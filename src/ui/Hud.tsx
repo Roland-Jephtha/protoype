@@ -3,7 +3,9 @@ import { HERO_COMBAT, SPEED_FORCE } from '../config/combat';
 import { REGIONS, type Side } from '../config/regions';
 import { runtime } from '../game/runtime';
 import { useApp } from '../state/appStore';
+import { useSettings } from '../state/settings';
 import { MissionHud } from './MissionScreens';
+import { easeReadout, readoutKmh } from './speedReadout';
 
 const STATE_LABEL: Record<string, string> = {
   idle: 'Standing',
@@ -31,6 +33,8 @@ const EDGE_HINT_DISTANCE = 80;
  */
 export function Hud({ touchUi }: { touchUi: boolean }) {
   const speedRef = useRef<HTMLSpanElement>(null);
+  const speedBoxRef = useRef<HTMLDivElement>(null);
+  const shownKmh = useRef(0);
   const stateRef = useRef<HTMLSpanElement>(null);
   const edgeRef = useRef<HTMLDivElement>(null);
   const healthRef = useRef<HTMLDivElement>(null);
@@ -49,20 +53,27 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
   const bossFillRef = useRef<HTMLDivElement>(null);
   const frozenRef = useRef<HTMLDivElement>(null);
   const finisherRef = useRef<HTMLDivElement>(null);
+  const comboRef = useRef<HTMLDivElement>(null);
+  const comboNumRef = useRef<HTMLSpanElement>(null);
+  const lastChain = useRef(0);
   const pointerLocked = useApp((s) => s.pointerLocked);
   const regionId = useApp((s) => s.regionId);
   const mode = useApp((s) => s.mode);
   const liftPrompt = useApp((s) => s.liftPrompt);
   const interactPrompt = useApp((s) => s.interactPrompt);
   const region = REGIONS[regionId];
+  const quality = useSettings((s) => s.graphicsQuality);
 
   useEffect(() => {
     const id = window.setInterval(() => {
       const v = runtime.playerVelocity;
       // In flight, show full 3D speed (a straight climb at 60 km/h reads 60).
-      const kmh = (FLIGHT_STATES.has(runtime.playerState) ? Math.hypot(v.x, v.y, v.z) : Math.hypot(v.x, v.z)) * 3.6;
-      if (speedRef.current) speedRef.current.textContent = kmh.toFixed(0);
-      if (stateRef.current) stateRef.current.textContent = STATE_LABEL[runtime.playerState] ?? '';
+      const ms = FLIGHT_STATES.has(runtime.playerState) ? Math.hypot(v.x, v.y, v.z) : Math.hypot(v.x, v.z);
+      // In Speed Force: speed relative to the slowed world, counting up.
+      shownKmh.current = easeReadout(shownKmh.current, readoutKmh(ms, runtime.speedForce), 0.1);
+      if (speedRef.current) speedRef.current.textContent = shownKmh.current.toFixed(0);
+      if (stateRef.current) stateRef.current.textContent = runtime.speedForce ? 'Speed Force' : (STATE_LABEL[runtime.playerState] ?? '');
+      speedBoxRef.current?.classList.toggle('speedforce', runtime.speedForce);
 
       const c = runtime.combat;
       if (healthRef.current) healthRef.current.style.transform = `scaleX(${c.health / HERO_COMBAT.maxHealth})`;
@@ -70,7 +81,11 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
       heatBarRef.current?.classList.toggle('overheated', c.overheated);
       if (solarRef.current) solarRef.current.style.transform = `scaleX(${c.solar / HERO_COMBAT.solar.capacity})`;
       if (speedForceRef.current) speedForceRef.current.style.transform = `scaleX(${c.speedEnergy / SPEED_FORCE.capacity})`;
-      if (speedTintRef.current) speedTintRef.current.style.opacity = c.speedForce ? '1' : '0';
+      if (speedTintRef.current) {
+        // Streaks and edge blur grow with speed.
+        const k = c.speedForce ? Math.min(1, 0.35 + ms / 30) : 0;
+        speedTintRef.current.style.opacity = k.toFixed(2);
+      }
       // White flash on a Super Nova.
       if (flashRef.current && runtime.novaFlash !== lastNova.current) {
         lastNova.current = runtime.novaFlash;
@@ -103,6 +118,20 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
       }
       bossRef.current?.classList.toggle('enraged', boss?.phase === 2);
       finisherRef.current?.classList.toggle('on', !!runtime.finisher);
+      // Combo counter: shows from 2 hits, pops on every new hit, gold on super hits.
+      const chain = c.chain;
+      const box = comboRef.current;
+      if (box && comboNumRef.current) {
+        box.classList.toggle('on', chain >= 2);
+        if (chain > lastChain.current && chain >= 2) {
+          comboNumRef.current.textContent = `×${chain}`;
+          box.classList.toggle('super', chain % HERO_COMBAT.punch.superEvery === 0);
+          box.classList.remove('pop');
+          void box.offsetWidth; // restart the pop animation
+          box.classList.add('pop');
+        }
+      }
+      lastChain.current = chain;
       if (frozenRef.current) frozenRef.current.style.opacity = runtime.heroFrozen > 0 ? '1' : '0';
 
       // Nearest edge: point the way to the neighbouring region, or warn it's the boundary.
@@ -139,8 +168,14 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
       <div ref={hurtRef} className="hud-hurt" />
       <div ref={flashRef} className="hud-flash" />
       <div ref={frozenRef} className="hud-frozen" />
-      <div ref={speedTintRef} className="hud-speedforce" />
+      <div ref={speedTintRef} className={`hud-speedforce ${quality === 'low' ? 'no-blur' : ''}`}>
+        <div className="hud-speedforce-streaks" />
+      </div>
       <div ref={finisherRef} className="hud-finisher" />
+      <div ref={comboRef} className="hud-combo">
+        <span ref={comboNumRef} className="hud-combo-num">×2</span>
+        <span className="hud-combo-label">Hits</span>
+      </div>
       <div ref={bossRef} className="hud-boss" style={{ display: 'none' }}>
         <span ref={bossNameRef} className="hud-boss-name" />
         <div className="hud-bar hud-boss-bar">
@@ -163,7 +198,7 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
           <div ref={speedForceRef} className="hud-bar-fill" />
         </div>
       </div>
-      <div className={`hud-speed ${touchUi ? 'touch' : ''}`}>
+      <div ref={speedBoxRef} className={`hud-speed ${touchUi ? 'touch' : ''}`}>
         <span ref={speedRef} className="hud-speed-value">0</span>
         <span className="hud-speed-unit">km/h</span>
         <span ref={stateRef} className="hud-speed-state" />

@@ -151,7 +151,8 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
         cameraYaw: runtime.cameraYaw,
         // Level flight at the camera's default framing; look up/down to climb/dive.
         cameraPitch: runtime.cameraPitch - CAMERA.defaultPitch,
-        sprintHeld: input.isHeld('sprint'),
+        // Speed Force: always at full pace.
+        sprintHeld: input.isHeld('sprint') || runtime.speedForce,
         jumpPressed: input.consumePressed('jump'),
         jumpHeld: input.isHeld('jump'),
         flyPressed: input.consumePressed('fly'),
@@ -205,7 +206,8 @@ export function Player({ region, half, ground }: { region: RegionDef; half: numb
     // Water: fast enough and he runs on the surface; slower, he wades / swims.
     let onWater = false;
     runtime.heroOnWater = null;
-    if (!flying && runtime.waterLevel) {
+    // Also while flying: descending into the sea lands him on (or in) the water, not the seabed.
+    if (runtime.waterLevel) {
       const v = motor.velocity;
       const wf = waterFeet(runtime.waterLevel(nx, nz), ny - CAPSULE_REST_HEIGHT, Math.hypot(v.x, v.z), v.y, runtime.speedForce, dt);
       if (wf) {

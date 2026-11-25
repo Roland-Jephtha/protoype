@@ -26,8 +26,9 @@ mkdirSync(OUT, { recursive: true });
 
 const candidates = [
   process.env.CHROME_PATH,
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  // Edge first on Windows: Chrome 158 fails to launch under playwright-core here.
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+  'C:/Program Files/Google/Chrome/Application/chrome.exe',
   '/usr/bin/google-chrome',
   '/usr/bin/chromium',
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -571,6 +572,37 @@ async function lifeRun(browser) {
   await context.close();
 }
 
+/** Street fight: LexCorp soldiers in the city; taps lock on, lunge, build the combo counter and knock them out. */
+async function fightRun(browser) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  await page.goto(BASE);
+  await page.getByRole('button', { name: 'Free roam' }).click();
+  await waitForReady(page);
+  await page.evaluate(() => window.__krypton.app.getState().travelTo('metropolis', { at: { x: 28, z: -24, facing: Math.PI } }));
+  await sleep(500);
+  await waitForReady(page);
+  await sleep(2000);
+  const alive = await page.evaluate(() => window.__krypton.runtime.soldiersAlive);
+  check('fight: LexCorp soldiers patrol the city', alive >= 4, `${alive} soldiers`);
+  let maxChain = 0;
+  for (let i = 0; i < 16; i++) {
+    await page.evaluate(() => window.__krypton.input.setButton('mouse', 'attack', true));
+    await sleep(40);
+    await page.evaluate(() => window.__krypton.input.setButton('mouse', 'attack', false));
+    await sleep(260);
+    maxChain = Math.max(maxChain, await page.evaluate(() => window.__krypton.runtime.combat.chain));
+    if (i === 3) await page.screenshot({ path: path.join(OUT, '16-street-fight.png') });
+  }
+  const out = await page.evaluate(() => window.__krypton.runtime.soldiersOut);
+  check('fight: punches lock on and land — the combo counter climbs', maxChain >= 3, `best combo ×${maxChain}`);
+  check('fight: soldiers get knocked out', out >= 1, `${out} knocked out`);
+  check('fight: no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+  await context.close();
+}
+
 /** Other worlds: Apokolips and Warworld load from the Travel menu, the hero lands on solid ground, a boss waits. */
 async function worldsRun(browser) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
@@ -715,6 +747,15 @@ async function combatRun(browser) {
   await sleep(300);
   const slow = await page.evaluate(() => ({ on: window.__krypton.runtime.speedForce, scale: window.__krypton.runtime.timeScale, energy: window.__krypton.runtime.combat.speedEnergy }));
   check('combat: T starts Speed Force (world slows, meter drains)', slow.on && slow.scale < 0.5 && slow.energy < 100, `on=${slow.on} scale=${slow.scale} energy=${slow.energy.toFixed(1)}`);
+  await page.keyboard.down('KeyW');
+  await sleep(1500);
+  const sfRun = await page.evaluate(() => {
+    const v = window.__krypton.runtime.playerVelocity;
+    return { real: Math.hypot(v.x, v.z) * 3.6, shown: Number(document.querySelector('.hud-speed-value')?.textContent ?? 0) };
+  });
+  await page.screenshot({ path: path.join(OUT, '15-speed-force.png') });
+  await page.keyboard.up('KeyW');
+  check('combat: Speed Force speedometer reads the speed relative to the slowed world', sfRun.real > 10 && sfRun.shown > sfRun.real * 5, `real ${sfRun.real.toFixed(0)} km/h, shown ${sfRun.shown}`);
   await page.evaluate(() => window.__krypton.input.setButton('keyboard', 'slowmo', true));
   await page.evaluate(() => window.__krypton.input.setButton('keyboard', 'slowmo', false));
   await sleep(200);
@@ -1165,6 +1206,7 @@ try {
   await bayRun(browser);
   await propLiftRun(browser);
   await worldsRun(browser);
+  await fightRun(browser);
   await combatRun(browser);
   await villainRun(browser);
   await storyRun(browser);
