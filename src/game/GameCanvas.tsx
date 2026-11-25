@@ -1,4 +1,6 @@
-import { PerformanceMonitor, Sky } from '@react-three/drei';
+import { Environment, PerformanceMonitor, Sky } from '@react-three/drei';
+import { ENVIRONMENT } from '../config/graphics';
+import { PostFx } from './PostFx';
 import { advance, Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
@@ -224,12 +226,19 @@ export function GameCanvas() {
       // app frame is CSS-rotated into landscape on phones.
       resize={{ offsetSize: true }}
       gl={{ antialias: quality !== 'low', powerPreference: 'high-performance' }}
+      // With post-processing (Medium/High) tone mapping happens in the effect chain, not twice.
+      flat={quality !== 'low'}
       camera={{ fov: CAMERA.fov, near: CAMERA.near, far: CAMERA.far, position: [0, 4, 14] }}
     >
       <color attach="background" args={[look.background]} />
       <fog attach="fog" args={[look.fog.color, look.fog.near, fogFar]} />
       {look.dome ? <SkyDome top={look.dome.top} horizon={look.dome.horizon} /> : <Sky distance={2000} sunPosition={look.sunOffset} {...look.sky} />}
       <Lighting look={look} shadows={preset.shadows} mapSize={preset.shadowMapSize} />
+      {/* Sky image lighting: reflections on the suit, cars, glass, water. */}
+      <Suspense fallback={null}>
+        <Environment files={ENVIRONMENT.url} environmentIntensity={look.envIntensity ?? ENVIRONMENT.intensity} />
+      </Suspense>
+      <PostFx quality={quality} look={look} />
       <Suspense fallback={null}>
         {/* Keyed by region: travelling disposes the old world, colliders and player entirely. */}
         <Physics key={`${regionId}:${travelCount}`} timeStep={PHYSICS.timeStep} paused={paused} updatePriority={-50} gravity={[0, -PHYSICS.gravity, 0]}>

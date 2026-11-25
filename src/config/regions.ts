@@ -1,4 +1,5 @@
 import type { AlienParams, DesertParams, ForestParams } from '../game/world/terrainNoise';
+import type { ColorGrade } from './graphics';
 import type { GraphicsQuality } from './gameConfig';
 
 /**
@@ -30,6 +31,10 @@ export interface RegionLook {
   sky: { turbidity: number; rayleigh: number; mieCoefficient: number; mieDirectionalG: number };
   /** Other worlds: a plain gradient sky dome instead of the (Earth) atmosphere. */
   dome?: { top: string; horizon: string };
+  /** Colour grade (post-processing, Medium/High): cool city, warm desert, red Apokolips… */
+  grade?: ColorGrade;
+  /** How strongly the sky image lights and reflects in this region (0..1). */
+  envIntensity?: number;
 }
 
 interface RegionBase {
@@ -89,6 +94,7 @@ export const REGIONS: Record<RegionId, RegionDef> = {
       sun: { color: '#ffc38a', intensity: 2.6 },
       hemisphere: { sky: '#c6d4ec', ground: '#6a5d52', intensity: 1.5 },
       sky: { turbidity: 6, rayleigh: 1.6, mieCoefficient: 0.006, mieDirectionalG: 0.85 },
+      grade: { saturation: 0.06, brightness: 0, contrast: 0.1 },
     },
     exits: { east: 'desert', north: 'forest' },
     entries: {
@@ -111,6 +117,7 @@ export const REGIONS: Record<RegionId, RegionDef> = {
       sun: { color: '#fff0d4', intensity: 3.1 },
       hemisphere: { sky: '#bcd2ee', ground: '#c49a6c', intensity: 1.25 },
       sky: { turbidity: 9, rayleigh: 1.1, mieCoefficient: 0.008, mieDirectionalG: 0.82 },
+      grade: { saturation: 0.12, brightness: 0.02, contrast: 0.08 },
     },
     terrain: {
       kind: 'desert',
@@ -167,6 +174,7 @@ export const REGIONS: Record<RegionId, RegionDef> = {
       sun: { color: '#ffd6a0', intensity: 2.3 },
       hemisphere: { sky: '#a9c4d6', ground: '#3d4a2c', intensity: 1.35 },
       sky: { turbidity: 5, rayleigh: 2, mieCoefficient: 0.006, mieDirectionalG: 0.85 },
+      grade: { saturation: 0.14, brightness: 0, contrast: 0.08 },
     },
     terrain: {
       kind: 'forest',
@@ -232,6 +240,7 @@ export const REGIONS: Record<RegionId, RegionDef> = {
       sun: { color: '#ff9a5a', intensity: 2.6 },
       hemisphere: { sky: '#d0603a', ground: '#4a2418', intensity: 1.8 },
       sky: { turbidity: 20, rayleigh: 4, mieCoefficient: 0.05, mieDirectionalG: 0.95 },
+      grade: { saturation: 0.2, brightness: 0.02, contrast: 0.14 }, envIntensity: 0.3,
       dome: { top: '#1a0806', horizon: '#a8401c' },
     },
     terrain: {
@@ -271,6 +280,7 @@ export const REGIONS: Record<RegionId, RegionDef> = {
       sun: { color: '#ffb48a', intensity: 2.4 },
       hemisphere: { sky: '#c2604a', ground: '#3a2a24', intensity: 1.35 },
       sky: { turbidity: 14, rayleigh: 3.2, mieCoefficient: 0.02, mieDirectionalG: 0.9 },
+      grade: { saturation: 0.15, brightness: 0.02, contrast: 0.12 }, envIntensity: 0.35,
       dome: { top: '#2a0e0c', horizon: '#c0583c' },
     },
     terrain: {
