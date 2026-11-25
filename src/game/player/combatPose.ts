@@ -114,6 +114,8 @@ export class CombatPose {
   private legs: Record<'left' | 'right', { thigh?: Object3D; shin?: Object3D }>;
   /** Finger chains per hand (base → tip) and the curl direction found in the rest pose. */
   private fingers: Record<'left' | 'right', { chains: Object3D[][]; thumb: Object3D[] | null; sign: number }>;
+  /** Every finger joint with its open (bind) and clenched local rotation, worked out once in the bind pose. */
+  private fist: { bone: Object3D; open: Quaternion; closed: Quaternion }[] = [];
   private spine?: Object3D;
   private arms: Record<'left' | 'right', { upper?: Object3D; fore?: Object3D; hand?: Object3D }>;
   private v = { a: new Vector3(), b: new Vector3(), c: new Vector3(), target: new Vector3(), dir: new Vector3(), up: new Vector3(0, 1, 0), left: new Vector3(), elbow: new Vector3(), fist: new Vector3(), tmp: new Vector3() };
@@ -132,6 +134,38 @@ export class CombatPose {
       right: { thigh: find('RightUpLeg'), shin: find('RightLeg') },
     };
     this.fingers = { left: this.findFingers(this.arms.left.hand), right: this.findFingers(this.arms.right.hand) };
+    this.buildFist();
+  }
+
+  /**
+   * The clenched fist as local rotations of each finger joint, computed once in
+   * the bind pose. The clips never move the fingers, so applying these local
+   * rotations every frame gives the same fist however the hand turns (bending
+   * around a world axis each frame made the fingers twist when the hand rotated).
+   */
+  private buildFist() {
+    for (const side of ['left', 'right'] as const) {
+      const f = this.fingers[side];
+      const axis = this.knuckleAxis(f.chains, new Vector3());
+      if (!axis) continue;
+      axis.multiplyScalar(f.sign);
+      const joints: Object3D[] = [...f.chains.flat(), ...(f.thumb ?? [])];
+      const open = joints.map((b) => b.quaternion.clone());
+      const q = new Quaternion();
+      for (const chain of f.chains) {
+        chain.forEach((b, i) => {
+          q.setFromAxisAngle(axis, i === 0 ? 1.45 : i === 1 ? 1.9 : 1.5);
+          this.rotateWorld(b, q);
+        });
+      }
+      // Thumb folds across the curled fingers.
+      if (f.thumb) f.thumb.forEach((b, i) => this.rotateWorld(b, q.setFromAxisAngle(axis, i === 0 ? 0.9 : 0.8)));
+      joints.forEach((b, i) => {
+        this.fist.push({ bone: b, open: open[i], closed: b.quaternion.clone() });
+        b.quaternion.copy(open[i]);
+        b.updateWorldMatrix(false, true);
+      });
+    }
   }
 
   /** Finger chains under a hand bone (any rig): each child chain up to 3 joints; the thumb is the one named thumb / "1". */
@@ -184,24 +218,8 @@ export class CombatPose {
 
   /** Curls the fingers into fists (0..1). Call after the mixer has posed the skeleton. */
   makeFists(weight: number) {
-    if (weight <= 0.001) return;
-    for (const side of ['left', 'right'] as const) {
-      const f = this.fingers[side];
-      const axis = this.knuckleAxis(f.chains, this.v.target);
-      if (!axis) continue;
-      axis.multiplyScalar(f.sign);
-      const q = this.q.full;
-      for (const chain of f.chains) {
-        chain.forEach((b, i) => {
-          q.setFromAxisAngle(axis, weight * (i === 0 ? 1.45 : i === 1 ? 1.9 : 1.5));
-          this.rotateWorld(b, q);
-        });
-      }
-      if (f.thumb) {
-        q.setFromAxisAngle(axis, weight * 0.6);
-        this.rotateWorld(f.thumb[0], q);
-      }
-    }
+    // Local rotations, so the fist keeps its shape whatever the arm and wrist do.
+    for (const j of this.fist) j.bone.quaternion.copy(j.open).slerp(j.closed, weight);
   }
 
   /**
