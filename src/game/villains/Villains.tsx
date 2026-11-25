@@ -176,7 +176,9 @@ function VillainActor({ v }: { v: Villain }) {
         ? -v.tumble
         : v.mode === 'defeated'
           ? v.vy === 0
-            ? -Math.PI / 2
+            ? h.has('die')
+              ? 0 // its own death clip lies it down
+              : -Math.PI / 2
             : -v.tumble
           : v.mode === 'downed'
             ? (-Math.PI / 2) * Math.min(1, v.timer / VILLAIN_AI.getUpTime)
@@ -186,7 +188,9 @@ function VillainActor({ v }: { v: Villain }) {
     const speed = Math.hypot(v.vx, v.vz);
     let anim: VillainAnim = 'idle';
     let rate = 1;
-    if (v.mode === 'launched' || v.mode === 'defeated' || v.mode === 'leap' || v.mode === 'downed') anim = 'fall';
+    if (v.mode === 'defeated' && v.vy === 0) anim = 'die';
+    else if (v.mode === 'launched' || v.mode === 'defeated' || v.mode === 'leap' || v.mode === 'downed') anim = 'fall';
+    else if (v.flinch > 0) anim = 'hit';
     else if (v.mode === 'windup' || v.mode === 'enrage') anim = 'taunt';
     else if (v.flying || (v.def.canFly && v.mode === 'charge')) anim = speed > 6 || v.mode === 'charge' ? 'fly' : 'idle';
     else if (v.mode === 'charge') {

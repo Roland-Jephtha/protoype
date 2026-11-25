@@ -3,13 +3,27 @@ import type { RegionId } from './regions';
 export type VillainId = 'doomsday' | 'zod' | 'darkseid' | 'clone';
 export type VillainPower = 'punch' | 'charge' | 'slam' | 'heatBeam' | 'omegaBeams' | 'freezeBreath' | 'flurry';
 
+/** Animation roles a villain model plays. */
+export type VillainClipRole = 'idle' | 'walk' | 'run' | 'fly' | 'fall' | 'taunt' | 'hit' | 'stun' | 'die' | 'attack' | 'attack2' | 'attack3';
+
+/**
+ * How a villain model is animated:
+ * - `davida3d`: DavidA3D's film rigs, animated by retargeting the hero's clips.
+ * - `rigify`: Blender (Rigify / metarig) rigs, also retargeted; `upright` stands up a model exported lying down.
+ * - `native`: the model's own animations, by clip name (e.g. DC Legends rips); `aliases` name its bones for the eyes/pose helpers.
+ */
+export type VillainRig =
+  | { type: 'davida3d' }
+  | { type: 'rigify'; upright?: boolean }
+  | { type: 'native'; clips: Partial<Record<VillainClipRole, string>>; aliases: Record<string, string> };
+
 export interface VillainDef {
   id: VillainId;
   name: string;
   /** Short line shown when the fight starts. */
   title: string;
   /** Model: a villain .glb (DavidA3D rig, animated by retargeting the hero's clips), or the hero model itself. */
-  model: { kind: 'villain'; url: string } | { kind: 'hero' };
+  model: { kind: 'villain'; url: string; rig: VillainRig } | { kind: 'hero' };
   heightMeters: number;
   /** Extra yaw if the model's forward isn't +Z (checked visually). */
   yawOffset: number;
@@ -43,7 +57,8 @@ export const VILLAINS: Record<VillainId, VillainDef> = {
     id: 'doomsday',
     name: 'Doomsday',
     title: 'The creature that killed a god',
-    model: { kind: 'villain', url: `${base}models/villains/doomsday.glb` },
+    // Classic comics Doomsday (3dmanx888, CC BY 4.0).
+    model: { kind: 'villain', url: `${base}models/characters/doomsday-classic.glb`, rig: { type: 'rigify', upright: true } },
     heightMeters: 2.7,
     yawOffset: 0,
     health: 900,
@@ -63,7 +78,7 @@ export const VILLAINS: Record<VillainId, VillainDef> = {
     id: 'zod',
     name: 'General Zod',
     title: 'Kryptonian warlord',
-    model: { kind: 'villain', url: `${base}models/villains/zod.glb` },
+    model: { kind: 'villain', url: `${base}models/villains/zod.glb`, rig: { type: 'davida3d' } },
     heightMeters: 1.88,
     yawOffset: 0,
     health: 600,
@@ -83,7 +98,16 @@ export const VILLAINS: Record<VillainId, VillainDef> = {
     id: 'darkseid',
     name: 'Darkseid',
     title: 'Lord of Apokolips',
-    model: { kind: 'villain', url: `${base}models/villains/darkseid.glb` },
+    // DC Legends Darkseid (3dworldz, CC BY 4.0) with his own fighting animations.
+    model: {
+      kind: 'villain',
+      url: `${base}models/characters/darkseid-legends.glb`,
+      rig: {
+        type: 'native',
+        clips: { idle: 'IDLE002', walk: 'MOVE001', run: 'APPROACH001_2', fall: 'DAMAGE002', taunt: 'SKILL001_1', hit: 'DAMAGE001', stun: 'STUN001', die: 'DIE001', attack: 'ATTACK001', attack2: 'ATTACK002', attack3: 'ATTACK003' },
+        aliases: { Hips: 'Bip001 Pelvis', Spine: 'Bip001 Spine', Spine1: 'Bip001 Spine1', Spine2: 'Bip001 Spine1', Neck: 'Bip001 Neck', Head: 'Bip001 Head', LeftShoulder: 'Bip001 L Clavicle', LeftArm: 'Bip001 L UpperArm', LeftForeArm: 'Bip001 L Forearm', LeftHand: 'Bip001 L Hand', RightShoulder: 'Bip001 R Clavicle', RightArm: 'Bip001 R UpperArm', RightForeArm: 'Bip001 R Forearm', RightHand: 'Bip001 R Hand', LeftUpLeg: 'Bip001 L Thigh', LeftLeg: 'Bip001 L Calf', LeftFoot: 'Bip001 L Foot', RightUpLeg: 'Bip001 R Thigh', RightLeg: 'Bip001 R Calf', RightFoot: 'Bip001 R Foot' },
+      },
+    },
     heightMeters: 2.5,
     yawOffset: 0,
     health: 1100,

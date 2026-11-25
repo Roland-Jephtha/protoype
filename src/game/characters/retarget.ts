@@ -59,6 +59,63 @@ export const UAL_TO_MIXAMO: BonePair[] = [
   }),
 ];
 
+/** Rigify-style limb pairs (Blender metarig names: upper_arm.L, thigh.R …), from a source naming scheme. */
+function rigifyLimbs(src: (side: 'L' | 'R', part: 'shoulder' | 'arm' | 'forearm' | 'hand' | 'thigh' | 'shin' | 'foot') => string): BonePair[] {
+  return (['L', 'R'] as const).flatMap((s) => [
+    { source: src(s, 'shoulder'), target: `shoulder${s}`, sourceChild: src(s, 'arm'), targetChild: `upper_arm${s}` },
+    { source: src(s, 'arm'), target: `upper_arm${s}`, sourceChild: src(s, 'forearm'), targetChild: `forearm${s}` },
+    { source: src(s, 'forearm'), target: `forearm${s}`, sourceChild: src(s, 'hand'), targetChild: `hand${s}` },
+    { source: src(s, 'hand'), target: `hand${s}` },
+    { source: src(s, 'thigh'), target: `thigh${s}`, sourceChild: src(s, 'shin'), targetChild: `shin${s}` },
+    { source: src(s, 'shin'), target: `shin${s}`, sourceChild: src(s, 'foot'), targetChild: `foot${s}` },
+    { source: src(s, 'foot'), target: `foot${s}` },
+  ]);
+}
+
+const MIXAMO_PART = { shoulder: 'Shoulder', arm: 'Arm', forearm: 'ForeArm', hand: 'Hand', thigh: 'UpLeg', shin: 'Leg', foot: 'Foot' } as const;
+
+/** Mixamo (the hero) → a Rigify metarig (e.g. the classic Doomsday): hips, spine, chest, neck, head. */
+export const MIXAMO_TO_RIGIFY: BonePair[] = [
+  { source: 'Hips', target: 'hips' },
+  { source: 'Spine', target: 'spine', sourceChild: 'Spine2', targetChild: 'chest' },
+  { source: 'Spine2', target: 'chest', sourceChild: 'Neck', targetChild: 'neck' },
+  { source: 'Neck', target: 'neck', sourceChild: 'Head', targetChild: 'head' },
+  { source: 'Head', target: 'head' },
+  ...rigifyLimbs((s, p) => `${s === 'L' ? 'Left' : 'Right'}${MIXAMO_PART[p]}`),
+];
+
+const UAL_PART = { shoulder: 'shoulder', arm: 'upper_arm', forearm: 'forearm', hand: 'hand', thigh: 'thigh', shin: 'shin', foot: 'foot' } as const;
+
+/** The CC0 mannequin (strike clips) → a Rigify metarig. */
+export const UAL_TO_RIGIFY: BonePair[] = [
+  { source: 'hips', target: 'hips' },
+  { source: 'spine001', target: 'spine', sourceChild: 'spine003', targetChild: 'chest' },
+  { source: 'spine003', target: 'chest', sourceChild: 'neck', targetChild: 'neck' },
+  { source: 'neck', target: 'neck', sourceChild: 'head', targetChild: 'head' },
+  { source: 'head', target: 'head' },
+  ...rigifyLimbs((s, p) => `${UAL_PART[p]}${s}`),
+];
+
+/**
+ * Stands a model upright facing +Z when it was exported lying down or turned:
+ * rotates its root so hips→head points up and the left shoulder is at +X.
+ */
+export function standUpright(model: Object3D, bones = { hips: 'hips', head: 'head', left: 'upper_armL', right: 'upper_armR' }) {
+  model.updateMatrixWorld(true);
+  const b = bonesByCanon(model);
+  const pos = (n: string) => b.get(n)?.getWorldPosition(new Vector3());
+  const hips = pos(bones.hips);
+  const head = pos(bones.head);
+  const left = pos(bones.left);
+  const right = pos(bones.right);
+  if (!hips || !head || !left || !right) return;
+  const up = new Quaternion().setFromUnitVectors(head.sub(hips).normalize(), new Vector3(0, 1, 0));
+  const side = left.sub(right).applyQuaternion(up);
+  const yaw = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), -Math.atan2(-side.z, side.x));
+  model.quaternion.premultiply(yaw.multiply(up));
+  model.updateMatrixWorld(true);
+}
+
 function bonesByCanon(root: Object3D) {
   const map = new Map<string, Bone>();
   root.traverse((o) => {

@@ -15,10 +15,9 @@ import { MeshoptEncoder } from 'meshoptimizer';
 import { copyFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 
+// Doomsday and Darkseid now come from scripts/prepare-characters.mjs.
 const SOURCES = {
-  doomsday: 'doomsday_batman_v_superman_rigged',
   zod: 'general_zod_michael_shannon_-_rigged',
-  darkseid: 'darkseid_-_rigged_ray_porter',
 };
 
 await MeshoptEncoder.ready;
