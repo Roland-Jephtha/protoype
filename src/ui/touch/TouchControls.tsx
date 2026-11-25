@@ -52,7 +52,8 @@ export function TouchControls() {
       <div className="touch-right">
         <div className="touch-col">
           <TouchButton action="aim" label="Heat" icon="◉" size={60 * scale} className="btn-heat" dragToLook />
-          <TouchButton action="attack" label={carrying ? 'Throw' : 'Punch'} icon="✊" size={72 * scale} className="btn-punch" />
+          <TouchButton action="attack" label={carrying ? (liftPrompt?.includes('Swing') ? 'Swing' : 'Smash') : 'Punch'} icon="✊" size={72 * scale} className="btn-punch" />
+          {carrying && <TouchButton action="throw" label="Throw" icon="➶" size={60 * scale} className="btn-throw" />}
         </div>
         <div className="touch-col">
           <div className="touch-power">

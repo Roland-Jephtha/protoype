@@ -20,18 +20,20 @@ export function hitHero(amount: number, knock: { x: number; y: number; z: number
     const flying = runtime.moveMode === 'flight';
     // Heavy blows put him down until he's back on his feet.
     const down = heavy && !flying ? HERO_HIT.fall + HERO_HIT.lie + HERO_HIT.getUp * 0.5 : controlLoss;
-    runtime.heroImpulse.x += knock.x;
-    runtime.heroImpulse.y += knock.y;
-    runtime.heroImpulse.z += knock.z;
+    // Heavy blows lift him off his feet: he flies back in an arc and lands on his back, rather than sliding.
+    const h = heavy && !flying ? HERO_HIT.knockdownHorizontal : 1;
+    runtime.heroImpulse.x += knock.x * h;
+    runtime.heroImpulse.y += heavy && !flying ? Math.max(knock.y, HERO_HIT.knockdownLift) : knock.y;
+    runtime.heroImpulse.z += knock.z * h;
     runtime.heroControlLoss = Math.max(runtime.heroControlLoss, down);
-    const h = runtime.heroHit;
+    const hh = runtime.heroHit;
     // A light hit doesn't interrupt a knockdown already under way.
-    if (heavy || h.t < 0 || h.kind === 'stagger') {
+    if (heavy || hh.t < 0 || hh.kind === 'stagger') {
       const yaw = runtime.heroFacingYaw;
-      h.t = 0;
-      h.kind = heavy ? (flying ? 'tumble' : 'knockdown') : 'stagger';
+      hh.t = 0;
+      hh.kind = heavy ? (flying ? 'tumble' : 'knockdown') : 'stagger';
       // Hit from behind: falls on his face; from the front: on his back.
-      h.forward = knock.x * Math.sin(yaw) + knock.z * Math.cos(yaw) > 0;
+      hh.forward = knock.x * Math.sin(yaw) + knock.z * Math.cos(yaw) > 0;
     }
   }
 }

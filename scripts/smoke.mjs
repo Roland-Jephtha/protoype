@@ -531,12 +531,33 @@ async function lifeRun(browser) {
   await sleep(500);
   const carrying = await page.evaluate(() => window.__krypton.runtime.carrying?.type ?? null);
   check('lifting: E lifts a car from traffic', !!liftPrompt && !!carrying, `prompt=${liftPrompt}, carrying=${carrying}`);
+  // Click smashes with it (still held); G / Throw hurls it.
   await page.evaluate(() => {
     window.__krypton.input.setButton('mouse', 'attack', true);
     window.__krypton.input.setButton('mouse', 'attack', false);
   });
+  await sleep(700);
+  check('lifting: click smashes with the held car (still holding it)', (await page.evaluate(() => window.__krypton.runtime.carrying?.type ?? null)) !== null);
+  await page.evaluate(() => {
+    window.__krypton.input.setButton('keyboard', 'throw', true);
+    window.__krypton.input.setButton('keyboard', 'throw', false);
+  });
   await sleep(400);
-  check('lifting: click throws it', (await page.evaluate(() => window.__krypton.runtime.carrying)) === null);
+  check('lifting: Throw hurls it', (await page.evaluate(() => window.__krypton.runtime.carrying)) === null);
+  // Once it lands it can be picked up again.
+  let again = null;
+  for (let i = 0; i < 20 && !again; i++) {
+    await sleep(300);
+    again = await page.evaluate(() => {
+      const p = window.__krypton.runtime.playerPosition;
+      for (const s of window.__krypton.liftSources) {
+        const c = s.nearest(p.x, p.y, p.z, 120);
+        if (c?.thrown) return { type: c.type, d: Math.round(c.distance) };
+      }
+      return null;
+    });
+  }
+  check('lifting: the thrown car can be picked up again', !!again, JSON.stringify(again));
 
   // Forest: arrive beside the railway, behind the train's front, then fly alongside and pass it.
   await page.evaluate(() => window.__krypton.app.getState().travelTo('forest', { at: { x: -340, z: 552, facing: Math.PI / 2 } }));
@@ -669,7 +690,7 @@ async function propLiftRun(browser) {
     await sleep(800);
     await press('interact');
     const carrying = await page.evaluate(() => window.__krypton.runtime.carrying);
-    await press('attack');
+    await press('throw');
     const after = await page.evaluate(() => window.__krypton.runtime.carrying);
     return { found: true, want: c.type, carrying: carrying?.type ?? null, thrown: !after, label };
   };

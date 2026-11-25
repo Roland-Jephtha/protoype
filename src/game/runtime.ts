@@ -73,7 +73,11 @@ export const runtime = {
   /** True while the hero is dashing. */
   heroDashing: false,
   /** The vehicle the hero is holding overhead. */
-  carrying: null as { type: LiftKind; paint: string; scale: number } | null,
+  /** What the hero holds: `t` seconds since picking it up (it rises into his hands), `fromY` where it was, `swing` seconds into a swing (-1 = none). */
+  carrying: null as { type: LiftKind; paint: string; scale: number; t: number; fromY: number; swing: number } | null,
+  /** The hero's right hand (world), for one-handed weapons. */
+  heroHand: new Vector3(),
+  heroHandValid: false,
   /** Breath blowing this step (from the mouth along the crosshair), for effects. */
   breath: { kind: 'none' as 'none' | 'wind' | 'freeze', from: new Vector3(), dir: new Vector3(0, 0, -1) },
   /** Incremented on each Super Nova (the HUD flashes). */

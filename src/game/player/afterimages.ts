@@ -1,4 +1,4 @@
-import { AdditiveBlending, Color, Matrix4, MeshBasicMaterial, type Bone, type Material, type Mesh, type MeshStandardMaterial, type Object3D, type Scene, type Texture } from 'three';
+import { Color, NormalBlending, Matrix4, Vector3, MeshBasicMaterial, type Bone, type Material, type Mesh, type MeshStandardMaterial, type Object3D, type Scene, type Texture } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { SPEED_FORCE } from '../../config/combat';
 
@@ -23,6 +23,11 @@ export class AfterimageTrail {
   private readonly liveBones: Bone[] = [];
   private next = 0;
   private sinceShot = 0;
+  /** Where the last snapshot was taken (world), to fill the gap when he moves far in one frame. */
+  private readonly last = new Vector3();
+  private hasLast = false;
+  private readonly cur = new Vector3();
+  private readonly m = new Matrix4();
 
   private readonly live: Object3D;
 
@@ -39,7 +44,7 @@ export class AfterimageTrail {
         const mesh = o as Mesh;
         if (!mesh.isMesh) return;
         const make = (m: Material) => {
-          const g = new MeshBasicMaterial({ map: (m as MeshStandardMaterial).map as Texture | null, color: tint, transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, fog: false });
+          const g = new MeshBasicMaterial({ map: (m as MeshStandardMaterial).map as Texture | null, color: tint, transparent: true, opacity: 0, blending: NormalBlending, depthWrite: false, fog: false });
           materials.push(g);
           return g;
         };
@@ -70,21 +75,23 @@ export class AfterimageTrail {
   /** Call after the hero has been posed this frame. `active`: Speed Force on and moving. */
   update(dt: number, active: boolean) {
     this.sinceShot += dt;
-    if (active && this.sinceShot >= A.interval && this.ghosts.length) {
+    if (!active) this.hasLast = false;
+    this.cur.setFromMatrixPosition(this.live.matrixWorld);
+    const moved = this.hasLast ? this.cur.distanceTo(this.last) : 0;
+    if (active && this.ghosts.length && (this.sinceShot >= A.interval || moved >= A.spacing)) {
       this.sinceShot = 0;
-      const g = this.ghosts[this.next];
-      this.next = (this.next + 1) % this.ghosts.length;
-      // Freeze the live pose into this ghost, where he stands right now.
-      g.root.matrix.copy(this.live.matrixWorld as Matrix4);
-      g.bones.forEach((b, i) => {
-        const src = this.liveBones[i];
-        if (!src) return;
-        b.position.copy(src.position);
-        b.quaternion.copy(src.quaternion);
-        b.scale.copy(src.scale);
-      });
-      g.root.updateMatrixWorld(true);
-      g.age = 0;
+      // Moving fast: several copies spread along the path covered since the last one, so the blur never shows gaps.
+      const n = this.hasLast ? Math.min(A.maxPerFrame, Math.max(1, Math.ceil(moved / A.spacing))) : 1;
+      for (let s = 1; s <= n; s++) {
+        this.m.copy(this.live.matrixWorld as Matrix4);
+        if (this.hasLast) {
+          const p = this.last.clone().lerp(this.cur, s / n);
+          this.m.setPosition(p);
+        }
+        this.snapshot(this.m);
+      }
+      this.last.copy(this.cur);
+      this.hasLast = true;
     }
     for (const g of this.ghosts) {
       g.age += dt;
@@ -94,6 +101,22 @@ export class AfterimageTrail {
       const o = A.opacity * Math.pow(1 - k, 1.5);
       for (const m of g.materials) m.opacity = o;
     }
+  }
+
+  /** Freezes the live pose into the next ghost, placed at `matrix`. */
+  private snapshot(matrix: Matrix4) {
+    const g = this.ghosts[this.next];
+    this.next = (this.next + 1) % this.ghosts.length;
+    g.root.matrix.copy(matrix);
+    g.bones.forEach((b, i) => {
+      const src = this.liveBones[i];
+      if (!src) return;
+      b.position.copy(src.position);
+      b.quaternion.copy(src.quaternion);
+      b.scale.copy(src.scale);
+    });
+    g.root.updateMatrixWorld(true);
+    g.age = 0;
   }
 
   dispose() {

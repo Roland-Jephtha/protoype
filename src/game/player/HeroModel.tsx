@@ -37,11 +37,13 @@ import { FootSoles, nextFootLift } from './footGrounding';
 import type { GroundMotor } from './groundMovement';
 import { LOCOMOTION, LOOPING, resolveClips, roleForState } from './heroAnimation';
 import { applySuperSuit, measureModel } from './superSuit';
-import { CombatPose, type PunchPose } from './combatPose';
-import { HERO_COMBAT, type StrikeKind } from '../../config/combat';
+import { CombatPose } from './combatPose';
+import { HERO_COMBAT, HERO_HIT, LIFT, type StrikeKind } from '../../config/combat';
+import { clubAngle, ONE_HANDED } from '../combat/liftShapes';
 
 /** Real strike clips from the CC0 mannequin's animation library (others still use the procedural arm pose). */
-const STRIKE_CLIPS: Partial<Record<StrikeKind, string>> = { jab: 'Punch_Jab', cross: 'Punch_Cross' };
+// None: Superman's punches are posed procedurally (applySuperPunch), not boxing clips.
+const STRIKE_CLIPS: Partial<Record<StrikeKind, string>> = {};
 /** Strike clips are played this much longer than the strike itself, so their follow-through blends out. */
 const STRIKE_TAIL = 1.35;
 
@@ -69,6 +71,26 @@ function strikeClips(heroScene: Object3D, ualScene: Object3D, ualClips: Animatio
     out[kind] = sameRig || !src || !tgt ? clip : retargetClip(src, tgt, clip, pairs, 30, hips);
   }
   strikeCache.set(heroScene, out);
+  return out;
+}
+
+/** A clip from the CC0 mannequin's library on this hero's rig (e.g. the fall onto the back), once per model. */
+const ualClipCache = new WeakMap<Object3D, Map<string, AnimationClip | null>>();
+
+function ualClip(heroScene: Object3D, ual: { scene: Object3D; animations: AnimationClip[] }, def: HeroModelDef, name: string): AnimationClip | null {
+  let cache = ualClipCache.get(heroScene);
+  if (!cache) {
+    cache = new Map();
+    ualClipCache.set(heroScene, cache);
+  }
+  if (cache.has(name)) return cache.get(name) ?? null;
+  const clip = ual.animations.find((c) => c.name === name) ?? null;
+  let out: AnimationClip | null = clip;
+  if (clip && def.id !== 'ual') {
+    const rig = def.retarget?.rig;
+    out = retargetClip(cloneSkinned(ual.scene), cloneSkinned(heroScene), clip, rig ? rigPairs('ual', rig) : UAL_TO_MIXAMO, 30, { source: 'hips', target: rig ? RIG_NAMES[rig].hips : 'Hips' });
+  }
+  cache.set(name, out);
   return out;
 }
 
@@ -279,7 +301,30 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       actions[role] = a;
     }
     const jumpStartDuration = clips.jumpStart ? clips.jumpStart.duration * 0.6 : 0;
-    return { mixer, actions, strikes, jumpStartDuration };
+    // Borrowed (retargeted) clips can stand the body higher or lower than its bind
+    // pose: measure the soles in the idle pose once and put them on the ground.
+    let soleOffset = 0;
+    const idle = actions.idle;
+    if (idle && built.soles.available) {
+      // Measured in the model's own space (detached from the scene while measuring).
+      const parent = built.model.parent;
+      parent?.remove(built.model);
+      idle.play();
+      mixer.update(0);
+      built.model.updateMatrixWorld(true);
+      soleOffset = built.soles.lowestWorldY() - built.minY;
+      idle.stop();
+      mixer.update(0);
+      parent?.add(built.model);
+    }
+    // Knocked down: a real fall onto the back (held at its last frame while he lies there).
+    const fallClip = ualClip(gltf.scene, ual, def, 'Death01');
+    const fall = fallClip ? mixer.clipAction(fallClip) : null;
+    if (fall) {
+      fall.setLoop(LoopOnce, 1);
+      fall.clampWhenFinished = true;
+    }
+    return { mixer, actions, strikes, jumpStartDuration, soleOffset, fall };
   }, [built, gltf, def, ual, clipSource]);
 
   useEffect(
@@ -311,10 +356,12 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     const v = motor.velocity;
     const hSpeed = Math.hypot(v.x, v.z);
     let role = roleForState(motor.state, motor.stateTime, anim.jumpStartDuration);
-    // Knocked off his feet: limbs loose (airborne clip) while falling and lying.
+    // Knocked off his feet: a real fall clip onto his back where the rig has one (else a tilt).
     const hh = runtime.heroHit;
-    const hit = hh.t >= 0 ? hitPose(hh.kind, hh.t, hh.forward) : null;
-    if (!hit && hh.t >= 0) hh.t = -1;
+    const fullHit = hh.t >= 0 ? hitPose(hh.kind, hh.t, hh.forward) : null;
+    if (!fullHit && hh.t >= 0) hh.t = -1;
+    const fallingDown = !!anim.fall && hh.t >= 0 && hh.kind === 'knockdown' && hh.t < HERO_HIT.fall + HERO_HIT.lie;
+    const hit = anim.fall && hh.kind === 'knockdown' ? null : fullHit;
     if (hit && hh.kind === 'knockdown' && hit.drop > 0.3 && anim.actions.airborne) role = 'airborne';
     if (!anim.actions[role]) role = role === 'hardLand' && anim.actions.land ? 'land' : role === 'jumpStart' ? 'airborne' : role;
     let next = anim.actions[role] ?? anim.actions.idle;
@@ -324,7 +371,10 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     const strikeKind = cb.punching && !cb.powerPunching && !runtime.carrying ? cb.strikes[0]?.kind : undefined;
     const strikeAction = strikeKind ? anim.strikes[strikeKind] : undefined;
     const striking = !!strikeAction && cb.punchTime < cb.strikeLength * STRIKE_TAIL;
-    if (striking && strikeAction) {
+    if (fallingDown && anim.fall) {
+      next = anim.fall;
+      key = 'knockdown';
+    } else if (striking && strikeAction) {
       next = strikeAction;
       key = `strike:${strikeKind}:${cb.combo}:${cb.sinceLastPunch < 0.05 ? 'new' : ''}`;
       // A new punch of the same kind restarts the clip.
@@ -339,7 +389,8 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       // his rest pose — the "gliding with arms out" look.
       currentRole.current = key;
     } else if (key !== prevRole && next) {
-      const fade = striking ? 0.06 : prevRole?.startsWith('strike') ? 0.14 : role === 'airborne' || role === 'jumpStart' || role === 'land' ? 0.1 : 0.2;
+      // Getting up from a knockdown blends slowly out of the lying pose.
+      const fade = key === 'knockdown' ? 0.1 : prevRole === 'knockdown' ? HERO_HIT.getUp : striking ? 0.06 : prevRole?.startsWith('strike') ? 0.14 : role === 'airborne' || role === 'jumpStart' || role === 'land' ? 0.1 : 0.2;
       next.reset();
       // Keep foot phase when blending between locomotion loops.
       if (prev && prevRole && LOCOMOTION.includes(prevRole as HeroAnim) && LOCOMOTION.includes(role)) {
@@ -354,7 +405,8 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
     // Locomotion playback rate follows ground speed.
     const sp = def.clipSpeeds;
     const rate = (ref: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, hSpeed / ref));
-    if (striking && next) next.setEffectiveTimeScale(next.getClip().duration / (cb.strikeLength * STRIKE_TAIL));
+    if (key === 'knockdown' && next) next.setEffectiveTimeScale(next.getClip().duration / (HERO_HIT.fall * 2.2));
+    else if (striking && next) next.setEffectiveTimeScale(next.getClip().duration / (cb.strikeLength * STRIKE_TAIL));
     else if (role === 'walk') next?.setEffectiveTimeScale(rate(sp.walk, 0.5, 2.2));
     // Run and sprint: one rule. Playback follows ground speed (up to ~5.5× at 90 km/h)
     // so the feet keep pace with the ground instead of sliding.
@@ -416,33 +468,25 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
       ct.forward.set(0, 0, 1).applyQuaternion(ct.q);
       ct.up.set(0, 1, 0).applyQuaternion(ct.q);
       const c = runtime.combat;
-      // Fighting stance near enemies (on foot or hovering, not while flying fast or carrying).
-      const speed = Math.hypot(v.x, v.y, v.z);
-      const wantGuard = runtime.combatReady && !runtime.carrying && speed < 9 && !striking && !(hit && hh.kind !== 'stagger') ? 1 : 0;
-      ct.guard += (wantGuard - ct.guard) * Math.min(1, dt * 8);
-      if (runtime.carrying) built.pose.applyLift(ct.forward, def.heightMeters, 1);
-      else {
-        const P = HERO_COMBAT.punch;
-        const d = P.duration;
-        // Every strike of the current punch (both hands, in turn); heavy blows put the whole body in.
-        const punches: PunchPose[] = c.punching && !striking
-          ? c.strikes.map((st) => ({
-              side: st.side,
-              kind: st.kind,
-              progress: (c.punchTime - st.at) / (c.powerPunching ? d : c.strikeLength),
-              ...(st.heavy
-                ? { twist: P.cross.twist * 1.2, lean: c.powerPunching ? HERO_COMBAT.powerPunch.lean : P.cross.lean * 1.5 }
-                : st.kind === 'hook'
-                  ? { twist: P.cross.twist * 1.3, lean: P.jab.lean }
-                  : st.kind === 'uppercut'
-                    ? { twist: P.jab.twist, lean: -0.05 }
-                    : st.kind === 'cross'
-                      ? P.cross
-                      : P.jab),
-            }))
-          : [];
-        built.pose.applyFighting(ct.forward, def.heightMeters, ct.guard, punches);
+      // He's a fighter: fists always clenched (a club is gripped too; open hands only under heavy things).
+      const carry = runtime.carrying;
+      const club = !!carry && ONE_HANDED.has(carry.type);
+      const wantFists = carry && !club ? 0 : 1;
+      ct.guard += (wantFists - ct.guard) * Math.min(1, dt * 10);
+      if (carry && club) built.pose.applyClub(ct.forward, def.heightMeters, clubAngle(carry.swing, LIFT.swingTime));
+      else if (carry) {
+        // Arms rise with the object as he lifts it; a slam brings them down in front.
+        const k = Math.min(1, carry.t / LIFT.liftTime);
+        built.pose.applyLift(ct.forward, def.heightMeters, k * k * (3 - 2 * k));
       }
+      else if (c.punching) {
+        // Superman's punch: the strike in progress (the latest one thrown), whole body behind it.
+        const d = c.powerPunching ? HERO_COMBAT.punch.duration : c.strikeLength;
+        const st = [...c.strikes].reverse().find((x) => c.punchTime >= x.at) ?? c.strikes[0];
+        if (st) built.pose.applySuperPunch(ct.forward, def.heightMeters, st.side, (c.punchTime - st.at) / d, st.heavy ? 1 : 0);
+      }
+      built.pose.makeFists(ct.guard);
+      runtime.heroHandValid = built.pose.handPosition('right', runtime.heroHand);
       runtime.heroEyesValid = built.pose.eyes(runtime.heroEyes, ct.forward, ct.up, def.heightMeters);
     }
 
@@ -464,7 +508,7 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
             <group
               rotation-y={def.yawOffset}
               scale={built.scale}
-              position={[-built.centerX * built.scale, -built.minY * built.scale, 0]}
+              position={[-built.centerX * built.scale, -(built.minY + anim.soleOffset) * built.scale, 0]}
             >
               <primitive object={built.model} />
             </group>

@@ -1165,6 +1165,11 @@ input[type='range']::-moz-range-thumb {
   border-color: rgba(242, 193, 78, 0.75);
 }
 
+.btn-throw {
+  margin-bottom: 12px;
+  border-color: rgba(120, 220, 160, 0.75);
+}
+
 .btn-dash {
   margin-bottom: 18px;
   border-color: rgba(150, 210, 255, 0.75);

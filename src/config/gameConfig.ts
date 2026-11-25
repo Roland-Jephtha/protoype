@@ -45,6 +45,8 @@ export const GROUND_MOVEMENT = {
   turnSpeed: 14,
   /** How fast a knockback's horizontal velocity bleeds off while the hero has no control (m/s²). */
   knockDrag: 12,
+  /** Knocked down and back on the ground: he stops sliding fast (friction of a body on the ground, m/s²). */
+  knockGroundDrag: 70,
   jumpVelocity: 11,
   /** Holding jump extends the jump; releasing early cuts upward velocity by this factor. */
   jumpCutMultiplier: 0.5,

@@ -24,6 +24,27 @@ export const LIFT_LABEL: Record<LiftKind, string> = {
 
 const isVehicle = (k: LiftKind): k is VehicleType => k in VEHICLES;
 
+/** Long things held in one hand like a club and swung at enemies; everything else is held overhead in both hands. */
+export const ONE_HANDED: ReadonlySet<LiftKind> = new Set<LiftKind>(['streetLight', 'conifer', 'broadleaf', 'cactus']);
+
+/**
+ * Angle of a held club above the horizontal, forward (rad), `swing` seconds into
+ * a swing of `duration` (< 0 = not swinging): resting up over the shoulder, a
+ * fast chop forward-down, then back up.
+ */
+export function clubAngle(swing: number, duration: number): number {
+  const rest = 1.95; // up and slightly back, over the shoulder
+  const strike = -0.45; // forward and down
+  if (swing < 0 || swing >= duration) return rest;
+  const p = swing / duration;
+  if (p < 0.4) {
+    const t = p / 0.4;
+    return rest + (strike - rest) * (t * t * (3 - 2 * t));
+  }
+  const t = (p - 0.4) / 0.6;
+  return strike + (rest - strike) * (t * t * (3 - 2 * t));
+}
+
 /** City street lamp: post, arm and lamp head, ~6.3 m tall. */
 export function streetLampGeometry(): BufferGeometry {
   return merged([

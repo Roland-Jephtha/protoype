@@ -42,14 +42,15 @@ export const HERO_COMBAT = {
     jab: { twist: 0.32, lean: 0.12 },
     cross: { twist: 0.5, lean: 0.22 },
     /**
-     * Every tap throws ONE strike, in a learnable order: left jab, right cross,
-     * left hook, right uppercut, then a heavy finisher (one of several). A tap
+     * Every tap throws ONE Superman punch — a straight drive with the whole body
+     * leaning into it — alternating hands: right, left, right, left, then a
+     * heavy finisher (a knockout drive, or an uppercut that launches). A tap
      * within `comboWindow` of the last strike continues the sequence.
      */
-    sequence: [S('left', 'jab', 0), S('right', 'cross', 0), S('left', 'hook', 0), S('right', 'uppercut', 0)],
-    finishers: [S('right', 'cross', 0, true), S('right', 'uppercut', 0, true), S('left', 'hook', 0, true)],
+    sequence: [S('right', 'cross', 0), S('left', 'cross', 0), S('right', 'cross', 0), S('left', 'cross', 0)],
+    finishers: [S('right', 'cross', 0, true), S('right', 'uppercut', 0, true)],
     /** Length of each strike (s); the blow lands at `hitFraction` of it. */
-    strikeTime: { jab: 0.3, cross: 0.36, hook: 0.38, uppercut: 0.4 } as Record<StrikeKind, number>,
+    strikeTime: { jab: 0.34, cross: 0.4, hook: 0.4, uppercut: 0.42 } as Record<StrikeKind, number>,
     hitFraction: 0.45,
     /** Lock-on: the enemy nearest the aim direction within this range (m) and angle (rad) is the target. */
     lockRange: 12,
@@ -179,6 +180,17 @@ export const LIFT = {
   respawnDelay: 40,
   /** Rapier collider density (lower = lighter, flies further after bounces). */
   density: 0.25,
+  /** Picking up: the object rises from the ground to the hold over this long (s). */
+  liftTime: 0.38,
+  /** Swinging a held weapon (street lamp, tree…) / slamming a heavy object: duration (s), when it hits (s), damage, knockback (m/s). */
+  swingTime: 0.5,
+  swingHitAt: 0.2,
+  swingDamage: 70,
+  swingKnock: 30,
+  slamDamage: 90,
+  slamKnock: 26,
+  /** Thrown or dropped things can be picked up again once they move slower than this (m/s). */
+  repickSpeed: 2.5,
 };
 
 /** Prometheus drones: flying, armed, original design. */
@@ -246,16 +258,25 @@ export const MISSION_RULES = {
 export const SPEED_FORCE = {
   /** World time runs at this fraction while active: people and cars still drift, in slow motion. */
   worldScale: 0.12,
-  /** He runs at sprint pace without holding sprint, × this. */
-  heroSpeed: 2.2,
-  /** Holding sprint (boost in flight) in Speed Force: faster still. */
-  sprintBoost: 1.6,
+  /**
+   * The hero moves at his normal speed (so he can still fight) while the world
+   * crawls; the speedometer shows ~1000 km/h. Holding sprint / boost goes
+   * overboard: `boostSpeed` × faster, the speedometer climbing to 3000–4000.
+   */
+  boostSpeed: 2.2,
+  /** Speedometer in Speed Force = real km/h × this (normal) or × `readoutBoosted` (sprint/boost). */
+  readoutScale: 45,
+  readoutBoosted: 15,
   /** Afterimages: see-through copies of the hero in the suit's colours, left behind every `interval` s, fading over `life` s. */
   afterimages: {
-    count: { low: 4, medium: 6, high: 8 } as Record<'low' | 'medium' | 'high', number>,
-    interval: 0.04,
-    life: 0.36,
-    opacity: 0.8,
+    // Close together so they overlap into one smeared blur (a copy every frame).
+    count: { low: 8, medium: 12, high: 16 } as Record<'low' | 'medium' | 'high', number>,
+    interval: 0.014,
+    /** At speed, a copy at least every `spacing` m along his path (up to `maxPerFrame` per frame). */
+    spacing: 0.3,
+    maxPerFrame: 4,
+    life: 0.24,
+    opacity: 0.42,
     blue: '#6f9bff',
     red: '#ff2230',
   },
@@ -280,10 +301,13 @@ export const SPEED_FORCE = {
  */
 export const HERO_HIT = {
   knockdownAt: 0.6,
+  /** A knockdown throws him up (m/s) and back with this share of the blow's push. */
+  knockdownLift: 7,
+  knockdownHorizontal: 0.55,
   /** Fall, lie and get-up phases (s), and the total. */
-  fall: 0.35,
-  lie: 0.55,
-  getUp: 0.5,
+  fall: 0.5,
+  lie: 0.9,
+  getUp: 0.55,
   /** In flight: one full somersault over this long (s). */
   tumble: 0.7,
   /** Light hits: lean back this far (rad) for this long (s). */

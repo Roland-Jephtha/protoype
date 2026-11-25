@@ -43,15 +43,16 @@ describe('hero combat', () => {
       heavy += events.filter((e) => e.type === 'punchHit' && e.heavy).length;
       expect(events.filter((e) => e.type === 'punchHit')).toHaveLength(1);
     }
-    expect(kinds.slice(0, 4)).toEqual(['jab', 'cross', 'hook', 'uppercut']);
-    expect(sides.slice(0, 4)).toEqual(['left', 'right', 'left', 'right']);
+    expect(kinds.slice(0, 4)).toEqual(['cross', 'cross', 'cross', 'cross']);
+    expect(sides.slice(0, 4)).toEqual(['right', 'left', 'right', 'left']);
     expect(c.combo).toBe(5);
     expect(heavy).toBe(1); // only the finisher
     expect(c.punchStrength(true).damage).toBe(HERO_COMBAT.punch.finisherDamage);
     expect(c.punchStrength(false).damage).toBeLessThan(HERO_COMBAT.punch.damage);
     // After the finisher, or after a pause, it starts again with the jab.
     c.step({ attackPressed: true, aimHeld: false }, DT);
-    expect(c.strikes[0].kind).toBe('jab');
+    expect(c.strikes[0].side).toBe('right');
+    expect(c.combo).toBe(1);
     run(c, 1.5);
     c.step({ attackPressed: true, aimHeld: false }, DT);
     expect(c.combo).toBe(1);

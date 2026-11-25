@@ -5,6 +5,8 @@ export const ACTIONS = [
   'attack',
   'aim',
   'interact',
+  /** Throw what the hero is holding. */
+  'throw',
   /** Super breath: a gale that shoves enemies (hold). */
   'breath',
   /** Freeze breath (hold). */

@@ -9,6 +9,7 @@ export const DEFAULT_KEY_BINDINGS: Record<string, Action> = {
   ShiftLeft: 'sprint',
   ShiftRight: 'sprint',
   KeyE: 'interact',
+  KeyG: 'throw',
   KeyQ: 'freeze',
   KeyR: 'breath',
   KeyX: 'nova',

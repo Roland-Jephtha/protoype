@@ -219,7 +219,7 @@ export class GroundMotor {
     const dx = (knocked ? 0 : tx) - v.x;
     const dz = (knocked ? 0 : tz) - v.z;
     const dLen = Math.hypot(dx, dz);
-    const maxDelta = (knocked ? t.knockDrag : rate) * dt;
+    const maxDelta = (knocked ? (this.grounded ? t.knockGroundDrag : t.knockDrag) : rate) * dt;
     if (dLen <= maxDelta) {
       v.x = tx;
       v.z = tz;

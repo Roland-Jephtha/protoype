@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { HERO_COMBAT, SPEED_FORCE } from '../config/combat';
 import { REGIONS, type Side } from '../config/regions';
 import { runtime } from '../game/runtime';
+import { input } from '../input/InputManager';
 import { useApp } from '../state/appStore';
 import { useSettings } from '../state/settings';
 import { MissionHud } from './MissionScreens';
@@ -70,7 +71,7 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
       // In flight, show full 3D speed (a straight climb at 60 km/h reads 60).
       const ms = FLIGHT_STATES.has(runtime.playerState) ? Math.hypot(v.x, v.y, v.z) : Math.hypot(v.x, v.z);
       // In Speed Force: speed relative to the slowed world, counting up.
-      shownKmh.current = easeReadout(shownKmh.current, readoutKmh(ms, runtime.speedForce), 0.1);
+      shownKmh.current = easeReadout(shownKmh.current, readoutKmh(ms, runtime.speedForce, runtime.speedForce && input.isHeld('sprint')), 0.1);
       if (speedRef.current) speedRef.current.textContent = shownKmh.current.toFixed(0);
       if (stateRef.current) stateRef.current.textContent = runtime.speedForce ? 'Speed Force' : (STATE_LABEL[runtime.playerState] ?? '');
       speedBoxRef.current?.classList.toggle('speedforce', runtime.speedForce);
@@ -206,7 +207,7 @@ export function Hud({ touchUi }: { touchUi: boolean }) {
       {!touchUi && !pointerLocked && <div className="hud-prompt">Click to control the camera</div>}
       {!touchUi && liftPrompt && !interactPrompt && (
         <div className="hud-interact">
-          {liftPrompt.startsWith('Drop') ? 'Click · Throw    E · Drop' : `E · ${liftPrompt.split(' · ')[0]}`}
+          {liftPrompt.startsWith('Drop') ? `Click · ${liftPrompt.includes('Swing') ? 'Swing' : 'Smash'}    G · Throw    E · Drop` : `E · ${liftPrompt.split(' · ')[0]}`}
         </div>
       )}
     </div>

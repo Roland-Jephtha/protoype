@@ -9,6 +9,8 @@ export interface LiftCandidate {
   paint: string;
   /** Size multiplier of the carried shape (props vary; vehicles are 1). */
   scale?: number;
+  /** Something he threw or dropped earlier. */
+  thrown?: boolean;
   x: number;
   y: number;
   z: number;

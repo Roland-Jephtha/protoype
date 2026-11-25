@@ -22,8 +22,8 @@ Only controls that work today are listed as active. Bindings live in
 | R (hold) | Super breath (wind) | ✅ |
 | Q (hold) | Freeze breath | ✅ |
 | X (hold, release when charged) | Super Nova | ✅ |
-| E near a car, street lamp, tree, rock or cactus | Lift it (click throws, E drops) | ✅ |
-| T | Speed Force: the world slows down, you don't (toggle; blue meter) | ✅ |
+| E near a car, street lamp, tree, rock, cactus — or anything thrown earlier | Lift it. Lamps/trees/cacti are one-handed clubs, the rest overhead. Click swings / slams it into enemies, G (touch: Throw) throws it, E drops it | ✅ |
+| T | Speed Force: the world slows to a crawl while you move at normal speed (afterimage blur; speedometer ~1000); hold Shift/Boost to go overboard (×2.2, 3000–4000) | ✅ |
 | E | Interact / rescue (story mode); lift a nearby vehicle; drop it | ✅ |
 | Left mouse while carrying | Throw the vehicle along the crosshair | ✅ |
 
