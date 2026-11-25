@@ -51,7 +51,8 @@ describe('hero combat', () => {
     expect(c.punchStrength(false).damage).toBeLessThan(HERO_COMBAT.punch.damage);
     // After the finisher, or after a pause, it starts again with the jab.
     c.step({ attackPressed: true, aimHeld: false }, DT);
-    expect(c.strikes[0].side).toBe('right');
+    // Hands keep alternating across combos: the finisher was thrown with the right, so this is the left.
+    expect(c.strikes[0].side).toBe(sides[4] === 'right' ? 'left' : 'right');
     expect(c.combo).toBe(1);
     run(c, 1.5);
     c.step({ attackPressed: true, aimHeld: false }, DT);
