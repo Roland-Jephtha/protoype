@@ -113,7 +113,8 @@ function retargetedClips(heroScene: Object3D, ual: { scene: Object3D; animations
     const u = fromUal[role];
     const c = u ?? fromSource[role];
     if (!c || baked.has(c)) continue;
-    baked.set(c, u ? retargetClip(ualSrc, tgt, c, rigPairs('ual', rig), 30, { source: 'hips', target: RIG_NAMES[rig].hips }) : retargetClip(src, tgt, c, rigPairs('mixamo', rig), 30, { source: 'Hips', target: RIG_NAMES[rig].hips }));
+    // The fallback source is the hero model itself when it is Mixamo-rigged: its clips need no retargeting.
+    baked.set(c, u ? retargetClip(ualSrc, tgt, c, rigPairs('ual', rig), 30, { source: 'hips', target: RIG_NAMES[rig].hips }) : rig === 'mixamo' ? c : retargetClip(src, tgt, c, rigPairs('mixamo', rig), 30, { source: 'Hips', target: RIG_NAMES[rig].hips }));
   }
   out = [...baked.values()];
   roleCache.set(heroScene, out);

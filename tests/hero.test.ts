@@ -29,15 +29,21 @@ describe('resolveClips', () => {
 });
 
 describe('Hatch Superman clip mapping', () => {
-  it('maps the real Mixamo clip names in the downloaded model', () => {
-    const names = ['mixamo.com', 'Falling Idle', 'Flying', 'Male Dynamic Pose', 'Running', 'Walk Strafe Left', 'Walk Strafe Right', 'Walking'];
-    const out = resolveClips(names.map(clip), HERO_MODELS.hatch.clips);
-    expect(out.idle?.name).toBe('mixamo.com');
-    expect(out.walk?.name).toBe('Walking');
-    expect(out.run?.name).toBe('Running');
-    expect(out.sprint?.name).toBe('Running');
-    expect(out.airborne?.name).toBe('Falling Idle');
-    expect(out.hardLand?.name).toBe('Male Dynamic Pose');
+  it('takes clean locomotion from the CC0 library and flight from its own Flying clip', () => {
+    const ual = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Jump_Start', 'Jump_Loop', 'Jump_Land', 'Crouch_Idle_Loop'];
+    const hatch = ['mixamo.com', 'Falling Idle', 'Flying', 'Male Dynamic Pose', 'Running', 'Walking'];
+    const fromUal = resolveClips(ual.map(clip), HERO_MODELS.hatch.clips);
+    const fromHatch = resolveClips(hatch.map(clip), HERO_MODELS.hatch.clips);
+    expect(fromUal.idle?.name).toBe('Idle_Loop');
+    expect(fromUal.walk?.name).toBe('Walk_Loop');
+    expect(fromUal.run?.name).toBe('Jog_Fwd_Loop');
+    expect(fromUal.sprint?.name).toBe('Sprint_Loop');
+    expect(fromUal.airborne?.name).toBe('Jump_Loop');
+    expect(fromUal.hover?.name).toBe('Idle_Loop');
+    // No flight clip in the library: the Hatch model's own.
+    expect(fromUal.fly).toBeUndefined();
+    expect(fromHatch.fly?.name).toBe('Flying');
+    expect(HERO_MODELS.hatch.retarget?.rig).toBe('mixamo');
   });
 });
 

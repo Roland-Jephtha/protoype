@@ -158,8 +158,37 @@ export class CombatPose {
           this.rotateWorld(b, q);
         });
       }
-      // Thumb folds across the curled fingers.
-      if (f.thumb) f.thumb.forEach((b, i) => this.rotateWorld(b, q.setFromAxisAngle(axis, i === 0 ? 0.9 : 0.8)));
+      // Thumb folds across the curled fingers: for each thumb joint, try a few fold
+      // directions and keep the one that brings the thumb tip closest to the
+      // index finger's middle joint (rigs orient thumbs very differently).
+      const thumb = f.thumb;
+      const target = f.chains[0]?.[1];
+      if (thumb && target) {
+        const tipBone = thumb[thumb.length - 1];
+        const fingerDir = f.chains[0][1].getWorldPosition(new Vector3()).sub(f.chains[0][0].getWorldPosition(new Vector3())).normalize();
+        const palm = new Vector3().crossVectors(axis, fingerDir).normalize();
+        const axes = [axis, fingerDir, palm];
+        const goal = target.getWorldPosition(new Vector3());
+        for (const b of thumb) {
+          const start = b.quaternion.clone();
+          let best = start.clone();
+          let bestD = tipBone.getWorldPosition(new Vector3()).distanceTo(goal);
+          for (const ax of axes) {
+            for (const ang of [-1.1, -0.7, 0.7, 1.1]) {
+              b.quaternion.copy(start);
+              b.updateWorldMatrix(false, true);
+              this.rotateWorld(b, q.setFromAxisAngle(ax, ang));
+              const d = tipBone.getWorldPosition(new Vector3()).distanceTo(goal);
+              if (d < bestD) {
+                bestD = d;
+                best = b.quaternion.clone();
+              }
+            }
+          }
+          b.quaternion.copy(best);
+          b.updateWorldMatrix(false, true);
+        }
+      }
       joints.forEach((b, i) => {
         this.fist.push({ bone: b, open: open[i], closed: b.quaternion.clone() });
         b.quaternion.copy(open[i]);
