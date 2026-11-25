@@ -25,8 +25,8 @@ export interface HeroModelDef {
   /** Ordered name patterns per role; the first clip whose name matches wins. */
   clips: Record<HeroAnim, RegExp[]>;
   /**
-   * A model without its own clips: animated by retargeting another hero model's
-   * clips onto its rig (`rig` = its bone naming), and the strike clips likewise.
+   * A model without its own clips: animated by retargeting clips onto its rig
+   * (`rig` = its bone naming) — from the CC0 library first, then `fromModel`.
    */
   retarget?: { fromModel: 'hatch'; rig: 'injustice' };
   /** Ground speed (m/s) at which each locomotion clip plays at 1× (feet match the ground). */
@@ -37,7 +37,7 @@ export interface HeroModelDef {
 /** Respect Vite's base path so the game also works from a sub-folder (e.g. GitHub Pages). */
 const base = import.meta.env.BASE_URL ?? '/';
 
-const COMMON_CLIPS: HeroModelDef['clips'] = {
+export const COMMON_CLIPS: HeroModelDef['clips'] = {
   idle: [/^idle_loop$/i, /idle/i],
   walk: [/^walk_loop$/i, /walk/i],
   run: [/^jog_fwd_loop$/i, /jog|run/i],
@@ -112,9 +112,11 @@ export const INJUSTICE_HERO: HeroModelDef = {
   yawOffset: 0,
   styling: 'textured',
   addCape: false,
-  clips: HERO_MODELS.hatch.clips,
+  // Clean, upright locomotion from the CC0 library (the Hatch clips' idle has a cocked knee);
+  // flight from the Hatch Superman's Flying clip; hovering stands upright.
+  clips: { ...COMMON_CLIPS, hover: [/^idle_loop$/i], fly: [/^flying$/i] },
   retarget: { fromModel: 'hatch', rig: 'injustice' },
-  clipSpeeds: HERO_MODELS.hatch.clipSpeeds,
+  clipSpeeds: HERO_MODELS.ual.clipSpeeds,
   credit: 'Injustice 2 | DCEU | 3D Model Collection Rigged by kanimator — https://sketchfab.com/3d-models/injustice-2-dceu-3d-model-collection-rigged-e27284b707ec42aab42416ed39911d28 — CC BY 4.0 (original models credited to DatKofGuy and Carinhaqualquer)',
 };
 

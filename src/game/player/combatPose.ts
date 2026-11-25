@@ -92,9 +92,9 @@ const SUPER = {
   twist: 0.62,
   lean: 0.42,
   /** Front leg steps forward (thigh swing, knee bend), rear leg pushes back (rad). */
-  stepThigh: 0.55,
-  stepKnee: 0.45,
-  pushThigh: 0.3,
+  stepThigh: 0.75,
+  stepKnee: 0.55,
+  pushThigh: 0.4,
 } as const;
 
 /** Punch envelope: fast drive out (to 30 %), hold, ease back. */
@@ -149,20 +149,25 @@ export class CombatPose {
       if (/thumb|finger_?1/i.test(chain[0].name)) out.thumb = chain;
       else out.chains.push(chain);
     }
-    // Which way curls toward the palm: the sign that brings the fingertips nearer the wrist.
+    // Which way curls toward the palm: the palm is on the thumb's side, so pick the
+    // sign that brings the fingertips nearer the thumb's tip (nearer the wrist is true both ways).
     const chain = out.chains[0];
-    if (chain && chain.length >= 2) {
+    const thumbTip = out.thumb?.[out.thumb.length - 1];
+    if (chain && chain.length >= 2 && thumbTip) {
       const axis = this.knuckleAxis(out.chains, new Vector3());
       if (axis) {
         const tip = chain[chain.length - 1];
-        const wrist = hand.getWorldPosition(new Vector3());
-        const before = tip.getWorldPosition(new Vector3()).distanceTo(wrist);
+        const target = thumbTip.getWorldPosition(new Vector3());
         const saved = chain[0].quaternion.clone();
-        this.rotateWorld(chain[0], new Quaternion().setFromAxisAngle(axis, 0.8));
-        const after = tip.getWorldPosition(new Vector3()).distanceTo(wrist);
+        const dist = (angle: number) => {
+          chain[0].quaternion.copy(saved);
+          chain[0].updateWorldMatrix(false, true);
+          this.rotateWorld(chain[0], new Quaternion().setFromAxisAngle(axis, angle));
+          return tip.getWorldPosition(new Vector3()).distanceTo(target);
+        };
+        out.sign = dist(0.9) < dist(-0.9) ? 1 : -1;
         chain[0].quaternion.copy(saved);
         chain[0].updateWorldMatrix(false, true);
-        out.sign = after < before ? 1 : -1;
       }
     }
     return out;
@@ -188,7 +193,7 @@ export class CombatPose {
       const q = this.q.full;
       for (const chain of f.chains) {
         chain.forEach((b, i) => {
-          q.setFromAxisAngle(axis, weight * (i === 0 ? 1.35 : 1.5));
+          q.setFromAxisAngle(axis, weight * (i === 0 ? 1.45 : i === 1 ? 1.9 : 1.5));
           this.rotateWorld(b, q);
         });
       }
@@ -196,6 +201,26 @@ export class CombatPose {
         q.setFromAxisAngle(axis, weight * 0.6);
         this.rotateWorld(f.thumb[0], q);
       }
+    }
+  }
+
+  /**
+   * Stands him tall: both legs straight down under the hips (the idle clip is a
+   * staggered fighting stance with one knee bent). `weight` 0..1. Needs the
+   * world matrices current.
+   */
+  standStraight(weight: number) {
+    if (weight <= 0.001) return;
+    const down = this.v.dir.set(0, -1, 0);
+    for (const side of ['left', 'right'] as const) {
+      const leg = this.legs[side];
+      if (!leg.thigh || !leg.shin) continue;
+      const foot = leg.shin.children.find((c) => (c as Bone).isBone);
+      if (!foot) continue;
+      const hip = leg.thigh.getWorldPosition(this.v.a);
+      this.aim(leg.thigh, leg.shin, this.v.target.copy(hip).add(down), weight);
+      const knee = leg.shin.getWorldPosition(this.v.b);
+      this.aim(leg.shin, foot, this.v.target.copy(knee).add(down), weight);
     }
   }
 
@@ -235,6 +260,13 @@ export class CombatPose {
       const fist = this.bodyPoint(this.v.fist, shoulder, forward, out, striking ? SUPER.fist : SUPER.rearFist, height);
       this.aim(arm.upper, arm.fore, elbow, k);
       this.aim(arm.fore, arm.hand, fist, k);
+      // The fist lines up with the forearm (no wrist bent down at the ground).
+      const knuckle = this.fingers[s].chains[0]?.[0];
+      if (striking && knuckle) {
+        const wrist = arm.hand.getWorldPosition(this.v.a);
+        const elbowNow = arm.fore.getWorldPosition(this.v.b);
+        this.aim(arm.hand, knuckle, this.v.target.copy(wrist).sub(elbowNow).normalize().add(wrist), k);
+      }
     }
   }
 

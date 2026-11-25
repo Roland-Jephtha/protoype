@@ -65,6 +65,8 @@ export class HeroCombat {
   private buffered = false;
   combo = 0;
   side: 'left' | 'right' = 'right';
+  /** The hand the next punch is thrown with: always alternates, however slowly you tap. */
+  private nextSide: 'left' | 'right' = 'right';
   /** Seconds the punch button has been held (charging a power punch). */
   holdTime = 0;
   /** Super Nova charge, 0..1. */
@@ -178,7 +180,9 @@ export class HeroCombat {
       this.buffered = false;
       // One strike per tap, in order; the fifth is a heavy finisher, then it starts over.
       this.combo = this.sinceEnd <= p.comboWindow && this.combo < 5 ? this.combo + 1 : 1;
-      const strike = this.combo <= p.sequence.length ? p.sequence[this.combo - 1] : this.pick(p.finishers);
+      const picked = this.combo <= p.sequence.length ? p.sequence[this.combo - 1] : this.pick(p.finishers);
+      const strike = { ...picked, side: this.nextSide };
+      this.nextSide = this.nextSide === 'right' ? 'left' : 'right';
       this.strikes = [strike];
       this.side = strike.side;
       this.strikeLength = p.strikeTime[strike.kind];

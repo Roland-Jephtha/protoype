@@ -97,18 +97,25 @@ function ualClip(heroScene: Object3D, ual: { scene: Object3D; animations: Animat
 /** Locomotion clips for a model without its own: another hero's clips retargeted onto its rig (once per model). */
 const roleCache = new WeakMap<Object3D, AnimationClip[]>();
 
-function retargetedClips(heroScene: Object3D, source: { scene: Object3D; animations: AnimationClip[] }, def: HeroModelDef): AnimationClip[] {
+function retargetedClips(heroScene: Object3D, ual: { scene: Object3D; animations: AnimationClip[] }, source: { scene: Object3D; animations: AnimationClip[] }, def: HeroModelDef): AnimationClip[] {
   const rig = def.retarget?.rig;
   if (!rig) return [];
   let out = roleCache.get(heroScene);
   if (out) return out;
-  const src = cloneSkinned(source.scene);
   const tgt = cloneSkinned(heroScene);
-  const pairs = rigPairs('mixamo', rig);
-  const hips = { source: 'Hips', target: RIG_NAMES[rig].hips };
-  // Only the clips the roles use.
-  const wanted = new Set(Object.values(resolveClips(source.animations, def.clips)));
-  out = [...wanted].filter(Boolean).map((c) => retargetClip(src, tgt, c as AnimationClip, pairs, 30, hips));
+  const fromUal = resolveClips(ual.animations, def.clips);
+  const fromSource = resolveClips(source.animations, def.clips);
+  const ualSrc = cloneSkinned(ual.scene);
+  const src = cloneSkinned(source.scene);
+  // Per role: the CC0 library's clip if it has one, else the other hero's. Each clip is baked once.
+  const baked = new Map<AnimationClip, AnimationClip>();
+  for (const role of Object.keys(def.clips) as HeroAnim[]) {
+    const u = fromUal[role];
+    const c = u ?? fromSource[role];
+    if (!c || baked.has(c)) continue;
+    baked.set(c, u ? retargetClip(ualSrc, tgt, c, rigPairs('ual', rig), 30, { source: 'hips', target: RIG_NAMES[rig].hips }) : retargetClip(src, tgt, c, rigPairs('mixamo', rig), 30, { source: 'Hips', target: RIG_NAMES[rig].hips }));
+  }
+  out = [...baked.values()];
   roleCache.set(heroScene, out);
   return out;
 }
@@ -277,14 +284,14 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
   const pivotY = def.heightMeters * 0.6;
   const flight = useRef({ pitch: 0, bob: 0 });
   const tmpPos = useMemo(() => new Vector3(), []);
-  const combatTmp = useRef({ q: new Quaternion(), forward: new Vector3(), up: new Vector3(), guard: 0 });
+  const combatTmp = useRef({ q: new Quaternion(), forward: new Vector3(), up: new Vector3(), guard: 0, stand: 0 });
 
   const ual = useGLTF(HERO_MODELS.ual.url);
   // Models without their own clips borrow the Hatch hero's (always committed).
   const clipSource = useGLTF(HERO_MODELS.hatch.url);
   const anim = useMemo(() => {
     const mixer = new AnimationMixer(built.model);
-    const clips = resolveClips(def.retarget ? retargetedClips(gltf.scene, clipSource, def) : gltf.animations, def.clips);
+    const clips = resolveClips(def.retarget ? retargetedClips(gltf.scene, ual, clipSource, def) : gltf.animations, def.clips);
     // Punches: real strike clips, played over everything while a punch is thrown.
     const strikes: Partial<Record<StrikeKind, AnimationAction>> = {};
     for (const [kind, clip] of Object.entries(strikeClips(gltf.scene, ual.scene, ual.animations, def)) as [StrikeKind, AnimationClip][]) {
@@ -479,7 +486,11 @@ export function HeroModel({ def, motor }: { def: HeroModelDef; motor: GroundMoto
         const k = Math.min(1, carry.t / LIFT.liftTime);
         built.pose.applyLift(ct.forward, def.heightMeters, k * k * (3 - 2 * k));
       }
-      else if (c.punching) {
+      // Standing (or punching on the ground): legs straight under the hips — he stands tall, and both punches start square.
+      const stand = motor.grounded && hSpeed < 1.2 && (role === 'idle' || role === 'land' || c.punching) && !(hit && hh.kind !== 'stagger') ? 1 : 0;
+      ct.stand += (stand - ct.stand) * Math.min(1, dt * 10);
+      if (!carry) built.pose.standStraight(ct.stand);
+      if (!carry && c.punching) {
         // Superman's punch: the strike in progress (the latest one thrown), whole body behind it.
         const d = c.powerPunching ? HERO_COMBAT.punch.duration : c.strikeLength;
         const st = [...c.strikes].reverse().find((x) => c.punchTime >= x.at) ?? c.strikes[0];
